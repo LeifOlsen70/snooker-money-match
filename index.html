@@ -1,0 +1,793 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#0f5f37">
+  <meta name="application-version" content="5.5-fixed">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Snooker Match">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <title>Snooker Money Match</title>
+  <style>
+    :root{
+      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+      background:#f3f4f6;color:#171717;
+    }
+    *{box-sizing:border-box}
+    body{margin:0}
+    .app{max-width:720px;margin:0 auto;padding:calc(16px + env(safe-area-inset-top)) 14px calc(28px + env(safe-area-inset-bottom))}
+    h1{font-size:28px;margin:4px 0 18px}
+    h2,h3{margin:0 0 12px}
+    .card{background:#fff;border-radius:18px;padding:18px;margin:12px 0;box-shadow:0 2px 12px #00000010}
+    label{display:block;font-weight:700;margin:14px 0 6px}
+    input,button,select{font:inherit}
+    input{
+      width:100%;padding:14px;border:1px solid #d1d5db;border-radius:12px;background:#fff;font-size:17px
+    }
+    button{
+      border:0;border-radius:13px;padding:13px 16px;font-weight:800;cursor:pointer;
+      -webkit-tap-highlight-color:transparent;
+    }
+    button:active{transform:scale(.985)}
+    .primary{width:100%;background:#0f5f37;color:white}
+    .secondary{background:#e5e7eb;color:#111827}
+    .danger{background:#fee2e2;color:#991b1b}
+    .counter{display:flex;align-items:center;justify-content:center;gap:20px;margin:10px 0 18px}
+    .counter button{font-size:28px;min-width:66px;min-height:54px}
+    .counter span{font-size:34px;font-weight:900;min-width:50px;text-align:center}
+    .score{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px}
+    .scoreBox{text-align:center;background:#f3f4f6;border-radius:15px;padding:12px}
+    .scoreName{font-size:14px;font-weight:700;word-break:break-word}
+    .scoreNum{font-size:38px;font-weight:900}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}
+    .winnerBtn{background:#e5e7eb}
+    .winnerBtn.selected{background:#0f5f37;color:white}
+    .breakRow{display:grid;grid-template-columns:1fr 105px 54px;gap:8px;align-items:center;margin:10px 0}
+    .breakTags{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 8px}
+    .tag{background:#eef2f7;border-radius:999px;padding:5px 8px;font-size:12px}
+    .moneyRow{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid #ececec}
+    .pos{color:#0f7a43;font-weight:900}
+    .neg{color:#b42318;font-weight:900}
+    .muted{color:#6b7280}
+    .small{font-size:13px}
+    .hidden{display:none!important}
+    .winner{text-align:center;font-size:30px;font-weight:900}
+    .topbar{display:flex;justify-content:space-between;gap:10px;align-items:center}
+    .history{max-height:180px;overflow:auto}
+    .historyItem{font-size:13px;padding:5px 0;color:#4b5563}
+    .viewTabs{display:flex;gap:8px;margin:12px 0;position:sticky;top:0;z-index:5;background:#f3f4f6;padding:8px 0}
+    .viewTabs button{flex:1;font-size:16px;padding:15px 8px}
+    .viewTabs button.active{background:#0f5f37;color:white}
+    .scorerPage{min-height:70vh;touch-action:pan-y}
+    .scorerHeading{text-align:center;font-size:clamp(24px,6vw,38px);font-weight:900;margin:18px 0}
+    .scorerGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:12px}
+    .scorerPlayer{border:3px solid #d1d5db;border-radius:18px;background:white;padding:14px 8px;text-align:center;cursor:pointer;min-width:0}
+    .scorerPlayer.active{border-color:#0f5f37;background:#e6f5ec}
+    .scorerPlayerName{font-size:clamp(19px,4.8vw,28px);font-weight:900;overflow-wrap:anywhere}
+    .scorerPoints{font-size:clamp(55px,15vw,90px);font-weight:900;line-height:1.2;font-variant-numeric:tabular-nums}
+    .scorerFrameCount{font-size:16px;color:#596579}
+    .scorerEntry{margin-top:18px;background:#fff;border-radius:18px;padding:20px;text-align:center}
+    .scorerEntry input{font-size:42px;text-align:center;font-weight:900;max-width:260px;display:block;margin:10px auto 16px}
+    .scorerEntry button{font-size:20px;min-height:62px}
+    .scorerKeypad{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;max-width:380px;margin:12px auto 16px}
+    .scorerKeypad button{font-size:clamp(27px,7vw,38px);font-weight:850;min-height:66px;border-radius:14px;touch-action:manipulation;background:#eef2f7;color:#17212f;border:1px solid #cbd5e1}
+    .scorerKeypad button:active{background:#d1e9d9}
+    .scorerKeypad button.keyClear{font-size:19px;background:#fce8e8}
+    .scorerKeypad button.keyDelete{font-size:26px}
+    .scorerHelp{text-align:center;color:#596579;font-size:14px;margin:18px 0}
+    .installHint{background:#ecfdf5;border:1px solid #a7f3d0}
+    /* v5.3: compact live scorer: scores and complete keypad visible together */
+    #scorerPage .scorerHeading{font-size:clamp(20px,5vw,28px);margin:3px 0 9px;line-height:1.1}
+    #scorerPage .scorerGrid{gap:8px;grid-template-columns:repeat(auto-fit,minmax(105px,1fr))}
+    #scorerPage .scorerPlayer{padding:7px 4px;border-radius:13px;border-width:2px}
+    #scorerPage .scorerPlayerName{font-size:clamp(17px,4.4vw,23px);line-height:1.1}
+    #scorerPage .scorerPoints{font-size:clamp(42px,12vw,68px);line-height:1.05;margin:3px 0}
+    #scorerPage .scorerFrameCount{font-size:13px}
+    #scorerPage .scorerEntry{margin-top:9px;padding:10px 13px;border-radius:14px}
+    #scorerPage #scorerSelectedName{font-size:18px!important;line-height:1.1}
+    #scorerPage label[for=scorerBreak]{display:none}
+    #scorerPage #scorerBreak{font-size:29px;max-width:100%;height:43px;min-height:43px;box-sizing:border-box;margin:6px auto 8px;padding:3px}
+    #scorerPage .scorerKeypad{gap:5px;max-width:none;margin:0 auto 8px}
+    #scorerPage .scorerKeypad button{font-size:26px;min-height:43px;height:43px;padding:2px;border-radius:9px}
+    #scorerPage .scorerKeypad button.keyClear{font-size:13px}
+    #scorerPage .scorerKeypad button.keyDelete{font-size:23px}
+    #scorerPage #scorerAdd{min-height:43px;font-size:16px;padding:7px}
+    #scorerPage #scorerUndo{min-height:35px;font-size:14px;margin-top:5px!important;padding:5px}
+    #scorerPage .scorerHelp{font-size:11px;margin:7px 0}
+    .viewTabs{margin:5px 0;padding:4px 0}
+    .viewTabs button{padding:9px 6px}
+    @media(max-height:720px){
+      #scorerPage .scorerHeading{font-size:20px;margin:1px 0 5px}
+      #scorerPage .scorerPlayer{padding:4px 3px}
+      #scorerPage .scorerPoints{font-size:42px}
+      #scorerPage .scorerEntry{padding:7px 10px;margin-top:6px}
+      #scorerPage .scorerKeypad button{height:38px;min-height:38px}
+    }
+  
+/* Snooker Match Edition 5.4: presentation only, game/save data unchanged */
+:root{background:#071b15;color:#f7f2df;font-family:Arial,Helvetica,sans-serif}
+body{background:radial-gradient(ellipse at 50% -15%,#174a34 0%,#09291f 40%,#061812 100%);min-height:100vh}
+.app{max-width:720px;padding:calc(8px + env(safe-area-inset-top)) 12px calc(12px + env(safe-area-inset-bottom))}
+h1{font-family:Georgia,serif;text-align:center;letter-spacing:.04em;font-size:clamp(20px,5.2vw,29px);margin:3px 0 8px;color:#f6f3e7}
+.gold{color:#d8bb75}.snookerBall{color:#bc292b;font-size:26px;text-shadow:0 2px 4px #000}
+.viewTabs{background:#09251c;top:0;margin:5px 0 8px;padding:5px;border:1px solid #365f49;border-radius:13px;gap:5px}
+.viewTabs button{font-size:clamp(12px,3.3vw,16px);padding:10px 4px;border-radius:9px}
+.viewTabs button.active{background:#c9a65c;color:#10251b;box-shadow:inset 0 1px #ffe7a5}
+.viewTabs button.secondary{background:#143d2c;color:#e4dfce}
+.card{background:#f9f7ef;color:#16261f;border:1px solid #dfd3b5;box-shadow:0 5px 22px #0004}
+#scorerPage{display:flex;flex-direction:column;min-height:0;height:calc(100dvh - 135px - env(safe-area-inset-top) - env(safe-area-inset-bottom));gap:8px}
+#scorerPage .scorerHeading{font-family:Georgia,serif;letter-spacing:.12em;font-size:clamp(15px,4.5vw,24px);color:#d6bd78;margin:0;flex:0 0 auto}
+#scorerPage .scorerGrid{flex:0 0 30%;min-height:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(80px,1fr));gap:7px}
+#scorerPage .scorerPlayer{background:linear-gradient(145deg,#174d35,#0d3024);border:1px solid #6c805b;color:#f8f5e8;box-shadow:inset 0 1px #ffffff22,0 3px 10px #0005;border-radius:13px;padding:6px 3px;display:flex;flex-direction:column;justify-content:center}
+#scorerPage .scorerPlayer.active{border:2px solid #f2d48c;background:linear-gradient(145deg,#236342,#13432d);box-shadow:0 0 0 1px #b5944b,0 3px 14px #0007}
+#scorerPage .scorerPlayerName{font-size:clamp(14px,4.4vw,24px);color:#f6e8b8}
+#scorerPage .scorerPoints{font-size:clamp(38px,12vw,76px);line-height:1.05;margin:1px 0;color:white}
+#scorerPage .scorerFrameCount{font-size:clamp(10px,2.8vw,14px);color:#d3e4d8}
+#scorerPage .scorerFrameCount strong{color:#ffdd91;font-size:1.3em}
+#scorerPage .scorerEntry{flex:1 1 66%;min-height:0;display:flex;flex-direction:column;background:#102e22;border:1px solid #68805d;border-radius:15px;padding:8px 10px;box-shadow:0 5px 15px #0004;margin:0;color:#f9f4e4}
+#scorerPage #scorerSelectedName{font-size:clamp(13px,3.5vw,18px)!important;color:#ead298}
+#scorerPage #scorerBreak{flex:0 0 auto;font-size:clamp(24px,7vw,38px);height:clamp(36px,6vh,54px);min-height:0;max-width:100%;background:#eae7d9!important;border:2px solid #c9a65c;border-radius:8px;margin:3px auto 5px;color:#09291d}
+#scorerPage .scorerKeypad{flex:1 1 auto;min-height:0;display:grid;grid-template-rows:repeat(4,minmax(0,1fr));gap:5px;max-width:none;margin:0 0 6px}
+#scorerPage .scorerKeypad button{min-height:0;height:100%;font-size:clamp(19px,5.7vw,31px);padding:0;background:#e8e3d5;color:#183426;border:1px solid #b4a98d;border-radius:8px}
+#scorerPage .scorerKeypad button.keyClear{font-size:clamp(11px,3vw,16px);background:#efd8d1;color:#67271e}
+#scorerPage #scorerAdd{flex:0 0 auto;min-height:clamp(36px,6vh,49px);background:#c5a159;color:#11281b;border:1px solid #f0d18a;font-size:clamp(13px,3.7vw,18px);padding:5px}
+#scorerPage #scorerUndo{flex:0 0 auto;min-height:28px;font-size:12px;padding:4px;margin-top:4px!important;background:#224c37;color:#f1e6c6}
+#scorerPage .scorerHelp{flex:0 0 auto;font-size:10px;margin:0;color:#c6d5c7}
+#match{color:#18251e}#match .topbar{color:#f6ebcd}#match .secondary{background:#e7e2d6}
+#setup{color:#18251e}
+@media(max-height:690px){#scorerPage{height:calc(100dvh - 112px - env(safe-area-inset-top) - env(safe-area-inset-bottom));gap:4px}h1{font-size:19px;margin:0 0 3px}.viewTabs{margin:3px 0 5px}.viewTabs button{padding:7px 3px}#scorerPage .scorerGrid{flex-basis:28%}#scorerPage .scorerEntry{padding:5px 8px}#scorerPage .scorerHelp{display:none}}
+#matchActionDialog{position:fixed;inset:0;background:#000b;z-index:999;display:flex;align-items:center;justify-content:center;padding:20px}
+.dialogPanel{background:#133c2b;border:2px solid #bfa15c;border-radius:20px;padding:24px;width:min(100%,430px);color:#f5e9c9;box-shadow:0 15px 50px #0008}
+.dialogPanel button{display:block;width:100%;margin-top:12px;min-height:52px}
+.scorerWinner{padding:6px 10px;background:#173f2e;border:1px solid #a88c4d;border-radius:12px;color:#f5e8c4;text-align:center;margin:6px 0}
+.scorerWinner strong{font-size:13px}.scorerWinner .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(85px,1fr));gap:6px;margin-top:5px}
+.scorerWinner button{padding:8px 4px;min-height:38px;background:#d3b56e;color:#173425;font-size:14px}
+#scorerPage{height:auto!important;min-height:0!important;overflow:visible!important}
+#scorerPage .scorerEntry{flex:initial!important}
+#scorerPage .scorerKeypad{flex:initial!important;grid-template-rows:repeat(4,minmax(42px,1fr))!important}
+</style>
+</head>
+<body>
+<div class="app">
+  <h1><span class="snookerBall">●</span> SNOOKER <span class="gold">MONEY MATCH</span></h1><div id="offlineStatus" class="hidden" aria-live="polite"></div>
+
+<section id="setup" class="card">
+    <h2>Neues Match</h2>
+
+    <label for="target">Frames bis zum Gesamtsieg</label>
+    <input id="target" type="number" min="1" max="50" value="5" inputmode="numeric">
+
+    <label for="prize">Siegprämie (€)</label>
+    <input id="prize" type="number" min="0" step="0.01" value="50" inputmode="decimal">
+
+    <label>Spieleranzahl</label>
+    <div class="counter">
+      <button type="button" class="secondary" id="minusBtn">−</button>
+      <span id="countDisplay">2</span>
+      <button type="button" class="secondary" id="plusBtn">+</button>
+    </div>
+
+    <div id="names"></div>
+
+    <button class="primary" id="startBtn">MATCH STARTEN</button>
+  </section>
+
+  <nav id="viewTabs" class="viewTabs hidden" aria-label="Ansicht wechseln">
+    <button type="button" id="matchTab" class="secondary">Abrechnung &amp; Verwaltung</button>
+    <button type="button" id="scorerTab" class="active">● Live-Scoreboard</button>
+  </nav>
+  <section id="scorerPage" class="scorerPage hidden" aria-label="Live Scoreboard">
+    <div class="scorerHeading" id="scorerFrameTitle">LIVE-SCOREBOARD</div>
+    <div class="scorerGrid" id="scorerPlayers"></div>
+    <div class="scorerEntry">
+      <div id="scorerSelectedName" style="font-size:22px;font-weight:800">Spieler wählen</div>
+      <label for="scorerBreak">Break-Punkte eingeben</label>
+      <input id="scorerBreak" type="text" readonly aria-label="Eingegebene Break-Punkte" placeholder="0" style="background:#f8fafc;cursor:default">
+      <div class="scorerKeypad" id="scorerKeypad" aria-label="Ziffernblock">
+        <button type="button" data-digit="1">1</button><button type="button" data-digit="2">2</button><button type="button" data-digit="3">3</button>
+        <button type="button" data-digit="4">4</button><button type="button" data-digit="5">5</button><button type="button" data-digit="6">6</button>
+        <button type="button" data-digit="7">7</button><button type="button" data-digit="8">8</button><button type="button" data-digit="9">9</button>
+        <button type="button" class="keyClear" data-key="clear">LÖSCHEN</button><button type="button" data-digit="0">0</button><button type="button" class="keyDelete" data-key="delete" aria-label="Letzte Ziffer löschen">⌫</button>
+      </div>
+      <button type="button" id="scorerAdd" class="primary">BREAK ÜBERNEHMEN</button>
+      <button type="button" id="scorerUndo" class="secondary" style="width:100%;margin-top:10px">↩️ RÜCKGÄNGIG</button>
+    </div>
+    <div class="scorerWinner"><strong>Frame-Gewinner</strong><div id="scorerWinnerButtons" class="grid"></div></div>
+    <p class="scorerHelp">Spieler antippen · Punkte eingeben · nach rechts wischen für Abrechnung</p>
+  </section>
+  <section id="match" class="hidden">
+    <div class="topbar">
+      <h2 id="frameTitle"></h2>
+      <button class="secondary" id="newMatchBtn">Neues Match</button>
+    </div>
+
+    <div id="score" class="score card"></div>
+
+    <div id="winnerButtons" class="hidden"></div>
+
+    <div class="card">
+      <h3>Breaks</h3>
+      <p class="small muted">Mehrere Breaks pro Spieler möglich. Breaks außerhalb 20–100 werden gespeichert, bringen aber keine Prämie.</p>
+      <div id="breakInputs"></div>
+    </div>
+
+    <div class="card">
+      <button class="primary" id="saveGameBtn">SPIEL SPEICHERN</button>
+      <button class="secondary" style="width:100%;margin-top:10px" id="undoBtn">↩️ RÜCKGÄNGIG</button>
+      <p id="undoInfo" class="small muted"></p>
+    </div>
+
+    <div class="card">
+      <h3>Aktuelle Abrechnung</h3>
+      <div id="money"></div>
+    </div>
+
+    <div class="card">
+      <h3>Kumulierte Abrechnung</h3>
+      <p class="small muted">Wird nach jedem abgeschlossenen Match aktualisiert. Zahlungen können direkt verrechnet werden.</p>
+      <div id="cumulative"></div>
+      <div id="paymentControls"></div>
+    </div>
+
+    <div class="card">
+      <h3>Match-Historie</h3>
+      <p class="small muted">Abgeschlossene Matches werden automatisch gespeichert. Danach startet sofort das nächste Match mit denselben Einstellungen.</p>
+      <div id="matchHistory"></div>
+    </div>
+
+    <div class="card">
+      <h3>Letzte Eingaben</h3>
+      <div id="history" class="history"></div>
+    </div>
+
+    <div id="winnerCard" class="card hidden">
+      <div id="winnerText"></div>
+    </div>
+  </section>
+</div>
+<div id="matchActionDialog" class="hidden" role="dialog" aria-modal="true" aria-label="Match verwalten"><div class="dialogPanel"><h2>Match verwalten</h2><button id="dialogNew" class="primary" type="button">Neues Match erstellen</button><button id="dialogLoad" class="secondary" type="button">Gespeichertes Match laden</button><button id="dialogCancel" class="secondary" type="button">Abbrechen</button></div></div>
+<input id="loadFileInput" type="file" accept=".json,application/json" class="hidden">
+
+<script>
+const $ = id => document.getElementById(id);
+let playerCount = 2;
+let state = null;
+let activeView = 'scorer';
+let scorerSelected = 0;
+function ensureScorer(){
+  if(!state) return;
+  if(!Array.isArray(state.liveFrameScores) || state.liveFrameScores.length !== state.players.length){
+    state.liveFrameScores = state.players.map(()=>0);
+  }
+}
+function showView(view){
+  activeView=view;
+  if(!state) return;
+  $('viewTabs').classList.remove('hidden');
+  $('match').classList.toggle('hidden',view!=='match');
+  $('scorerPage').classList.toggle('hidden',view!=='scorer');
+  $('matchTab').classList.toggle('active',view==='match');
+  $('scorerTab').classList.toggle('active',view==='scorer');
+  $('matchTab').classList.toggle('secondary',view!=='match');
+  $('scorerTab').classList.toggle('secondary',view!=='scorer');
+  if(view==='scorer') renderScorer();
+}
+function renderScorer(){
+  if(!state) return;
+  ensureScorer();
+  scorerSelected=Math.min(Math.max(0,scorerSelected),state.players.length-1);
+  const played=state.players.reduce((n,p)=>n+p.frames,0);
+  $('scorerFrameTitle').textContent=`FRAME ${played+1} · LIVE`;
+  $('scorerPlayers').innerHTML=state.players.map((p,i)=>`<button type="button" class="scorerPlayer ${i===scorerSelected?'active':''}" data-scorer-player="${i}"><div class="scorerPlayerName">${esc(p.name)}</div><div class="scorerPoints">${state.liveFrameScores[i]}</div><div class="scorerFrameCount">Gewonnene Frames <strong>${p.frames}</strong></div></button>`).join('');
+  $('scorerSelectedName').textContent=state.players[scorerSelected].name;
+  document.querySelectorAll('[data-scorer-player]').forEach(b=>b.addEventListener('click',()=>{scorerSelected=Number(b.dataset.scorerPlayer);renderScorer();}));
+}
+$('matchTab').addEventListener('click',()=>showView('match'));
+$('scorerTab').addEventListener('click',()=>showView('scorer'));
+$('scorerKeypad').addEventListener('click',e=>{
+  const key=e.target.closest('button');if(!key)return;
+  const field=$('scorerBreak');
+  if(key.dataset.key==='clear'){field.value='';return;}
+  if(key.dataset.key==='delete'){field.value=field.value.slice(0,-1);return;}
+  if(key.dataset.digit!==undefined && field.value.length<3){
+    field.value=(field.value+key.dataset.digit).replace(/^0+(?=\d)/,'');
+  }
+});
+$('scorerAdd').addEventListener('click',()=>{
+  const input=$('scorerBreak');
+  const raw=input.value.trim();const points=Number(raw);
+  if(!raw || !Number.isInteger(points) || points<0 || points>147){alert('Bitte ein ganzzahliges Break zwischen 0 und 147 eingeben.');return;}
+  ensureScorer();
+  const i=scorerSelected;
+  const money=breakValue(points);
+  const entry={points,money};
+  state.players[i].breaks.push(entry);
+  state.players[i].breakMoney+=money;
+  state.liveFrameScores[i]+=points;
+  state.history.push({type:'break',playerIndex:i,entry,fromScorer:true});
+  input.value='';
+  persist();render();renderScorer();
+});
+$('scorerBreak').addEventListener('keydown',e=>{if(e.key==='Enter'){$('scorerAdd').click();$('scorerBreak').blur();}});
+$('scorerUndo').addEventListener('click',undo);
+let touchStart=null;
+document.addEventListener('touchstart',e=>{
+  if(!state || !e.touches.length || e.target.closest('input,select,textarea'))return;
+  touchStart={x:e.touches[0].clientX,y:e.touches[0].clientY};
+},{passive:true});
+document.addEventListener('touchend',e=>{
+  if(!touchStart || !state || !e.changedTouches.length)return;
+  const dx=e.changedTouches[0].clientX-touchStart.x;
+  const dy=e.changedTouches[0].clientY-touchStart.y;
+  touchStart=null;
+  if(Math.abs(dx)>75 && Math.abs(dx)>Math.abs(dy)*1.6){
+    if(dx<0 && activeView==='match')showView('scorer');
+    else if(dx>0 && activeView==='scorer')showView('match');
+  }
+},{passive:true});
+
+function renderNames(){
+  const old = [...document.querySelectorAll('.name')].map(x=>x.value);
+  $('names').innerHTML = '';
+  for(let i=0;i<playerCount;i++){
+    const label = document.createElement('label');
+    label.textContent = `Spieler ${i+1}`;
+    const input = document.createElement('input');
+    input.className = 'name';
+    input.value = old[i] || (i===0 ? 'Leif' : i===1 ? 'Peter' : `Spieler ${i+1}`);
+    $('names').append(label,input);
+  }
+}
+renderNames();
+
+$('minusBtn').addEventListener('click', ()=>{
+  playerCount = Math.max(2, playerCount-1);
+  $('countDisplay').textContent = playerCount;
+  renderNames();
+});
+
+$('plusBtn').addEventListener('click', ()=>{
+  playerCount = Math.min(8, playerCount+1);
+  $('countDisplay').textContent = playerCount;
+  renderNames();
+});
+
+$('startBtn').addEventListener('click', startMatch);
+$('newMatchBtn').addEventListener('click', newOrLoad);
+$('saveGameBtn').addEventListener('click', saveGameToFile);
+$('loadFileInput').addEventListener('change', loadGameFromFile);
+$('undoBtn').addEventListener('click', undo);
+
+function breakValue(p){
+  if(p>=20&&p<=29)return 0.50;
+  if(p>=30&&p<=39)return 1.00;
+  if(p>=40&&p<=49)return 2.00;
+  if(p>=50&&p<=59)return 4.00;
+  if(p>=60&&p<=69)return 8.00;
+  if(p>=70&&p<=79)return 16.00;
+  if(p>=80&&p<=100)return 32.00;
+  return 0;
+}
+
+function startMatch(){
+  const names = [...document.querySelectorAll('.name')].map((x,i)=>x.value.trim() || `Spieler ${i+1}`);
+  state = {
+    target: Math.max(1, Number($('target').value) || 1),
+    prize: Math.max(0, Number($('prize').value) || 0),
+    players: names.map(name=>({name,frames:0,breakMoney:0,breaks:[]})),
+    history: [],
+    completedMatches: [],
+    payments: [],
+    selected: null,
+    winner: null
+  };
+  persist();
+  $('setup').classList.add('hidden');
+  showView('scorer');
+  render();
+}
+
+function resetToSetup(){
+  localStorage.removeItem('snookerMoneyMatchState');
+  state = null;
+  $('match').classList.add('hidden');
+  $('scorerPage').classList.add('hidden');
+  $('viewTabs').classList.add('hidden');
+  $('setup').classList.remove('hidden');
+  $('winnerCard').classList.add('hidden');
+}
+
+function newOrLoad(){
+  $('matchActionDialog').classList.remove('hidden');
+}
+function closeMatchDialog(){ $('matchActionDialog').classList.add('hidden'); }
+$('dialogCancel').addEventListener('click',closeMatchDialog);
+$('dialogNew').addEventListener('click',()=>{closeMatchDialog(); if(confirm('Neues Match beginnen? Der aktuelle Spielstand wird nur behalten, wenn er zuvor gespeichert wurde.')) resetToSetup();});
+$('dialogLoad').addEventListener('click',()=>{closeMatchDialog();$('loadFileInput').click();});
+
+function startNextMatchSameSettings(){
+  state.players = state.players.map(p=>({name:p.name,frames:0,breakMoney:0,breaks:[]}));
+  state.history=[];
+  state.liveFrameScores=state.players.map(()=>0);
+  state.selected=null;
+  state.winner=null;
+}
+
+async function saveGameToFile(){
+  if(!state) return;
+  let filename = defaultFilename();
+  filename = (filename.trim() || defaultFilename()).replace(/[\\/:*?"<>|]/g,'-');
+  if(!filename.toLowerCase().endsWith('.json')) filename += '.json';
+
+  const data = JSON.stringify({
+    app:'Snooker Money Match',
+    version:4,
+    savedAt:new Date().toISOString(),
+    ...state
+  }, null, 2);
+
+  const file = new File([data], filename, {type:'application/json'});
+  if(navigator.canShare && navigator.canShare({files:[file]})){
+    try{
+      await navigator.share({files:[file], title:'Snooker Match speichern'});
+      return;
+    }catch(e){
+      if(e.name === 'AbortError') return;
+    }
+  }
+  const url = URL.createObjectURL(file);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),60000);
+}
+
+function defaultFilename(){
+  const d=new Date(), p=n=>String(n).padStart(2,'0');
+  return `Snooker_${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`;
+}
+
+function loadGameFromFile(event){
+  const file = event.target.files && event.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = ()=>{
+    try{
+      const obj = JSON.parse(reader.result);
+      if(!obj || !Array.isArray(obj.players) || !Number.isFinite(Number(obj.target))){
+        throw new Error('Ungültige Datei');
+      }
+      state = {
+        target:Number(obj.target),
+        prize:Number(obj.prize)||0,
+        players:obj.players,
+        history:Array.isArray(obj.history)?obj.history:[],
+        completedMatches:Array.isArray(obj.completedMatches)?obj.completedMatches:[],
+        payments:Array.isArray(obj.payments)?obj.payments:[],
+        selected:null,
+        winner:obj.winner ?? null,
+        liveFrameScores:Array.isArray(obj.liveFrameScores) && obj.liveFrameScores.length===obj.players.length ? obj.liveFrameScores : obj.players.map(()=>0)
+      };
+      persist();
+      $('setup').classList.add('hidden');
+      showView('scorer');
+      render();
+    }catch(e){
+      alert('Diese Datei ist kein gültiges Snooker-Match.');
+    }
+    $('loadFileInput').value='';
+  };
+  reader.readAsText(file);
+}
+
+function undo(){
+  const action = state.history.pop();
+  if(!action) return;
+
+  if(action.type === 'break'){
+    const p = state.players[action.playerIndex];
+    const last = p.breaks.pop();
+    if(last) p.breakMoney -= last.money;
+    if(action.fromScorer){ensureScorer();state.liveFrameScores[action.playerIndex]=Math.max(0,state.liveFrameScores[action.playerIndex]-action.entry.points);}
+  }
+  if(action.type === 'frame'){
+    state.players[action.playerIndex].frames = Math.max(0, state.players[action.playerIndex].frames-1);
+    state.winner = null;
+    if(Array.isArray(action.previousFrameScores))state.liveFrameScores=action.previousFrameScores;
+  }
+  state.selected = null;
+  persist();
+  render();
+  renderScorer();
+}
+
+function net(i){
+  const n = state.players.length;
+  const own = state.players[i].breakMoney;
+  const totalOthers = state.players.reduce((sum,p,idx)=>sum+(idx===i?0:p.breakMoney),0);
+
+  let value = own - totalOthers/(n-1);
+
+  if(state.winner !== null){
+    if(i === state.winner){
+      value += state.prize;
+    }else{
+      value -= state.prize/(n-1);
+    }
+  }
+  return value;
+}
+
+function euro(x){
+  const sign = x > 0 ? '+' : '';
+  return sign + x.toLocaleString('de-DE',{style:'currency',currency:'EUR'});
+}
+
+
+function cumulativeNet(i){
+  const name = state.players[i].name;
+  let total = 0;
+
+  const completed = Array.isArray(state.completedMatches) ? state.completedMatches : [];
+  completed.forEach(m=>{
+    const p = (m.players || []).find(x=>x.name === name);
+    if(p) total += Number(p.net || 0);
+  });
+
+  const payments = Array.isArray(state.payments) ? state.payments : [];
+  payments.forEach(pay=>{
+    if(pay.from === name) total += Number(pay.amount || 0);
+    if(pay.to === name) total -= Number(pay.amount || 0);
+  });
+
+  return total;
+}
+
+function addPayment(){
+  if(!state || state.players.length < 2) return;
+
+  const fromEl = $('payFrom');
+  const toEl = $('payTo');
+  const amountEl = $('payAmount');
+
+  const from = fromEl.value;
+  const to = toEl.value;
+  const amount = Number(amountEl.value);
+
+  if(!from || !to){
+    alert('Bitte Zahler und Empfänger auswählen.');
+    return;
+  }
+  if(from === to){
+    alert('Zahler und Empfänger müssen unterschiedlich sein.');
+    return;
+  }
+  if(!Number.isFinite(amount) || amount <= 0){
+    alert('Bitte einen gültigen Zahlungsbetrag eingeben.');
+    return;
+  }
+
+  if(!Array.isArray(state.payments)) state.payments = [];
+  state.payments.push({
+    from,
+    to,
+    amount,
+    at:new Date().toISOString()
+  });
+
+  amountEl.value = '';
+  persist();
+  render();
+}
+
+function undoPayment(){
+  if(!Array.isArray(state.payments) || !state.payments.length) return;
+  state.payments.pop();
+  persist();
+  render();
+}
+
+function render(){
+  if(!state) return;
+  ensureScorer();
+  if(activeView==='scorer')renderScorer();
+
+  const played = state.players.reduce((s,p)=>s+p.frames,0);
+  $('frameTitle').textContent = state.winner===null ? `Frame ${played+1}` : 'Match beendet';
+
+  $('score').innerHTML = state.players.map(p=>`
+    <div class="scoreBox">
+      <div class="scoreName">${esc(p.name)}</div>
+      <div class="scoreNum">${p.frames}</div>
+    </div>
+  `).join('');
+
+  $('winnerButtons').innerHTML = state.players.map((p,i)=>`
+    <button class="winnerBtn" data-winner="${i}" ${state.winner!==null?'disabled':''}>
+      ${esc(p.name)}
+    </button>
+  `).join('');
+
+  $('scorerWinnerButtons').innerHTML = $('winnerButtons').innerHTML;
+  document.querySelectorAll('[data-winner]').forEach(btn=>{
+    btn.addEventListener('click', ()=>awardFrame(Number(btn.dataset.winner)));
+  });
+
+  $('breakInputs').innerHTML = state.players.map((p,i)=>`
+    <div class="breakRow">
+      <b>${esc(p.name)}</b>
+      <input id="break-${i}" type="number" min="0" max="147" inputmode="numeric" placeholder="Break">
+      <button class="secondary" data-addbreak="${i}">+</button>
+    </div>
+    <div class="breakTags">
+      ${p.breaks.map(b=>`<span class="tag">${b.points} (${b.money.toLocaleString('de-DE',{style:'currency',currency:'EUR'})})</span>`).join('')}
+    </div>
+  `).join('');
+
+  document.querySelectorAll('[data-addbreak]').forEach(btn=>{
+    btn.addEventListener('click', ()=>addBreak(Number(btn.dataset.addbreak)));
+  });
+
+  $('money').innerHTML = state.players.map((p,i)=>{
+    const v = net(i);
+    return `<div class="moneyRow">
+      <span>${esc(p.name)}</span>
+      <span class="${v>=0?'pos':'neg'}">${euro(v)}</span>
+    </div>`;
+  }).join('');
+
+  $('undoInfo').textContent = state.history.length
+    ? 'Mehrfaches Rückgängig ist möglich.'
+    : 'Noch keine Eingabe vorhanden.';
+
+  const cumulativeRows = state.players.map((p,i)=>{
+    const v = cumulativeNet(i);
+    return `<div class="moneyRow">
+      <span>${esc(p.name)}</span>
+      <span class="${v>=0?'pos':'neg'}">${euro(v)}</span>
+    </div>`;
+  }).join('');
+
+  const playerOptions = state.players.map(p=>`<option value="${esc(p.name)}">${esc(p.name)}</option>`).join('');
+  const paymentList = Array.isArray(state.payments) ? state.payments : [];
+
+  $('cumulative').innerHTML = cumulativeRows;
+  $('paymentControls').innerHTML = `
+    <div style="margin-top:14px;padding-top:12px;border-top:1px solid #ececec">
+      <label for="payFrom">Zahlung des Verlierers / Zahlers</label>
+      <select id="payFrom" style="width:100%;padding:14px;border:1px solid #d1d5db;border-radius:12px;background:#fff;font-size:17px">${playerOptions}</select>
+
+      <label for="payTo">Zahlung an</label>
+      <select id="payTo" style="width:100%;padding:14px;border:1px solid #d1d5db;border-radius:12px;background:#fff;font-size:17px">${playerOptions}</select>
+
+      <label for="payAmount">Betrag (€)</label>
+      <input id="payAmount" type="number" min="0.01" step="0.01" inputmode="decimal" placeholder="z. B. 5,00">
+
+      <button class="primary" id="addPaymentBtn" style="margin-top:10px">ZAHLUNG VERRECHNEN</button>
+      ${paymentList.length ? '<button class="secondary" id="undoPaymentBtn" style="width:100%;margin-top:8px">LETZTE ZAHLUNG RÜCKGÄNGIG</button>' : ''}
+
+      <div class="small muted" style="margin-top:10px">
+        Beispiel: Spieler A steht bei −10,00 €. Zahlt A 5,00 € an B, verbessert sich A auf −5,00 € und B wird entsprechend um 5,00 € reduziert.
+      </div>
+
+      ${paymentList.length ? `
+        <details style="margin-top:10px">
+          <summary style="font-weight:700;cursor:pointer">Zahlungshistorie (${paymentList.length})</summary>
+          ${paymentList.slice().reverse().map(pay=>`
+            <div class="historyItem">${esc(pay.from)} → ${esc(pay.to)}: ${Number(pay.amount).toLocaleString('de-DE',{style:'currency',currency:'EUR'})}</div>
+          `).join('')}
+        </details>` : ''}
+    </div>`;
+
+  $('addPaymentBtn').addEventListener('click', addPayment);
+  if($('undoPaymentBtn')) $('undoPaymentBtn').addEventListener('click', undoPayment);
+  if(state.players.length > 1 && $('payTo')) $('payTo').selectedIndex = 1;
+
+  const completed = Array.isArray(state.completedMatches) ? state.completedMatches : [];
+  $('matchHistory').innerHTML = completed.length ? completed.slice().reverse().map(m=>{
+    const rows = m.players.map(p=>{
+      const breaks = (p.breaks || []).length
+        ? p.breaks.map(b=>`${b.points} (${Number(b.money).toLocaleString('de-DE',{style:'currency',currency:'EUR'})})`).join(', ')
+        : '—';
+      const nv = Number(p.net || 0);
+      return `<div class="moneyRow">
+        <div style="min-width:0">
+          <b>${esc(p.name)}</b> – ${p.frames} Frame${p.frames===1?'':'s'}<br>
+          <span class="small muted">Breaks: ${breaks}</span>
+        </div>
+        <span class="${nv>=0?'pos':'neg'}">${euro(nv)}</span>
+      </div>`;
+    }).join('');
+    return `<details style="margin:10px 0;border:1px solid #e5e7eb;border-radius:14px;padding:10px 12px">
+      <summary style="font-weight:800;cursor:pointer">Match ${m.number}: 🏆 ${esc(m.winnerName)}</summary>
+      <div class="small muted" style="margin-top:8px">Sieg bei ${m.target} Frames · Siegprämie ${Number(m.prize).toLocaleString('de-DE',{style:'currency',currency:'EUR'})}</div>
+      ${rows}
+    </details>`;
+  }).join('') : '<div class="historyItem">Noch kein Match abgeschlossen.</div>';
+
+  $('history').innerHTML = state.history.slice(-10).reverse().map(a=>{
+    if(a.type==='frame') return `<div class="historyItem">Frame: ${esc(state.players[a.playerIndex].name)} gewinnt</div>`;
+    return `<div class="historyItem">Break: ${esc(state.players[a.playerIndex].name)} – ${a.entry.points} Punkte</div>`;
+  }).join('') || '<div class="historyItem">Noch keine Eingaben.</div>';
+
+  if(state.winner !== null){
+    const w = state.players[state.winner];
+    $('winnerCard').classList.remove('hidden');
+    $('winnerText').innerHTML = `
+      <div class="winner">🏆 ${esc(w.name)} gewinnt!</div>
+      <p style="text-align:center"><b>Siegprämie:</b> ${state.prize.toLocaleString('de-DE',{style:'currency',currency:'EUR'})}</p>
+      ${state.players.map((p,i)=>{
+        const v=net(i);
+        return `<div class="moneyRow"><span>${esc(p.name)}</span><b class="${v>=0?'pos':'neg'}">${euro(v)}</b></div>`;
+      }).join('')}
+    `;
+  }else{
+    $('winnerCard').classList.add('hidden');
+  }
+}
+
+function persist(){
+  if(state) localStorage.setItem('snookerMoneyMatchState', JSON.stringify(state));
+}
+
+function restore(){
+  const saved = localStorage.getItem('snookerMoneyMatchState');
+  if(!saved) return;
+  try{
+    state = JSON.parse(saved);
+    if(!Array.isArray(state.completedMatches)) state.completedMatches = [];
+    if(!Array.isArray(state.payments)) state.payments = [];
+    $('setup').classList.add('hidden');
+    showView('scorer');
+    render();
+  }catch(e){}
+}
+
+function esc(s){
+  return String(s).replace(/[&<>"']/g,m=>({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+  }[m]));
+}
+
+restore();
+
+function updateOfflineStatus(){
+  const el = $('offlineStatus');
+  if(!el) return;
+  if(navigator.onLine){
+    el.textContent = '🟢 Online – Offline-Version ist verfügbar, sobald die App einmal vollständig geladen wurde.';
+  }else{
+    el.textContent = '🟠 Offline – App läuft aus dem lokalen Speicher.';
+  }
+}
+
+window.addEventListener('online', updateOfflineStatus);
+window.addEventListener('offline', updateOfflineStatus);
+updateOfflineStatus();
+
+if('serviceWorker' in navigator){
+  window.addEventListener('load', async ()=>{
+    try{
+      const reg = await navigator.serviceWorker.register('./service-worker.js', {scope:'./'});
+      await reg.update();
+      if($('offlineStatus')){
+        $('offlineStatus').textContent = navigator.onLine
+          ? '✅ Offline bereit – du kannst die App jetzt auch ohne Internet verwenden.'
+          : '🟠 Offline – App läuft aus dem lokalen Speicher.';
+      }
+    }catch(e){
+      if($('offlineStatus')){
+        $('offlineStatus').textContent = '⚠️ Offline-Speicher konnte noch nicht eingerichtet werden. Bitte einmal mit Internet neu öffnen.';
+      }
+    }
+  });
+}
+</script>
+</body>
+</html>
