@@ -210,7 +210,7 @@ h1{font-family:Georgia,serif;text-align:center;letter-spacing:.04em;font-size:cl
 
     <div class="card">
       <h3>Breaks</h3>
-      <p class="small muted">Mehrere Breaks pro Spieler möglich. Breaks außerhalb 20–100 werden gespeichert, bringen aber keine Prämie.</p>
+      <p class="small muted">Automatisch übernommene Breaks ab 20 Punkten.</p>
       <div id="breakInputs"></div>
     </div>
 
@@ -486,6 +486,22 @@ function loadGameFromFile(event){
   reader.readAsText(file);
 }
 
+function awardFrame(playerIndex){
+  if(!state || state.winner !== null) return;
+  if(!Number.isInteger(playerIndex) || playerIndex < 0 || playerIndex >= state.players.length) return;
+  ensureScorer();
+  const previousFrameScores = [...state.liveFrameScores];
+  state.players[playerIndex].frames += 1;
+  state.history.push({type:'frame', playerIndex, previousFrameScores});
+  state.liveFrameScores = state.players.map(()=>0);
+  if(state.players[playerIndex].frames >= state.target){
+    state.winner = playerIndex;
+  }
+  state.selected = null;
+  persist();
+  render();
+}
+
 function undo(){
   const action = state.history.pop();
   if(!action) return;
@@ -620,19 +636,10 @@ function render(){
   });
 
   $('breakInputs').innerHTML = state.players.map((p,i)=>`
-    <div class="breakRow">
-      <b>${esc(p.name)}</b>
-      <input id="break-${i}" type="number" min="0" max="147" inputmode="numeric" placeholder="Break">
-      <button class="secondary" data-addbreak="${i}">+</button>
-    </div>
-    <div class="breakTags">
-      ${p.breaks.map(b=>`<span class="tag">${b.points} (${b.money.toLocaleString('de-DE',{style:'currency',currency:'EUR'})})</span>`).join('')}
+    <div class="breakTags"><b>${esc(p.name)}</b>:
+      ${p.breaks.length ? p.breaks.map(b=>`<span class="tag">${b.points} (${b.money.toLocaleString('de-DE',{style:'currency',currency:'EUR'})})</span>`).join('') : '<span class="small muted">Noch keine Breaks</span>'}
     </div>
   `).join('');
-
-  document.querySelectorAll('[data-addbreak]').forEach(btn=>{
-    btn.addEventListener('click', ()=>addBreak(Number(btn.dataset.addbreak)));
-  });
 
   $('money').innerHTML = state.players.map((p,i)=>{
     const v = net(i);
