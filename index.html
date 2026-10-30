@@ -145,6 +145,13 @@ h1{font-family:Georgia,serif;text-align:center;letter-spacing:.04em;font-size:cl
 .scorerWinner{padding:6px 10px;background:#173f2e;border:1px solid #a88c4d;border-radius:12px;color:#f5e8c4;text-align:center;margin:6px 0}
 .scorerWinner strong{font-size:13px}.scorerWinner .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(85px,1fr));gap:6px;margin-top:5px}
 .scorerWinner button{padding:8px 4px;min-height:38px;background:#d3b56e;color:#173425;font-size:14px}
+#scorerPage .scorerBreakList{background:#123b2c;border:1px solid #6b805c;border-radius:12px;padding:9px 12px;text-align:center;color:#f2dfaf}
+#scorerPage .scorerBreakList strong{font-size:14px}
+#scorerBreakListContent{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-top:6px;font-size:13px}
+#scorerBreakListContent .breakChip{background:#24513c;border:1px solid #b99a59;border-radius:9px;padding:5px 9px;color:#fff}
+#scorerPage .scorerHistoryControls{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px}
+#scorerPage .scorerHistoryControls button{background:#214b38;border:1px solid #b99a59;color:#f1d48b;border-radius:12px;font-size:34px;line-height:1;min-height:49px;padding:4px}
+#scorerPage .scorerHistoryControls button:disabled{opacity:.35}
 #scorerPage{height:auto!important;min-height:0!important;overflow:visible!important}
 #scorerPage .scorerEntry{flex:initial!important}
 #scorerPage .scorerKeypad{flex:initial!important;grid-template-rows:repeat(4,minmax(42px,1fr))!important}
@@ -193,9 +200,11 @@ h1{font-family:Georgia,serif;text-align:center;letter-spacing:.04em;font-size:cl
         <button type="button" class="keyClear" data-key="clear">LÖSCHEN</button><button type="button" data-digit="0">0</button><button type="button" class="keyDelete" data-key="delete" aria-label="Letzte Ziffer löschen">⌫</button>
       </div>
       <button type="button" id="scorerAdd" class="primary">BREAK ÜBERNEHMEN</button>
-      <button type="button" id="scorerUndo" class="secondary" style="width:100%;margin-top:10px">↩️ RÜCKGÄNGIG</button>
+      
     </div>
     <div class="scorerWinner"><strong>Frame-Gewinner</strong><div id="scorerWinnerButtons" class="grid"></div></div>
+    <div class="scorerBreakList"><strong>Gespielte Breaks ab 20</strong><div id="scorerBreakListContent"></div></div>
+    <div class="scorerHistoryControls"><button type="button" id="scorerUndo" aria-label="Rückgängig" title="Rückgängig">↶</button><button type="button" id="scorerRedo" aria-label="Wiederherstellen" title="Wiederherstellen">↷</button></div>
     <p class="scorerHelp">Spieler antippen · Punkte eingeben · nach rechts wischen für Abrechnung</p>
   </section>
   <section id="match" class="hidden">
@@ -257,6 +266,8 @@ let playerCount = 2;
 let state = null;
 let activeView = 'scorer';
 let scorerSelected = 0;
+let redoStack = [];
+function clearRedo(){redoStack=[];}
 function ensureScorer(){
   if(!state) return;
   if(!Array.isArray(state.liveFrameScores) || state.liveFrameScores.length !== state.players.length){
@@ -283,6 +294,10 @@ function renderScorer(){
   $('scorerFrameTitle').textContent=`FRAME ${played+1} · LIVE`;
   $('scorerPlayers').innerHTML=state.players.map((p,i)=>`<button type="button" class="scorerPlayer ${i===scorerSelected?'active':''}" data-scorer-player="${i}"><div class="scorerPlayerName">${esc(p.name)}</div><div class="scorerPoints">${state.liveFrameScores[i]}</div><div class="scorerFrameCount">Gewonnene Frames <strong>${p.frames}</strong></div></button>`).join('');
   $('scorerSelectedName').textContent=state.players[scorerSelected].name;
+  const recent=state.history.filter(a=>a.type==='break' && a.entry && a.entry.points>=20);
+  $('scorerBreakListContent').innerHTML=recent.length ? recent.map(a=>`<span class="breakChip">${esc(state.players[a.playerIndex].name)}: ${a.entry.points}</span>`).join('') : '<span style="color:#bdcfc3">Noch keine Breaks ab 20</span>';
+  $('scorerUndo').disabled=!state.history.length;
+  $('scorerRedo').disabled=!redoStack.length;
   document.querySelectorAll('[data-scorer-player]').forEach(b=>b.addEventListener('click',()=>{scorerSelected=Number(b.dataset.scorerPlayer);renderScorer();}));
 }
 $('matchTab').addEventListener('click',()=>showView('match'));
@@ -307,12 +322,14 @@ $('scorerAdd').addEventListener('click',()=>{
   state.players[i].breaks.push(entry);
   state.players[i].breakMoney+=money;
   state.liveFrameScores[i]+=points;
+  clearRedo();
   state.history.push({type:'break',playerIndex:i,entry,fromScorer:true});
   input.value='';
   persist();render();renderScorer();
 });
 $('scorerBreak').addEventListener('keydown',e=>{if(e.key==='Enter'){$('scorerAdd').click();$('scorerBreak').blur();}});
 $('scorerUndo').addEventListener('click',undo);
+$('scorerRedo').addEventListener('click',redo);
 let touchStart=null;
 document.addEventListener('touchstart',e=>{
   if(!state || !e.touches.length || e.target.closest('input,select,textarea'))return;
@@ -373,6 +390,7 @@ function breakValue(p){
 }
 
 function startMatch(){
+  clearRedo();
   const names = [...document.querySelectorAll('.name')].map((x,i)=>x.value.trim() || `Spieler ${i+1}`);
   state = {
     target: Math.max(1, Number($('target').value) || 1),
@@ -401,6 +419,7 @@ function resetToSetup(){
 }
 
 function newOrLoad(){
+  clearRedo();
   $('matchActionDialog').classList.remove('hidden');
 }
 function closeMatchDialog(){ $('matchActionDialog').classList.add('hidden'); }
@@ -492,6 +511,7 @@ function awardFrame(playerIndex){
   ensureScorer();
   const previousFrameScores = [...state.liveFrameScores];
   state.players[playerIndex].frames += 1;
+  clearRedo();
   state.history.push({type:'frame', playerIndex, previousFrameScores});
   state.liveFrameScores = state.players.map(()=>0);
   if(state.players[playerIndex].frames >= state.target){
@@ -505,6 +525,7 @@ function awardFrame(playerIndex){
 function undo(){
   const action = state.history.pop();
   if(!action) return;
+  redoStack.push(action);
 
   if(action.type === 'break'){
     const p = state.players[action.playerIndex];
@@ -521,6 +542,24 @@ function undo(){
   persist();
   render();
   renderScorer();
+}
+
+function redo(){
+  if(!state || !redoStack.length)return;
+  const action=redoStack.pop();
+  if(action.type==='break'){
+    const p=state.players[action.playerIndex];
+    p.breaks.push(action.entry);
+    p.breakMoney+=action.entry.money;
+    if(action.fromScorer){ensureScorer();state.liveFrameScores[action.playerIndex]+=action.entry.points;}
+  }else if(action.type==='frame'){
+    state.players[action.playerIndex].frames+=1;
+    state.liveFrameScores=state.players.map(()=>0);
+    if(state.players[action.playerIndex].frames>=state.target)state.winner=action.playerIndex;
+  }
+  state.history.push(action);
+  state.selected=null;
+  persist();render();renderScorer();
 }
 
 function net(i){
@@ -744,6 +783,7 @@ function persist(){
 }
 
 function restore(){
+  clearRedo();
   const saved = localStorage.getItem('snookerMoneyMatchState');
   if(!saved) return;
   try{
