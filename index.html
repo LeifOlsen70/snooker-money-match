@@ -236,6 +236,7 @@ h1{font-family:Georgia,serif;text-align:center;letter-spacing:.04em;font-size:cl
       <p id="undoInfo" class="small muted"></p>
     </div>
 
+<div class="card"><h3>☁️ Firebase Cloud-Sicherung</h3><p class="small muted">Lokale Spielstände bleiben erhalten. Cloud-Daten werden nur auf Knopfdruck übertragen.</p><input id="fbEmail" type="email" placeholder="Firebase E-Mail"><input id="fbPass" type="password" placeholder="Firebase Passwort"><button id="fbLogin" class="secondary">Anmelden</button><button id="fbLogout" class="secondary">Abmelden</button><p id="fbStatus" class="small">Nicht angemeldet</p><button id="fbSave" class="primary">☁️ In Cloud sichern</button><button id="fbLoad" class="secondary">☁️ Aus Cloud laden</button><p class="small muted">Laden ersetzt den lokalen Spielstand. Vorher bei Bedarf als JSON sichern.</p></div>
     <div class="card">
       <h3>Aktuelle Abrechnung</h3>
       <div id="money"></div>
@@ -843,5 +844,19 @@ if('serviceWorker' in navigator){
   });
 }
 </script>
-</body>
+<script type="module">
+import {initializeApp} from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js';
+import {getAuth,signInWithEmailAndPassword,signOut,onAuthStateChanged} from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-auth.js';
+import {getFirestore,doc,getDoc,setDoc} from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore.js';
+const config={apiKey:'AIzaSyBgmv1v5APpPReJ4olWCusUhhGGevcvRcE',authDomain:'snooker-money-match.firebaseapp.com',projectId:'snooker-money-match',storageBucket:'snooker-money-match.firebasestorage.app',messagingSenderId:'423302158497',appId:'1:423302158497:web:706c1fec068959b7bbb8e0'};
+const owner='SRx2kZD2jzdM3Q6RVVOjioAuHuw1';
+const app=initializeApp(config),auth=getAuth(app),db=getFirestore(app),e=id=>document.getElementById(id),msg=t=>e('fbStatus').textContent=t;
+const permitted=()=>auth.currentUser?.uid===owner;
+onAuthStateChanged(auth,u=>msg(u?(permitted()?'✅ Angemeldet: '+u.email:'⚠️ Konto nicht freigegeben'):'Nicht angemeldet'));
+e('fbLogin').onclick=async()=>{try{await signInWithEmailAndPassword(auth,e('fbEmail').value.trim(),e('fbPass').value);e('fbPass').value=''}catch(err){msg('Anmeldung fehlgeschlagen: '+err.code)}};
+e('fbLogout').onclick=async()=>{await signOut(auth)};
+const cloudDoc=()=>doc(db,'privateSnooker',owner);
+e('fbSave').onclick=async()=>{if(!permitted()){msg('Bitte zuerst anmelden.');return}const raw=localStorage.getItem('snookerMoneyMatchState');if(!raw){msg('Kein lokaler Spielstand vorhanden.');return}if(!confirm('Cloud-Sicherung überschreiben?'))return;try{await setDoc(cloudDoc(),{state:raw,updatedAt:new Date().toISOString()});msg('✅ In Cloud gesichert')}catch(err){msg('Fehler: '+err.code)}};
+e('fbLoad').onclick=async()=>{if(!permitted()){msg('Bitte zuerst anmelden.');return}try{const snap=await getDoc(cloudDoc());if(!snap.exists()){msg('Noch keine Cloud-Sicherung vorhanden.');return}const raw=snap.data().state,obj=JSON.parse(raw);if(!Array.isArray(obj.players)||!Number.isFinite(Number(obj.target)))throw Error('Ungültige Daten');if(!confirm('Lokalen Spielstand durch Cloud-Sicherung ersetzen?'))return;localStorage.setItem('snookerMoneyMatchState',raw);location.reload()}catch(err){msg('Laden fehlgeschlagen: '+(err.code||err.message))}};
+</script></body>
 </html>
