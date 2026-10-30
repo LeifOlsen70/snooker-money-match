@@ -155,6 +155,13 @@ h1{font-family:Georgia,serif;text-align:center;letter-spacing:.04em;font-size:cl
 #scorerPage{height:auto!important;min-height:0!important;overflow:visible!important}
 #scorerPage .scorerEntry{flex:initial!important}
 #scorerPage .scorerKeypad{flex:initial!important;grid-template-rows:repeat(4,minmax(42px,1fr))!important}
+
+/* v5.9: centered, larger live scores across tablet and phone widths */
+#scorerPage .scorerGrid{grid-template-columns:repeat(2,minmax(0,1fr));}
+#scorerPage .scorerPlayer{align-items:center;justify-content:space-evenly;text-align:center;width:100%;box-sizing:border-box;min-width:0;}
+#scorerPage .scorerPlayerName,#scorerPage .scorerPoints,#scorerPage .scorerFrameCount{width:100%;text-align:center;align-self:center;}
+#scorerPage .scorerPoints{font-size:clamp(64px,11vw,132px);line-height:1;display:flex;align-items:center;justify-content:center;flex:1 1 auto;min-height:0;margin:2px 0;font-variant-numeric:tabular-nums;}
+@media(max-width:480px){#scorerPage .scorerPoints{font-size:clamp(58px,16vw,92px);}}
 </style>
 </head>
 <body>
@@ -676,7 +683,7 @@ function render(){
 
   $('breakInputs').innerHTML = state.players.map((p,i)=>`
     <div class="breakTags"><b>${esc(p.name)}</b>:
-      ${p.breaks.length ? p.breaks.map(b=>`<span class="tag">${b.points} (${b.money.toLocaleString('de-DE',{style:'currency',currency:'EUR'})})</span>`).join('') : '<span class="small muted">Noch keine Breaks</span>'}
+      ${p.breaks.some(b=>Number(b.points)>=20) ? p.breaks.filter(b=>Number(b.points)>=20).map(b=>`<span class="tag">${b.points} (${b.money.toLocaleString('de-DE',{style:'currency',currency:'EUR'})})</span>`).join('') : '<span class="small muted">Noch keine Breaks ab 20</span>'}
     </div>
   `).join('');
 
@@ -738,8 +745,8 @@ function render(){
   const completed = Array.isArray(state.completedMatches) ? state.completedMatches : [];
   $('matchHistory').innerHTML = completed.length ? completed.slice().reverse().map(m=>{
     const rows = m.players.map(p=>{
-      const breaks = (p.breaks || []).length
-        ? p.breaks.map(b=>`${b.points} (${Number(b.money).toLocaleString('de-DE',{style:'currency',currency:'EUR'})})`).join(', ')
+      const breaks = (p.breaks || []).some(b=>Number(b.points)>=20)
+        ? p.breaks.filter(b=>Number(b.points)>=20).map(b=>`${b.points} (${Number(b.money).toLocaleString('de-DE',{style:'currency',currency:'EUR'})})`).join(', ')
         : '—';
       const nv = Number(p.net || 0);
       return `<div class="moneyRow">

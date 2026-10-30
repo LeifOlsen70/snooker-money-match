@@ -1,4 +1,4 @@
-const CACHE_NAME = 'snooker-money-match-v5-7-slim-breaks';
+const CACHE_NAME = 'snooker-money-match-v5-9-centered-score';
 const APP_SHELL = [
   './',
   './index.html',
