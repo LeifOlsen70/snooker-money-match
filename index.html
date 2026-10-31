@@ -171,6 +171,18 @@ h1{font-family:Georgia,serif;text-align:center;letter-spacing:.04em;font-size:cl
 #scorerPage .scorerKeypad button.keyClear{font-size:14px!important}
 #scorerPage .scorerKeypad button.keyDelete{font-size:25px!important}
 #scorerPage #scorerAdd{min-height:53px!important;font-size:18px!important}
+
+/* v6.4: Anzeige-Modus wird ausschließlich auf diesem Gerät gespeichert. */
+#scoreDisplayToggle{display:block;margin:0 0 5px auto;width:auto;min-height:34px;padding:5px 12px;font-size:13px;border:1px solid #d4b875;background:#244b39;color:#ffe2a1;border-radius:10px}
+#scorerPage.displayOnly{height:calc(100dvh - 115px - env(safe-area-inset-top) - env(safe-area-inset-bottom))!important;min-height:380px!important;display:flex;flex-direction:column;overflow:hidden!important}
+#scorerPage.displayOnly .scorerEntry,#scorerPage.displayOnly .scorerWinner,#scorerPage.displayOnly .scorerHistoryControls,#scorerPage.displayOnly .scorerHelp{display:none!important}
+#scorerPage.displayOnly .scorerGrid{flex:1 1 auto!important;min-height:0;grid-template-columns:repeat(2,minmax(0,1fr));align-items:stretch}
+#scorerPage.displayOnly .scorerPlayer{height:100%;min-height:0;justify-content:space-evenly;padding:10px 5px}
+#scorerPage.displayOnly .scorerPoints{font-size:clamp(72px,20vw,260px)!important;line-height:1!important;max-width:100%;overflow:hidden}
+#scorerPage.displayOnly .scorerPlayerName{font-size:clamp(22px,4vw,44px)!important}
+#scorerPage.displayOnly .scorerFrameCount{font-size:clamp(16px,2.6vw,27px)!important}
+#scorerPage.displayOnly .scorerHB{font-size:clamp(14px,2.1vw,24px)!important}
+@media(max-width:600px){#scorerPage.displayOnly{height:calc(100dvh - 125px - env(safe-area-inset-top) - env(safe-area-inset-bottom))!important}#scorerPage.displayOnly .scorerPoints{font-size:clamp(64px,20vw,130px)!important}}
 </style>
 </head>
 <body>
@@ -203,6 +215,7 @@ h1{font-family:Georgia,serif;text-align:center;letter-spacing:.04em;font-size:cl
     <button type="button" id="scorerTab" class="active">● Live-Scoreboard</button>
   </nav>
   <section id="scorerPage" class="scorerPage hidden" aria-label="Live Scoreboard">
+    <button type="button" id="scoreDisplayToggle" aria-pressed="false">⛶ Nur Score anzeigen</button>
     <div class="scorerHeading" id="scorerFrameTitle">LIVE-SCOREBOARD</div>
     <div class="scorerGrid" id="scorerPlayers"></div>
     <div class="scorerEntry">
@@ -960,5 +973,22 @@ e('fbLogin').onclick=async()=>{try{await signInWithEmailAndPassword(auth,e('fbEm
 e('fbLogout').onclick=async()=>{await signOut(auth)};
 e('fbSave').onclick=async()=>{if(!permitted()){msg('Bitte zuerst anmelden.');return}const raw=localStorage.getItem('snookerMoneyMatchState');if(!raw){msg('Kein lokaler Spielstand vorhanden.');return}if(!confirm('Cloud-Sicherung überschreiben?'))return;try{await setDoc(cloudDoc(),{state:raw,updatedAt:new Date().toISOString()});lastCloudRaw=raw;msg('✅ In Cloud gesichert')}catch(err){msg('Fehler: '+err.code)}};
 e('fbLoad').onclick=async()=>{if(!permitted()){msg('Bitte zuerst anmelden.');return}try{const snap=await getDoc(cloudDoc());if(!snap.exists()){msg('Noch keine Cloud-Sicherung vorhanden.');return}const raw=snap.data().state,obj=JSON.parse(raw);if(!Array.isArray(obj.players)||!Number.isFinite(Number(obj.target)))throw Error('Ungültige Daten');if(!confirm('Lokalen Spielstand durch Cloud-Sicherung ersetzen?'))return;localStorage.setItem('snookerMoneyMatchState',raw);location.reload()}catch(err){msg('Laden fehlgeschlagen: '+(err.code||err.message))}};
-</script></body>
+</script><script>
+// Geräteindividuelle Ansicht: nicht Teil des Matches und niemals Firebase-synchronisiert.
+(function(){
+ const page=document.getElementById('scorerPage');
+ const btn=document.getElementById('scoreDisplayToggle');
+ const key='snooker-score-display-only-v1';
+ function setDisplay(on){
+  page.classList.toggle('displayOnly',on);
+  btn.textContent=on?'▣ Eingabe einblenden':'⛶ Nur Score anzeigen';
+  btn.setAttribute('aria-pressed',String(on));
+  try{localStorage.setItem(key,on?'1':'0')}catch(e){}
+ }
+ let enabled=false;try{enabled=localStorage.getItem(key)==='1'}catch(e){}
+ setDisplay(enabled);
+ btn.addEventListener('click',()=>setDisplay(!page.classList.contains('displayOnly')));
+})();
+</script>
+</body>
 </html>

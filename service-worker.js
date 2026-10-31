@@ -1,4 +1,4 @@
-const CACHE_NAME = 'snooker-v6-3-hb-breaks';
+const CACHE_NAME = 'snooker-v6-4-display-mode';
 const APP_SHELL = [
   './',
   './index.html',
