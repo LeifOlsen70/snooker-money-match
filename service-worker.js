@@ -1,4 +1,4 @@
-const CACHE_NAME = 'v6-7-fullscreen-score';
+const CACHE_NAME = 'v6-8-snooker-icons-fullscreen';
 const APP_SHELL = [
   './',
   './index.html',
