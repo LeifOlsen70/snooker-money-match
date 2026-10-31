@@ -220,7 +220,7 @@ h1{font-family:Georgia,serif;text-align:center;letter-spacing:.04em;font-size:cl
       <button class="secondary" id="newMatchBtn">Neues Match</button>
     </div>
 
-    <div id="score" class="score card"></div>
+    <div class="card" id="matchSettingsInfo"></div><div id="score" class="score card"></div>
 
     <div id="winnerButtons" class="hidden"></div>
 
@@ -304,7 +304,7 @@ function renderScorer(){
   $('scorerSelectedName').textContent=state.players[scorerSelected].name;
   const recent=state.history.filter(a=>a.type==='break' && a.entry && a.entry.points>=20);
   $('scorerBreakListContent').innerHTML=recent.length ? recent.map(a=>`<span class="breakChip">${esc(state.players[a.playerIndex].name)}: ${a.entry.points}</span>`).join('') : '<span style="color:#bdcfc3">Noch keine Breaks ab 20</span>';
-  $('scorerUndo').disabled=!state.history.length;
+  $('scorerUndo').disabled=!state.history.length&&!lastMatchTransition;
   $('scorerRedo').disabled=!redoStack.length;
   document.querySelectorAll('[data-scorer-player]').forEach(b=>b.addEventListener('click',()=>{scorerSelected=Number(b.dataset.scorerPlayer);renderScorer();}));
 }
@@ -398,6 +398,7 @@ function breakValue(p){
 }
 
 function startMatch(){
+  lastMatchTransition=null;
   clearRedo();
   const names = [...document.querySelectorAll('.name')].map((x,i)=>x.value.trim() || `Spieler ${i+1}`);
   state = {
@@ -417,6 +418,7 @@ function startMatch(){
 }
 
 function resetToSetup(){
+  lastMatchTransition=null;
   localStorage.removeItem('snookerMoneyMatchState');
   window.dispatchEvent(new Event('snooker-state-changed'));
   state = null;
@@ -514,6 +516,15 @@ function loadGameFromFile(event){
   reader.readAsText(file);
 }
 
+let lastMatchTransition=null;
+function archiveAndRestart(){
+ const previous=JSON.parse(JSON.stringify(state));
+ if(!Array.isArray(state.completedMatches))state.completedMatches=[];
+ const record={number:state.completedMatches.length+1,target:state.target,prize:state.prize,winnerName:state.players[state.winner].name,players:state.players.map((p,i)=>({...p,net:net(i)}))};
+ state.completedMatches.push(record);
+ startNextMatchSameSettings();
+ lastMatchTransition={before:previous,after:JSON.parse(JSON.stringify(state))};
+}
 function awardFrame(playerIndex){
   if(!state || state.winner !== null) return;
   if(!Number.isInteger(playerIndex) || playerIndex < 0 || playerIndex >= state.players.length) return;
@@ -525,6 +536,10 @@ function awardFrame(playerIndex){
   state.liveFrameScores = state.players.map(()=>0);
   if(state.players[playerIndex].frames >= state.target){
     state.winner = playerIndex;
+    state.selected = null;
+    archiveAndRestart();
+    clearRedo();
+    persist();render();return;
   }
   state.selected = null;
   persist();
@@ -532,6 +547,11 @@ function awardFrame(playerIndex){
 }
 
 function undo(){
+  if(!state.history.length && lastMatchTransition){
+    redoStack.push({type:'matchTransition',after:lastMatchTransition.after});
+    state=JSON.parse(JSON.stringify(lastMatchTransition.before));lastMatchTransition=null;
+    persist();render();renderScorer();return;
+  }
   const action = state.history.pop();
   if(!action) return;
   redoStack.push(action);
@@ -556,6 +576,10 @@ function undo(){
 function redo(){
   if(!state || !redoStack.length)return;
   const action=redoStack.pop();
+  if(action.type==='matchTransition'){
+    lastMatchTransition={before:JSON.parse(JSON.stringify(state)),after:action.after};
+    state=JSON.parse(JSON.stringify(action.after));persist();render();renderScorer();return;
+  }
   if(action.type==='break'){
     const p=state.players[action.playerIndex];
     p.breaks.push(action.entry);
@@ -662,6 +686,7 @@ function render(){
   ensureScorer();
   if(activeView==='scorer')renderScorer();
 
+  $('matchSettingsInfo').innerHTML=`<strong>Match-Einstellungen:</strong> ${state.target} gewonnene Frames bis zum Sieg · Siegprämie ${Number(state.prize).toLocaleString('de-DE',{style:'currency',currency:'EUR'})}`;
   const played = state.players.reduce((s,p)=>s+p.frames,0);
   $('frameTitle').textContent = state.winner===null ? `Frame ${played+1}` : 'Match beendet';
 
@@ -795,6 +820,7 @@ function persist(){
 }
 
 function restore(){
+  lastMatchTransition=null;
   clearRedo();
   const saved = localStorage.getItem('snookerMoneyMatchState');
   if(!saved) return;
