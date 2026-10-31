@@ -162,6 +162,15 @@ h1{font-family:Georgia,serif;text-align:center;letter-spacing:.04em;font-size:cl
 #scorerPage .scorerPlayerName,#scorerPage .scorerPoints,#scorerPage .scorerFrameCount{width:100%;text-align:center;align-self:center;}
 #scorerPage .scorerPoints{font-size:clamp(64px,11vw,132px);line-height:1;display:flex;align-items:center;justify-content:center;flex:1 1 auto;min-height:0;margin:2px 0;font-variant-numeric:tabular-nums;}
 @media(max-width:480px){#scorerPage .scorerPoints{font-size:clamp(58px,16vw,92px);}}
+
+/* v6.3 – compact HB and expanded scorer after removing break chips */
+#scorerPage .scorerHB{font-size:clamp(12px,2.7vw,16px);font-weight:700;color:#f4d995;line-height:1.2;margin:0 0 3px}
+#scorerPage .scorerPoints{font-size:clamp(58px,15vw,100px)!important;line-height:1.03!important}
+#scorerPage #scorerBreak{font-size:clamp(34px,8vw,48px)!important;height:60px!important;min-height:60px!important}
+#scorerPage .scorerKeypad button{min-height:51px!important;height:51px!important;font-size:30px!important}
+#scorerPage .scorerKeypad button.keyClear{font-size:14px!important}
+#scorerPage .scorerKeypad button.keyDelete{font-size:25px!important}
+#scorerPage #scorerAdd{min-height:53px!important;font-size:18px!important}
 </style>
 </head>
 <body>
@@ -210,7 +219,7 @@ h1{font-family:Georgia,serif;text-align:center;letter-spacing:.04em;font-size:cl
       
     </div>
     <div class="scorerWinner"><strong>Frame-Gewinner</strong><div id="scorerWinnerButtons" class="grid"></div></div>
-    <div class="scorerBreakList"><strong>Gespielte Breaks ab 20</strong><div id="scorerBreakListContent"></div></div>
+
     <div class="scorerHistoryControls"><button type="button" id="scorerUndo" aria-label="Rückgängig" title="Rückgängig">↶</button><button type="button" id="scorerRedo" aria-label="Wiederherstellen" title="Wiederherstellen">↷</button></div>
     <p class="scorerHelp">Spieler antippen · Punkte eingeben · nach rechts wischen für Abrechnung</p>
   </section>
@@ -228,6 +237,7 @@ h1{font-family:Georgia,serif;text-align:center;letter-spacing:.04em;font-size:cl
       <h3>Breaks</h3>
       <p class="small muted">Automatisch übernommene Breaks ab 20 Punkten.</p>
       <div id="breakInputs"></div>
+      <h4 style="margin:16px 0 8px">Break-Historie (chronologisch)</h4><div id="breakHistoryChrono" class="small"></div>
     </div>
 
     <div class="card">
@@ -300,10 +310,10 @@ function renderScorer(){
   scorerSelected=Math.min(Math.max(0,scorerSelected),state.players.length-1);
   const played=state.players.reduce((n,p)=>n+p.frames,0);
   $('scorerFrameTitle').textContent=`FRAME ${played+1} · LIVE`;
-  $('scorerPlayers').innerHTML=state.players.map((p,i)=>`<button type="button" class="scorerPlayer ${i===scorerSelected?'active':''}" data-scorer-player="${i}"><div class="scorerPlayerName">${esc(p.name)}</div><div class="scorerPoints">${state.liveFrameScores[i]}</div><div class="scorerFrameCount">Gewonnene Frames <strong>${p.frames}</strong></div></button>`).join('');
+  $('scorerPlayers').innerHTML=state.players.map((p,i)=>`<button type="button" class="scorerPlayer ${i===scorerSelected?'active':''}" data-scorer-player="${i}"><div class="scorerPlayerName">${esc(p.name)}</div><div class="scorerPoints">${state.liveFrameScores[i]}</div><div class="scorerHB">HB: ${Math.max(0,...(p.breaks||[]).map(b=>Number(b.points)||0))}</div><div class="scorerFrameCount">Gewonnene Frames <strong>${p.frames}</strong></div></button>`).join('');
   $('scorerSelectedName').textContent=state.players[scorerSelected].name;
-  const recent=state.history.filter(a=>a.type==='break' && a.entry && a.entry.points>=20);
-  $('scorerBreakListContent').innerHTML=recent.length ? recent.map(a=>`<span class="breakChip">${esc(state.players[a.playerIndex].name)}: ${a.entry.points}</span>`).join('') : '<span style="color:#bdcfc3">Noch keine Breaks ab 20</span>';
+
+
   $('scorerUndo').disabled=!state.history.length&&!lastMatchTransition;
   $('scorerRedo').disabled=!redoStack.length;
   document.querySelectorAll('[data-scorer-player]').forEach(b=>b.addEventListener('click',()=>{scorerSelected=Number(b.dataset.scorerPlayer);renderScorer();}));
@@ -393,7 +403,7 @@ function breakValue(p){
   if(p>=50&&p<=59)return 4.00;
   if(p>=60&&p<=69)return 8.00;
   if(p>=70&&p<=79)return 16.00;
-  if(p>=80&&p<=100)return 32.00;
+  if(p>=80)return 32.00;
   return 0;
 }
 
@@ -710,9 +720,12 @@ function render(){
 
   $('breakInputs').innerHTML = state.players.map((p,i)=>`
     <div class="breakTags"><b>${esc(p.name)}</b>:
-      ${p.breaks.some(b=>Number(b.points)>=20) ? p.breaks.filter(b=>Number(b.points)>=20).map(b=>`<span class="tag">${b.points} (${b.money.toLocaleString('de-DE',{style:'currency',currency:'EUR'})})</span>`).join('') : '<span class="small muted">Noch keine Breaks ab 20</span>'}
+      ${p.breaks.some(b=>Number(b.points)>=20) ? p.breaks.filter(b=>Number(b.points)>=20).map(b=>`<span class="tag">${b.points} (${breakValue(Number(b.points)).toLocaleString('de-DE',{style:'currency',currency:'EUR'})})</span>`).join('') : '<span class="small muted">Noch keine Breaks ab 20</span>'}
     </div>
   `).join('');
+
+  const allBreaks=state.history.filter(a=>a.type==='break' && a.entry && Number(a.entry.points)>=20);
+  $('breakHistoryChrono').innerHTML=allBreaks.length ? allBreaks.map((a,j)=>`<div class="historyItem">${j+1}. ${esc(state.players[a.playerIndex]?.name||'Spieler')} – ${a.entry.points} Punkte · ${euro(breakValue(Number(a.entry.points)))}</div>`).join('') : '<span class="muted">Noch keine Breaks ab 20.</span>';
 
   $('money').innerHTML = state.players.map((p,i)=>{
     const v = net(i);
