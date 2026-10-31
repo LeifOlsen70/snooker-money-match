@@ -1,4 +1,4 @@
-const CACHE_NAME = 'v6-5-snooker-v6-4-display-mode';
+const CACHE_NAME = 'v6-6-scoreboard-large-layout';
 const APP_SHELL = [
   './',
   './index.html',

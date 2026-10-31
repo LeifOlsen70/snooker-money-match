@@ -7,3 +7,5 @@ Hinweis: Live-Synchronisierung benötigt eine Internetverbindung. Gleichzeitige 
 Version 6.4: Lokaler Scoreboard-Anzeigemodus (ohne Eingabetastatur), pro Geraet separat.
 
 Version 6.5: HB und Gewonnene Frames im reinen Scoreboard-Modus deutlich vergroessert. Eingabemodus unveraendert.
+
+Version 6.6: Nur im Scoreboard-Modus: Namen groesser, Frames als grosse Zahl direkt unter Namen, Punkte zentral, HB groesser darunter.
