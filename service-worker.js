@@ -1,4 +1,4 @@
-const CACHE_NAME = 'snooker-money-match-v6-0-live-1';
+const CACHE_NAME = 'snooker-money-match-v6-2-auto-match';
 const APP_SHELL = [
   './',
   './index.html',
