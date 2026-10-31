@@ -1,4 +1,4 @@
-const CACHE_NAME = 'v6-6-scoreboard-large-layout';
+const CACHE_NAME = 'v6-7-fullscreen-score';
 const APP_SHELL = [
   './',
   './index.html',

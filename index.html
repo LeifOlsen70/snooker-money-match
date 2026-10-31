@@ -198,6 +198,21 @@ h1{font-family:Georgia,serif;text-align:center;letter-spacing:.04em;font-size:cl
 #scorerPage.displayOnly .scorerPoints{order:2!important;flex:1 1 auto!important;display:flex!important;align-items:center!important;justify-content:center!important;font-size:clamp(75px,20vw,260px)!important;line-height:1!important;margin:0!important;min-height:0!important}
 #scorerPage.displayOnly .scorerHB{order:3!important;flex:0 0 auto!important;font-size:clamp(28px,5vw,65px)!important;font-weight:900!important;line-height:1.15!important;margin:0 0 clamp(6px,2vh,22px)!important}
 @media(max-width:600px){#scorerPage.displayOnly .scorerPlayerName{font-size:clamp(28px,7vw,48px)!important}#scorerPage.displayOnly .scorerFrameCount{font-size:clamp(38px,9vw,65px)!important}#scorerPage.displayOnly .scorerHB{font-size:clamp(24px,5vw,42px)!important}}
+
+/* v6.7: echte bildschirmfuellende Anzeigetafel, nur auf diesem Geraet */
+body.snookerFullscreenScore{overflow:hidden!important}
+body.snookerFullscreenScore .app{max-width:none!important;width:100%!important;height:100dvh!important;min-height:100dvh!important;box-sizing:border-box!important;padding:0!important;margin:0!important}
+body.snookerFullscreenScore .app>h1,body.snookerFullscreenScore .viewTabs{display:none!important}
+body.snookerFullscreenScore #scorerPage.displayOnly{position:fixed!important;inset:0!important;width:100vw!important;height:100dvh!important;min-height:0!important;max-height:100dvh!important;margin:0!important;padding:calc(env(safe-area-inset-top) + 8px) 8px calc(env(safe-area-inset-bottom) + 8px)!important;box-sizing:border-box!important;gap:0!important;z-index:100!important;background:#071e17!important}
+body.snookerFullscreenScore #scorerPage.displayOnly #scoreDisplayToggle{position:absolute!important;top:calc(env(safe-area-inset-top) + 6px)!important;right:12px!important;z-index:110!important;font-size:clamp(12px,1.8vw,16px)!important;min-height:32px!important;margin:0!important;padding:5px 10px!important;opacity:.9}
+body.snookerFullscreenScore #scorerPage.displayOnly .scorerHeading{display:none!important}
+body.snookerFullscreenScore #scorerPage.displayOnly .scorerGrid{width:100%!important;height:100%!important;flex:1 1 100%!important;min-height:0!important;gap:8px!important;margin:0!important;padding:0!important;grid-template-columns:repeat(2,minmax(0,1fr))!important}
+body.snookerFullscreenScore #scorerPage.displayOnly .scorerPlayer{height:100%!important;min-height:0!important;border-radius:15px!important;padding:clamp(14px,3vh,35px) 6px!important}
+body.snookerFullscreenScore #scorerPage.displayOnly .scorerPlayerName{font-size:clamp(34px,7vw,110px)!important}
+body.snookerFullscreenScore #scorerPage.displayOnly .scorerFrameCount{font-size:clamp(42px,9vw,125px)!important}
+body.snookerFullscreenScore #scorerPage.displayOnly .scorerPoints{font-size:clamp(75px,22vw,330px)!important}
+body.snookerFullscreenScore #scorerPage.displayOnly .scorerHB{font-size:clamp(30px,5.2vw,80px)!important}
+@media(max-width:600px){body.snookerFullscreenScore #scorerPage.displayOnly .scorerPlayerName{font-size:clamp(26px,6vw,52px)!important}body.snookerFullscreenScore #scorerPage.displayOnly .scorerFrameCount{font-size:clamp(38px,8vw,72px)!important}body.snookerFullscreenScore #scorerPage.displayOnly .scorerPoints{font-size:clamp(68px,20vw,135px)!important}body.snookerFullscreenScore #scorerPage.displayOnly .scorerHB{font-size:clamp(24px,5vw,44px)!important}}
 </style>
 </head>
 <body>
@@ -996,6 +1011,7 @@ e('fbLoad').onclick=async()=>{if(!permitted()){msg('Bitte zuerst anmelden.');ret
  const key='snooker-score-display-only-v1';
  function setDisplay(on){
   page.classList.toggle('displayOnly',on);
+  document.body.classList.toggle('snookerFullscreenScore',on);
   btn.textContent=on?'▣ Eingabe einblenden':'⛶ Nur Score anzeigen';
   btn.setAttribute('aria-pressed',String(on));
   try{localStorage.setItem(key,on?'1':'0')}catch(e){}
