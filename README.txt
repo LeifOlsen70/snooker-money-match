@@ -5,3 +5,5 @@ Nach Anmeldung auf beiden Geräten werden Änderungen am Spielstand automatisch 
 Hinweis: Live-Synchronisierung benötigt eine Internetverbindung. Gleichzeitige Eingaben auf beiden Geräten vermeiden.
 
 Version 6.4: Lokaler Scoreboard-Anzeigemodus (ohne Eingabetastatur), pro Geraet separat.
+
+Version 6.5: HB und Gewonnene Frames im reinen Scoreboard-Modus deutlich vergroessert. Eingabemodus unveraendert.
