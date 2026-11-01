@@ -1,4 +1,4 @@
-const CACHE_NAME = 'v6-9-snooker-larger-fullscreen-text';
+const CACHE_NAME = 'v7-0-snooker-device-specific-fullscreen';
 const APP_SHELL = [
   './',
   './index.html',
