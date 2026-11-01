@@ -246,10 +246,37 @@ body.snookerFullscreenScore #scorerPage.displayOnly .scorerHB{font-size:clamp(38
  body.snookerFullscreenScore #scorerPage.displayOnly .scorerHB{font-size:clamp(18px,6vh,32px)!important;line-height:1.1!important;flex:0 0 auto!important;margin:0 0 4px!important;white-space:nowrap!important}
  body.snookerFullscreenScore #scorerPage.displayOnly #scoreDisplayToggle{font-size:11px!important;padding:3px 6px!important;min-height:26px!important;right:8px!important}
 }
+
+/* v7.2: Nur Vollbild mit 3+ Spielern. 2-Spieler-Ansicht bleibt unveraendert. */
+body.snookerFullscreenScore #scorerPage.displayOnly .scorerGrid:has(> .scorerPlayer:nth-child(3)) .scorerPlayer{
+ padding:clamp(3px,0.9vh,9px) 5px!important;gap:0!important;justify-content:space-between!important;overflow:hidden!important;
+}
+body.snookerFullscreenScore #scorerPage.displayOnly .scorerGrid:has(> .scorerPlayer:nth-child(3)) .scorerPlayerName{
+ font-size:clamp(18px,min(3.3vw,4.5vh),38px)!important;line-height:1.05!important;flex:0 0 auto!important;
+}
+body.snookerFullscreenScore #scorerPage.displayOnly .scorerGrid:has(> .scorerPlayer:nth-child(3)) .scorerFrameCount{
+ font-size:clamp(17px,min(3vw,4vh),34px)!important;line-height:1.05!important;margin:2px 0 0!important;flex:0 0 auto!important;
+}
+body.snookerFullscreenScore #scorerPage.displayOnly .scorerGrid:has(> .scorerPlayer:nth-child(3)) .scorerPoints{
+ font-size:clamp(38px,min(10vw,15vh),120px)!important;line-height:1!important;flex:1 1 0!important;min-height:0!important;overflow:hidden!important;
+}
+body.snookerFullscreenScore #scorerPage.displayOnly .scorerGrid:has(> .scorerPlayer:nth-child(3)) .scorerHB{
+ font-size:clamp(18px,min(3.8vw,5vh),42px)!important;line-height:1.05!important;margin:0 0 2px!important;flex:0 0 auto!important;
+}
+body.snookerFullscreenScore #scorerPage.displayOnly .scorerGrid:has(> .scorerPlayer:nth-child(5)) .scorerPlayerName{font-size:clamp(14px,min(2.5vw,3.5vh),27px)!important}
+body.snookerFullscreenScore #scorerPage.displayOnly .scorerGrid:has(> .scorerPlayer:nth-child(5)) .scorerFrameCount{font-size:clamp(13px,min(2.4vw,3vh),24px)!important}
+body.snookerFullscreenScore #scorerPage.displayOnly .scorerGrid:has(> .scorerPlayer:nth-child(5)) .scorerPoints{font-size:clamp(28px,min(8vw,10vh),85px)!important}
+body.snookerFullscreenScore #scorerPage.displayOnly .scorerGrid:has(> .scorerPlayer:nth-child(5)) .scorerHB{font-size:clamp(14px,min(2.8vw,3.5vh),27px)!important}
+@media (max-height:520px){
+ body.snookerFullscreenScore #scorerPage.displayOnly .scorerGrid:has(> .scorerPlayer:nth-child(3)) .scorerPlayerName{font-size:clamp(14px,3vh,24px)!important}
+ body.snookerFullscreenScore #scorerPage.displayOnly .scorerGrid:has(> .scorerPlayer:nth-child(3)) .scorerFrameCount{font-size:clamp(13px,3vh,22px)!important}
+ body.snookerFullscreenScore #scorerPage.displayOnly .scorerGrid:has(> .scorerPlayer:nth-child(3)) .scorerPoints{font-size:clamp(27px,9vh,60px)!important}
+ body.snookerFullscreenScore #scorerPage.displayOnly .scorerGrid:has(> .scorerPlayer:nth-child(3)) .scorerHB{font-size:clamp(13px,3vh,22px)!important}
+}
 </style>
 </head>
 <body>
-<div id="appVersionTag" aria-label="App-Version 7.1">v7.1</div>
+<div id="appVersionTag" aria-label="App-Version 7.2">v7.2</div>
 <div class="app">
   <h1><span class="snookerBall">●</span> SNOOKER <span class="gold">MONEY MATCH</span></h1><div id="offlineStatus" class="hidden" aria-live="polite"></div>
 

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'v7-1-version-badge-iphone-landscape-fix';
+const CACHE_NAME = 'v7-2-multiplayer-fullscreen-responsive';
 const APP_SHELL = [
   './',
   './index.html',
