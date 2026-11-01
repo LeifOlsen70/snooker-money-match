@@ -1,4 +1,4 @@
-const CACHE_NAME = 'v7-0-snooker-device-specific-fullscreen';
+const CACHE_NAME = 'v7-1-version-badge-iphone-landscape-fix';
 const APP_SHELL = [
   './',
   './index.html',

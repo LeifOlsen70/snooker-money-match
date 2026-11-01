@@ -5,3 +5,5 @@ Basierend auf v6.8 inklusive Snooker-Icons und Firebase. Nur im Vollbildmodus si
 Alle sechs Dateien aus dem ZIP in das GitHub-Repository hochladen und vorhandene Dateien ersetzen.
 
 Version 7.0: iPhone-spezifische Schriftgroessen im Vollbildmodus, iPad unveraendert.
+
+Version 7.1: Versionsnummer unten links auch im Vollbild sichtbar; iPhone Querformat nach Bildschirmhoehe korrigiert. iPad bleibt unveraendert. Cachekennung erneuert.

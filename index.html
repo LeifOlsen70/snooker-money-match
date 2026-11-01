@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#0f5f37">
-  <meta name="application-version" content="6.2-auto-match">
+  <meta name="application-version" content="7.1">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="Snooker Match">
@@ -234,9 +234,22 @@ body.snookerFullscreenScore #scorerPage.displayOnly .scorerHB{font-size:clamp(38
  body.snookerFullscreenScore #scorerPage.displayOnly .scorerPoints{font-size:clamp(42px,23vh,100px)!important}
  body.snookerFullscreenScore #scorerPage.displayOnly .scorerHB{font-size:clamp(17px,5vh,30px)!important}
 }
+
+/* v7.1: sichtbare Buildnummer in allen Ansichten, auch im Vollbild */
+#appVersionTag{position:fixed;left:calc(env(safe-area-inset-left) + 8px);bottom:calc(env(safe-area-inset-bottom) + 5px);z-index:9999;pointer-events:none;color:#e5d49b;background:rgba(4,24,18,.80);border:1px solid rgba(232,207,137,.45);border-radius:6px;padding:2px 6px;font:600 11px/1.2 -apple-system,BlinkMacSystemFont,sans-serif;letter-spacing:.02em}
+/* iPhone im Querformat: CSS-Breite kann ueber 700px liegen. Die Hoehe ist entscheidend. */
+@media (orientation:landscape) and (max-height:550px) and (pointer:coarse){
+ body.snookerFullscreenScore #scorerPage.displayOnly .scorerPlayer{padding:clamp(3px,1.1vh,8px) 3px!important;justify-content:space-between!important;gap:0!important;overflow:hidden!important}
+ body.snookerFullscreenScore #scorerPage.displayOnly .scorerPlayerName{font-size:clamp(18px,5.5vh,31px)!important;line-height:1.05!important;flex:0 0 auto!important;overflow-wrap:anywhere!important}
+ body.snookerFullscreenScore #scorerPage.displayOnly .scorerFrameCount{font-size:clamp(18px,6vh,33px)!important;line-height:1.05!important;flex:0 0 auto!important}
+ body.snookerFullscreenScore #scorerPage.displayOnly .scorerPoints{font-size:clamp(45px,24vh,105px)!important;line-height:1!important;flex:1 1 0!important;min-height:0!important;overflow:hidden!important;margin:0!important}
+ body.snookerFullscreenScore #scorerPage.displayOnly .scorerHB{font-size:clamp(18px,6vh,32px)!important;line-height:1.1!important;flex:0 0 auto!important;margin:0 0 4px!important;white-space:nowrap!important}
+ body.snookerFullscreenScore #scorerPage.displayOnly #scoreDisplayToggle{font-size:11px!important;padding:3px 6px!important;min-height:26px!important;right:8px!important}
+}
 </style>
 </head>
 <body>
+<div id="appVersionTag" aria-label="App-Version 7.1">v7.1</div>
 <div class="app">
   <h1><span class="snookerBall">●</span> SNOOKER <span class="gold">MONEY MATCH</span></h1><div id="offlineStatus" class="hidden" aria-live="polite"></div>
 
