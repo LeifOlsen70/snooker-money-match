@@ -1,10 +1,11 @@
-const CACHE_NAME = 'v7-2-multiplayer-fullscreen-responsive';
+const CACHE_NAME = 'v7-3-club-branding';
 const APP_SHELL = [
   './',
   './index.html',
   './manifest.webmanifest',
   './icon-192.png',
-  './icon-512.png'
+  './icon-512.png',
+  './flensburger-snooker-club.png'
 ];
 
 self.addEventListener('install', event => {

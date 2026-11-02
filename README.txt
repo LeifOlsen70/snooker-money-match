@@ -1,5 +1,3 @@
-Snooker Money Match v7.2
-Basis: v7.1. Nur CSS im Vollbildmodus bei 3 bis 8 Spielern angepasst.
-Zwei-Spieler-Vollbild und normale Anzeige unveraendert.
-Version unten links v7.2. Cache-Version aktualisiert.
-Alle sechs Dateien ins GitHub-Repository hochladen (vorhandene Dateien ersetzen).
+Snooker Money Match v7.3 – Flensburger Snooker Club Design
+Basis: v7.2. Vereinslogo im normalen Kopfbereich. Vollbild-CSS, Matchlogik, Speicherung, Firebase und Icons unverändert.
+Alle Dateien im ZIP in das GitHub-Repository hochladen und vorhandene Dateien ersetzen.
