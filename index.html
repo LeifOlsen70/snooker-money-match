@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#0f5f37">
-  <meta name="application-version" content="7.4">
+  <meta name="application-version" content="7.5">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="Snooker Match">
@@ -283,7 +283,7 @@ body.snookerFullscreenScore #scorerPage.displayOnly .scorerGrid:has(> .scorerPla
 body:not(.snookerFullscreenScore) #scorerPage:not(.displayOnly){height:calc(100dvh - 191px - env(safe-area-inset-top) - env(safe-area-inset-bottom))}
 @media(max-height:690px){.clubBrand{height:58px;margin:0 auto 4px!important}.clubBrand img{height:54px}body:not(.snookerFullscreenScore) #scorerPage:not(.displayOnly){height:calc(100dvh - 151px - env(safe-area-inset-top) - env(safe-area-inset-bottom))}}
 @media(max-width:420px){.clubBrand{height:66px}.clubBrand img{height:61px}}
-/* v7.4 – Purple & Gold Club Design: styling only */
+/* v7.5 – Purple & Gold Club Design: styling only */
 :root{background:#08050e;color:#f8f0db}
 body{background:radial-gradient(ellipse at 50% 10%,#301044,#10091e 43%,#05040a 85%);color:#f8f0db}
 .app{max-width:850px}
@@ -323,10 +323,22 @@ input,select{background:#24162e;color:#f6eddc;border-color:#a67e4d}
 @media(max-width:420px){.clubBrand{height:74px}.clubBrand img{height:69px}}
 /* fullscreen structure and all sizing rules are retained */
 body.snookerFullscreenScore #scorerPage.displayOnly{background:#090613!important}
+
+/* v7.5: Ausschließlich Scorefelder in Abrechnung & Verwaltung */
+#match .scoreBox, .scoreBox {
+  background:linear-gradient(145deg,#43175d 0%,#21102f 48%,#120b22 100%) !important;
+  border:1.5px solid #d4a85d;
+  box-shadow:inset 0 0 15px #8d37b52b;
+}
+#match .scoreBox .scoreName,#match .scoreBox .scoreNum,
+.scoreBox .scoreName,.scoreBox .scoreNum {
+  color:#fff5e2 !important;
+  text-shadow:0 1px 2px #0009;
+}
 </style>
 </head>
 <body>
-<div id="appVersionTag" aria-label="App-Version 7.4">v7.4</div>
+<div id="appVersionTag" aria-label="App-Version 7.5">v7.5</div>
 <div class="app">
   <h1 class="clubBrand" aria-label="Flensburger Snooker Club – Snooker Money Match"><img src="flensburger-snooker-club.png" alt="Flensburger Snooker Club" width="430" height="125"><span class="visuallyHidden">Snooker Money Match</span></h1><div id="offlineStatus" class="hidden" aria-live="polite"></div>
 

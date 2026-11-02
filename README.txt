@@ -1,3 +1,1 @@
-Snooker Money Match v7.4 – Flensburger Snooker Club Purple & Gold
-Design-Update auf Basis von v7.3. Spiellogik, Synchronisation und Vollbild-Anordnung unverändert.
-Alle Dateien zusammen ins GitHub-Repository hochladen.
+Snooker Money Match v7.5 – nur Scorefelder der Verwaltung farblich korrigiert. Alle anderen Ansichten und Funktionen unverändert. Alle Dateien nach GitHub hochladen.\n
