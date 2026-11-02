@@ -1,4 +1,4 @@
-const CACHE_NAME = 'v7-3-club-branding';
+const CACHE_NAME = 'v7-4-purple-gold';
 const APP_SHELL = [
   './',
   './index.html',

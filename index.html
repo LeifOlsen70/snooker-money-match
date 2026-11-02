@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#0f5f37">
-  <meta name="application-version" content="7.3">
+  <meta name="application-version" content="7.4">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="Snooker Match">
@@ -283,10 +283,50 @@ body.snookerFullscreenScore #scorerPage.displayOnly .scorerGrid:has(> .scorerPla
 body:not(.snookerFullscreenScore) #scorerPage:not(.displayOnly){height:calc(100dvh - 191px - env(safe-area-inset-top) - env(safe-area-inset-bottom))}
 @media(max-height:690px){.clubBrand{height:58px;margin:0 auto 4px!important}.clubBrand img{height:54px}body:not(.snookerFullscreenScore) #scorerPage:not(.displayOnly){height:calc(100dvh - 151px - env(safe-area-inset-top) - env(safe-area-inset-bottom))}}
 @media(max-width:420px){.clubBrand{height:66px}.clubBrand img{height:61px}}
+/* v7.4 – Purple & Gold Club Design: styling only */
+:root{background:#08050e;color:#f8f0db}
+body{background:radial-gradient(ellipse at 50% 10%,#301044,#10091e 43%,#05040a 85%);color:#f8f0db}
+.app{max-width:850px}
+.clubBrand{height:108px;max-width:720px;background:radial-gradient(ellipse at 50% 40%,#2a0d42,#08050e 78%);border-color:#ad8445;box-shadow:0 0 24px #722eaa55}
+.clubBrand::before{background:linear-gradient(120deg,transparent 8%,#842cce55 30%,transparent 48%,#7434b755 72%,transparent 90%)}
+.clubBrand img{height:101px;max-width:98%}
+.viewTabs{background:#100a1b;border:1px solid #d8aa60;box-shadow:0 3px 15px #0008}
+.viewTabs button.secondary{background:linear-gradient(145deg,#361450,#10091e);color:#fff0d9;border:1px solid #bb914b}
+.viewTabs button.active{background:linear-gradient(165deg,#ffe7a0,#c49a42 65%,#9e722b);color:#150d16;border:1px solid #ffdf8d}
+#scorerPage .scorerHeading{color:#e9d3a2;text-shadow:0 0 14px #bd833c44}
+#scorerPage .scorerPlayer{background:linear-gradient(145deg,#43165e 0%,#1b0c2c 44%,#10091c 70%,#3b1352 100%);border:1.5px solid #b88752;box-shadow:inset 0 0 20px #7d28bd33,0 4px 16px #0009}
+#scorerPage .scorerPlayer.active{background:linear-gradient(145deg,#5a207b 0%,#1d0d31 48%,#481660 100%);border:2px solid #f5cf78;box-shadow:0 0 0 1px #b58436,0 0 16px #d39b5444,inset 0 0 22px #a349ce33}
+#scorerPage .scorerPlayerName{color:#fff1d2}
+#scorerPage .scorerPoints{color:#fff}
+#scorerPage .scorerHB{color:#f8d779}
+#scorerPage .scorerFrameCount{color:#f4edee}
+#scorerPage .scorerFrameCount strong{color:#f9d477}
+#scorerPage .scorerEntry{background:linear-gradient(135deg,#291339,#0e091b 70%,#29123a);border:1.5px solid #b98a4d;box-shadow:0 4px 20px #0009}
+#scorerPage #scorerSelectedName{color:#f7e5c6}
+#scorerPage #scorerBreak{background:linear-gradient(#fff,#eee9e4)!important;border:2px solid #d2a65c;color:#1a1220}
+#scorerPage .scorerKeypad button{background:linear-gradient(#fff,#e8e5e4);border:1px solid #cda45e;color:#17121b}
+#scorerPage .scorerKeypad button.keyClear{background:linear-gradient(#f5d5e8,#e9a9cf);color:#511c38}
+#scorerPage #scorerAdd,.scorerWinner button{background:linear-gradient(#ffe39b,#bd903c);color:#1a1220;border:1px solid #ffdf8d}
+.scorerWinner{background:linear-gradient(110deg,#1f0d31,#100a1e);border:1px solid #b68b52}
+#scorerPage .scorerHistoryControls button,#scoreDisplayToggle{background:linear-gradient(135deg,#321347,#140b25);border:1px solid #d6ad6d;color:#ffe4a3}
+#scorerPage .scorerHelp{color:#e0d5dc}
+.card{background:#170f23;color:#f6eddc;border:1px solid #aa824c}
+#setup,#match{color:#f6eddc}
+#match .topbar{color:#f6eddc}
+#match .secondary,.secondary{background:#39204b;color:#f7ecdb}
+.primary{background:linear-gradient(#f8d789,#ba8b35);color:#1c1024}
+input,select{background:#24162e;color:#f6eddc;border-color:#a67e4d}
+.muted,.historyItem{color:#d0c3d0}
+.tag{background:#382248;color:#f8e5c6}
+#appVersionTag{background:#110a1dd9;border-color:#c89a54;color:#f5d78c}
+@media(max-height:690px){.clubBrand{height:65px}.clubBrand img{height:60px}}
+@media(max-width:420px){.clubBrand{height:74px}.clubBrand img{height:69px}}
+/* fullscreen structure and all sizing rules are retained */
+body.snookerFullscreenScore #scorerPage.displayOnly{background:#090613!important}
 </style>
 </head>
 <body>
-<div id="appVersionTag" aria-label="App-Version 7.3">v7.3</div>
+<div id="appVersionTag" aria-label="App-Version 7.4">v7.4</div>
 <div class="app">
   <h1 class="clubBrand" aria-label="Flensburger Snooker Club – Snooker Money Match"><img src="flensburger-snooker-club.png" alt="Flensburger Snooker Club" width="430" height="125"><span class="visuallyHidden">Snooker Money Match</span></h1><div id="offlineStatus" class="hidden" aria-live="polite"></div>
 
