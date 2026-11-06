@@ -56,7 +56,7 @@
     return rows.sort((a, b) => b.points - a.points || b.diff - a.diff || a.id - b.id);
   }
 
-  function createRound() {
+  function pairRound(readyPlayers = null) {
     const rows = standings();
     if (tournament.rounds.length === 0) {
       for (let i = rows.length - 1; i > 0; i--) {
@@ -67,7 +67,9 @@
     let bye = null;
     if (rows.length % 2) {
       const fewestByes = Math.min(...rows.map(row => row.byes));
-      const index = rows.findLastIndex(row => row.byes === fewestByes);
+      const index = rows.findLastIndex(row => row.byes === fewestByes
+        && (readyPlayers?.size !== 2 || !readyPlayers.has(row.id)));
+      if (index === -1) return null;
       bye = rows.splice(index, 1)[0].id;
     }
 
@@ -80,9 +82,11 @@
     }
     // Find the best complete pairing, comparing repeat count, point gaps,
     // and the frequency of any unavoidable rematches in that order.
-    const memo = new Map([[0, {cost: [0, 0, 0], pairs: []}]]);
-    function bestPairing(mask) {
-      if (memo.has(mask)) return memo.get(mask);
+    const memo = new Map();
+    function bestPairing(mask, needsReadyMatch) {
+      if (!mask) return needsReadyMatch ? null : {cost: [0, 0, 0], pairs: []};
+      const memoKey = mask * 2 + Number(needsReadyMatch);
+      if (memo.has(memoKey)) return memo.get(memoKey);
       const first = rows.findIndex((_, index) => mask & (1 << index));
       const remaining = mask ^ (1 << first);
       const a = rows[first];
@@ -91,7 +95,9 @@
         if (!(remaining & (1 << second))) continue;
         const b = rows[second];
         const previous = meetings[a.id][b.id];
-        const rest = bestPairing(remaining ^ (1 << second));
+        const ready = readyPlayers?.has(a.id) && readyPlayers.has(b.id);
+        const rest = bestPairing(remaining ^ (1 << second), needsReadyMatch && !ready);
+        if (!rest) continue;
         const cost = [
           rest.cost[0] + Number(previous > 0),
           rest.cost[1] + Math.abs(a.points - b.points),
@@ -102,14 +108,16 @@
           best = {cost, pairs: [[a.id, b.id], ...rest.pairs]};
         }
       }
-      memo.set(mask, best);
+      memo.set(memoKey, best);
       return best;
     }
 
-    const matches = bestPairing((1 << rows.length) - 1).pairs.map(players => ({
+    const pairing = bestPairing((1 << rows.length) - 1, readyPlayers !== null);
+    if (!pairing) return null;
+    const matches = pairing.pairs.map(players => ({
       players, table: null, result: null
     }));
-    tournament.rounds.push({matches, bye});
+    return {matches, bye};
   }
 
   function saveTournament() {
@@ -185,24 +193,26 @@
       };
       drafting = false;
       openMatch = null;
-      createRound();
+      tournament.rounds.push(pairRound());
       saveTournament();
     };
   }
 
-  function renderMatch(match, index, freeTable) {
+  function renderMatch(match, index, freeTable, blocked) {
     const names = match.players.map(id => esc(tournament.players[id]));
     let status = 'Wartet';
     if (match.result) status = 'Fertig';
     else if (tournament.ended) status = 'Offen bei Turnierende';
     else if (match.table) status = `Am Tisch ${match.table}`;
+    else if (blocked) status = 'Wartet auf ein früheres Match';
     const editing = !tournament.ended && openMatch === index;
     return `<article class="tournamentMatch">
       <h4>${names.join(' – ')}</h4>
       <p class="tournamentStatus">${status}${match.result ? ` · ${match.result.frames.join(':')}` : ''}</p>
+      ${renderMatchTime(match, index)}
       ${!tournament.ended && openMatch === null ? `<div class="tournamentActions">
-        ${!match.result && !match.table && freeTable ? `<button type="button" class="secondary" data-start="${index}">An Tisch ${freeTable} starten</button>` : ''}
-        <button type="button" class="secondary" data-edit="${index}">${match.result ? 'Ergebnis korrigieren' : 'Ergebnis eintragen'}</button>
+        ${!match.result && !match.table && !blocked && freeTable ? `<button type="button" class="secondary" data-start="${index}">An Tisch ${freeTable} starten</button>` : ''}
+        ${!blocked || match.result ? `<button type="button" class="secondary" data-edit="${index}">${match.result ? 'Ergebnis korrigieren' : 'Ergebnis eintragen'}</button>` : ''}
       </div>` : ''}
       ${editing ? `<form data-result="${index}">
         <div class="tournamentFields">${names.map((name, i) => `<div>
@@ -236,12 +246,91 @@
       </details></div>`;
   }
 
-  function updateClock() {
-    const clock = $('tournamentClock');
-    if (!clock || !tournament) return;
-    const seconds = Math.max(0, Math.floor(((tournament.ended || Date.now()) - tournament.started) / 1000));
-    clock.textContent = [Math.floor(seconds / 3600), Math.floor(seconds / 60) % 60, seconds % 60]
-      .map(number => String(number).padStart(2, '0')).join(':');
+  function renderMatchTime(match, index) {
+    if (match.startedAt == null) {
+      return match.result || match.table ? '<p class="small">Spielzeit nicht erfasst</p>' : '';
+    }
+    return `<p class="small">Spielzeit <time data-match-time="${index}"></time></p>`;
+  }
+
+  function updateClocks() {
+    const now = Date.now();
+    for (const clock of panel.querySelectorAll('[data-match-time]')) {
+      const [roundIndex, matchIndex] = clock.dataset.matchTime.split(':').map(Number);
+      const match = tournament.rounds[roundIndex].matches[matchIndex];
+      const seconds = Math.max(0, Math.floor(((match.finishedAt ?? tournament.ended ?? now) - match.startedAt) / 1000));
+      clock.textContent = [Math.floor(seconds / 3600), Math.floor(seconds / 60) % 60, seconds % 60]
+        .map(number => String(number).padStart(2, '0')).join(':');
+    }
+  }
+
+  function validBackup(data) {
+    const integer = (value, min, max) => Number.isInteger(value) && value >= min && value <= max;
+    const timestamp = value => value == null || (Number.isFinite(value) && value >= 0);
+    if (!data || !Array.isArray(data.players) || !integer(data.players.length, 2, 12)
+      || !data.players.every(name => typeof name === 'string' && name.trim())
+      || !integer(data.tables, 1, 6) || !integer(data.target, 1, 50)
+      || !Array.isArray(data.rounds) || !data.rounds.length
+      || !(data.limit === null || integer(data.limit, data.rounds.length, 999))
+      || !timestamp(data.ended)) return false;
+    const validPlayer = id => integer(id, 0, data.players.length - 1);
+    return data.rounds.every(round => {
+      if (!round || !Array.isArray(round.matches) || round.matches.length !== Math.floor(data.players.length / 2)
+        || !(data.players.length % 2 ? validPlayer(round.bye) : round.bye === null)) return false;
+      const players = round.bye === null ? [] : [round.bye];
+      for (const match of round.matches) {
+        if (!match || !Array.isArray(match.players) || match.players.length !== 2
+          || !match.players.every(validPlayer) || !(match.table === null || integer(match.table, 1, data.tables))
+          || !timestamp(match.startedAt) || !timestamp(match.finishedAt)) return false;
+        players.push(...match.players);
+        if (match.result === null) continue;
+        const result = match.result;
+        if (!result || !Array.isArray(result.frames) || result.frames.length !== 2
+          || !result.frames.every(value => integer(value, 0, data.target))
+          || Math.max(...result.frames) !== data.target || result.frames[0] === result.frames[1]
+          || !Array.isArray(result.breaks) || result.breaks.length !== 2
+          || !result.breaks.every(list => Array.isArray(list) && list.every(value => integer(value, 20, 155)))) return false;
+      }
+      return new Set(players).size === data.players.length;
+    });
+  }
+
+  function renderBackupControls() {
+    panel.insertAdjacentHTML('beforeend', `<div class="card">
+      <h3>Turnier sichern</h3>
+      <div class="tournamentActions">
+        ${tournament ? '<button type="button" class="secondary" id="saveTournamentFile">Turnier speichern</button>' : ''}
+        <button type="button" class="secondary" id="restoreTournamentFile">Turnier wiederherstellen</button>
+      </div>
+      <input id="tournamentFileInput" type="file" accept=".json,application/json" class="hidden">
+      <p class="tournamentStatus" id="tournamentBackupStatus" role="status"></p>
+    </div>`);
+    if (tournament) $('saveTournamentFile').onclick = () => shareJsonFile(
+      {app: 'Snooker Swiss Tournament', version: 1, tournament},
+      `${defaultFilename()}_Turnier.json`, 'Snooker-Turnier speichern'
+    );
+    const input = $('tournamentFileInput');
+    $('restoreTournamentFile').onclick = () => input.click();
+    input.onchange = async () => {
+      const file = input.files[0];
+      input.value = '';
+      if (!file) return;
+      try {
+        const backup = JSON.parse(await file.text());
+        if (backup?.app !== 'Snooker Swiss Tournament' || backup.version !== 1 || !validBackup(backup.tournament)) {
+          throw new Error('Ungültige Turnierdatei');
+        }
+        if (tournament && !confirm('Den aktuellen Turnierstand durch die Sicherung ersetzen?')) return;
+        localStorage.setItem(key, JSON.stringify(backup.tournament));
+        tournament = backup.tournament;
+        drafting = false;
+        openMatch = null;
+        renderTournament();
+        $('tournamentBackupStatus').textContent = 'Turnier wiederhergestellt.';
+      } catch (error) {
+        $('tournamentBackupStatus').textContent = 'Turnier konnte nicht wiederhergestellt werden. Bitte eine gültige Turnier-Sicherung auswählen.';
+      }
+    };
   }
 
   function renderTournament() {
@@ -256,26 +345,45 @@
       const home = $('tournamentHome');
       renderSetup();
       panel.prepend(home);
+      renderBackupControls();
       return;
     }
 
-    const round = tournament.rounds.at(-1);
     const number = tournament.rounds.length;
-    const complete = round.matches.every(match => match.result);
+    const unfinished = tournament.rounds.flatMap(round => round.matches.filter(match => !match.result));
+    const complete = unfinished.length === 0;
     const freeTable = Array.from({length:tournament.tables}, (_, i) => i + 1)
-      .find(table => !round.matches.some(match => !match.result && match.table === table));
+      .find(table => !unfinished.some(match => match.table === table));
+    const pendingPlayers = new Set(unfinished.flatMap(match => match.players));
+    const readyPlayers = new Set(tournament.players.map((_, id) => id).filter(id => !pendingPlayers.has(id)));
+    const nextRound = !tournament.ended && openMatch === null && (tournament.limit === null || number < tournament.limit)
+      && (complete || (freeTable && readyPlayers.size >= 2))
+      ? pairRound(complete ? null : readyPlayers) : null;
     const mode = tournament.limit === null ? 'Endlos' : `${tournament.limit} Runden`;
+    const openRounds = tournament.rounds.flatMap((round, i) => round.matches.some(match => !match.result) ? [i + 1] : []);
+    const previousPlayers = new Set();
+    const roundCards = tournament.rounds.map((round, roundIndex) => {
+      const roundComplete = round.matches.every(match => match.result);
+      const title = `Runde ${roundIndex + 1}${tournament.limit === null ? '' : ` / ${tournament.limit}`}`;
+      const content = `${round.bye === null ? '' : `<p class="tournamentStatus">Freilos · ${esc(tournament.players[round.bye])}</p>`}
+        ${round.matches.map((match, i) => renderMatch(match, `${roundIndex}:${i}`, freeTable,
+          !match.table && match.players.some(id => previousPlayers.has(id)))).join('')}`;
+      for (const match of round.matches) {
+        if (!match.result) match.players.forEach(id => previousPlayers.add(id));
+      }
+      return roundComplete && roundIndex < number - 1
+        ? `<details class="card" ${openMatch?.startsWith(`${roundIndex}:`) ? 'open' : ''}><summary>${title} · abgeschlossen</summary>${content}</details>`
+        : `<div class="card"><h3>${title}</h3>${content}</div>`;
+    });
     panel.insertAdjacentHTML('beforeend', `
       <div class="card">
         <h2>Schweizer Turnier</h2>
         <p>${mode} · First to ${tournament.target} · ${tournament.tables} Tisch(e)</p>
-        <p>${tournament.ended ? 'Beendet nach' : 'Spielzeit'} <time id="tournamentClock"></time></p>
-        <h3>Runde ${number}${tournament.limit === null ? '' : ` / ${tournament.limit}`}</h3>
-        ${round.bye === null ? '' : `<p class="tournamentStatus">Freilos · ${esc(tournament.players[round.bye])}</p>`}
-        ${round.matches.map((match, index) => renderMatch(match, index, freeTable)).join('')}
+        <p class="tournamentStatus">${tournament.ended ? 'Turnier beendet' : openRounds.length
+          ? `${openRounds.length === 1 ? 'Laufende Runde' : 'Laufende Runden'} · ${openRounds.join(', ')}`
+          : `Runde ${number} abgeschlossen`}</p>
         <div class="tournamentActions">
-          ${!tournament.ended && openMatch === null && complete && (tournament.limit === null || number < tournament.limit)
-            ? '<button type="button" class="primary" id="nextTournamentRound">Nächste Runde auslosen</button>' : ''}
+          ${nextRound ? '<button type="button" class="primary" id="nextTournamentRound">Nächste Runde starten</button>' : ''}
           ${!tournament.ended && openMatch === null && tournament.limit === null
             ? '<button type="button" class="secondary" id="endTournament">Turnier beenden</button>' : ''}
           ${!tournament.ended && openMatch === null && complete && number === tournament.limit
@@ -283,24 +391,26 @@
           ${tournament.ended ? '<button type="button" class="primary" id="newTournament">Neues Turnier</button>' : ''}
         </div>
       </div>
-      ${renderStandings()}
-      ${number > 1 ? `<div class="card"><h3>Frühere Runden</h3>
-        ${tournament.rounds.slice(0, -1).map((past, i) => `<details><summary>Runde ${i + 1}</summary>
-          ${past.bye === null ? '' : `<p>Freilos · ${esc(tournament.players[past.bye])}</p>`}
-          ${past.matches.map(match => `<p>${match.players.map(id => esc(tournament.players[id])).join(' – ')} · ${match.result.frames.join(':')}</p>`).join('')}
-        </details>`).join('')}</div>` : ''}
     `);
+    if (openMatch === null) renderBackupControls();
+    panel.insertAdjacentHTML('beforeend', roundCards.reverse().join('') + renderStandings());
+    updateClocks();
 
-    updateClock();
+    function matchAt(index) {
+      const [roundIndex, matchIndex] = index.split(':').map(Number);
+      return tournament.rounds[roundIndex].matches[matchIndex];
+    }
     panel.querySelectorAll('[data-start]').forEach(button => {
       button.onclick = () => {
-        round.matches[Number(button.dataset.start)].table = freeTable;
+        const match = matchAt(button.dataset.start);
+        match.table = freeTable;
+        match.startedAt = Date.now();
         saveTournament();
       };
     });
     panel.querySelectorAll('[data-edit]').forEach(button => {
       button.onclick = () => {
-        openMatch = Number(button.dataset.edit);
+        openMatch = button.dataset.edit;
         renderTournament();
         panel.querySelector('[data-result] input').focus();
       };
@@ -325,18 +435,20 @@
           error.textContent = 'Bitte Breaks als ganze Zahlen von 20 bis 155 eingeben.';
           return;
         }
-        round.matches[openMatch].result = {frames, breaks};
+        const match = matchAt(openMatch);
+        if (!match.result && match.startedAt != null) match.finishedAt = Date.now();
+        match.result = {frames, breaks};
         openMatch = null;
         saveTournament();
       };
     }
     if ($('nextTournamentRound')) $('nextTournamentRound').onclick = () => {
       openMatch = null;
-      createRound();
+      tournament.rounds.push(nextRound);
       saveTournament();
     };
     if ($('endTournament')) $('endTournament').onclick = () => {
-      if (!complete && !confirm('Diese Runde hat offene Matches. Turnier mit den bisher eingetragenen Ergebnissen beenden?')) return;
+      if (!complete && !confirm('Es gibt noch offene Matches. Turnier mit den bisher eingetragenen Ergebnissen beenden?')) return;
       tournament.ended = Date.now();
       openMatch = null;
       saveTournament();
@@ -348,5 +460,5 @@
   }
 
   showMode('home');
-  setInterval(updateClock, 1000);
+  setInterval(updateClocks, 1000);
 })();

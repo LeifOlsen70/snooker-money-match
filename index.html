@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#0f5f37">
-  <meta name="application-version" content="7.6">
+  <meta name="application-version" content="7.7">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="Snooker Match">
@@ -336,10 +336,10 @@ body.snookerFullscreenScore #scorerPage.displayOnly{background:#090613!important
   text-shadow:0 1px 2px #0009;
 }
 </style>
-  <link rel="stylesheet" href="tournament.css">
+  <link rel="stylesheet" href="tournament.css?v=7.7">
 </head>
 <body>
-<div id="appVersionTag" aria-label="App-Version 7.6">v7.6</div>
+<div id="appVersionTag" aria-label="App-Version 7.7">v7.7</div>
 <div class="app">
   <h1 class="clubBrand" aria-label="Flensburger Snooker Club – Snooker Money Match"><img src="flensburger-snooker-club.png" alt="Flensburger Snooker Club" width="430" height="125"><span class="visuallyHidden">Snooker Money Match</span></h1><div id="offlineStatus" class="hidden" aria-live="polite"></div>
 
@@ -372,6 +372,7 @@ body.snookerFullscreenScore #scorerPage.displayOnly{background:#090613!important
     <div id="names"></div>
 
     <button class="primary" id="startBtn">MATCH STARTEN</button>
+    <button type="button" class="secondary" id="loadFromSetup">Gespeichertes Match laden</button>
   </section>
 
   <nav id="viewTabs" class="viewTabs hidden" aria-label="Ansicht wechseln">
@@ -624,6 +625,7 @@ function newOrLoad(){
 function closeMatchDialog(){ $('matchActionDialog').classList.add('hidden'); }
 $('dialogCancel').addEventListener('click',closeMatchDialog);
 $('dialogNew').addEventListener('click',()=>{closeMatchDialog(); if(confirm('Neues Match beginnen? Der aktuelle Spielstand wird nur behalten, wenn er zuvor gespeichert wurde.')) resetToSetup();});
+$('loadFromSetup').onclick = () => $('loadFileInput').click();
 $('dialogLoad').addEventListener('click',()=>{closeMatchDialog();$('loadFileInput').click();});
 
 function startNextMatchSameSettings(){
@@ -640,17 +642,19 @@ async function saveGameToFile(){
   filename = (filename.trim() || defaultFilename()).replace(/[\\/:*?"<>|]/g,'-');
   if(!filename.toLowerCase().endsWith('.json')) filename += '.json';
 
-  const data = JSON.stringify({
+  return shareJsonFile({
     app:'Snooker Money Match',
     version:4,
     savedAt:new Date().toISOString(),
     ...state
-  }, null, 2);
+  }, filename, 'Snooker Match speichern');
+}
 
-  const file = new File([data], filename, {type:'application/json'});
+async function shareJsonFile(data, filename, title){
+  const file = new File([JSON.stringify(data, null, 2)], filename, {type:'application/json'});
   if(navigator.canShare && navigator.canShare({files:[file]})){
     try{
-      await navigator.share({files:[file], title:'Snooker Match speichern'});
+      await navigator.share({files:[file], title});
       return;
     }catch(e){
       if(e.name === 'AbortError') return;
@@ -678,7 +682,7 @@ function loadGameFromFile(event){
   reader.onload = ()=>{
     try{
       const obj = JSON.parse(reader.result);
-      if(!obj || !Array.isArray(obj.players) || !Number.isFinite(Number(obj.target))){
+      if(!obj || !Array.isArray(obj.players) || obj.players.length < 2 || obj.players.length > 8 || obj.players.some(player => !player || typeof player.name !== 'string') || !Number.isFinite(Number(obj.target))){
         throw new Error('Ungültige Datei');
       }
       state = {
@@ -1156,6 +1160,6 @@ e('fbLoad').onclick=async()=>{if(!permitted()){msg('Bitte zuerst anmelden.');ret
  btn.addEventListener('click',()=>setDisplay(!page.classList.contains('displayOnly')));
 })();
 </script>
-<script src="tournament.js"></script>
+<script src="tournament.js?v=7.7"></script>
 </body>
 </html>
