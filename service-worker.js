@@ -1,9 +1,9 @@
-const CACHE_NAME = 'v7-7-swiss-tournament';
+const CACHE_NAME = 'v7-9-swiss-tournament';
 const APP_SHELL = [
   './',
   './index.html',
-  './tournament.js?v=7.7',
-  './tournament.css?v=7.7',
+  './tournament.js?v=7.9',
+  './tournament.css?v=7.9',
   './manifest.webmanifest',
   './icon-192.png',
   './icon-512.png',
@@ -12,7 +12,9 @@ const APP_SHELL = [
 
 self.addEventListener('install', event => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(APP_SHELL))
+    caches.open(CACHE_NAME).then(cache => cache.addAll(
+      APP_SHELL.map(url => new Request(url, {cache: 'reload'}))
+    ))
   );
   self.skipWaiting();
 });
@@ -35,10 +37,12 @@ self.addEventListener('fetch', event => {
   // otherwise fall back to the locally cached app.
   if (request.mode === 'navigate') {
     event.respondWith(
-      fetch(request)
+      fetch(request, {cache: 'no-cache'})
         .then(response => {
-          const copy = response.clone();
-          caches.open(CACHE_NAME).then(cache => cache.put('./index.html', copy));
+          if (response.ok) {
+            const copy = response.clone();
+            caches.open(CACHE_NAME).then(cache => cache.put('./index.html', copy));
+          }
           return response;
         })
         .catch(async () => {

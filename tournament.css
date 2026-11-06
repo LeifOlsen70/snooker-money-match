@@ -31,3 +31,42 @@
 #tournamentMode summary {cursor:pointer}
 #tournamentMode .tournamentStatus {color:#ffdd91;margin:5px 0}
 #tournamentMode form > button {margin-top:10px}
+
+#tournamentMode .tournamentViews {margin-bottom:10px}
+
+.tournamentStandingsHeader {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  margin-bottom:10px;
+}
+.tournamentStandingsHeader h3 {margin:0;overflow-wrap:anywhere}
+#tournamentFullscreenToggle {flex:none}
+body.snookerFullscreenTournament {overflow:hidden}
+body.snookerFullscreenTournament #tournamentMode {
+  position:fixed;
+  inset:0;
+  z-index:100;
+  overflow:auto;
+  overscroll-behavior:contain;
+  touch-action:pan-y pinch-zoom;
+  padding:env(safe-area-inset-top) max(10px,env(safe-area-inset-right))
+    env(safe-area-inset-bottom) max(10px,env(safe-area-inset-left));
+  background:#090613;
+}
+body.snookerFullscreenTournament #tournamentMode > :not(.tournamentStandings) {display:none}
+body.snookerFullscreenTournament .tournamentStandings {
+  min-height:100%;
+  margin:0;
+  font-size:clamp(16px,2.7vw,30px);
+}
+body.snookerFullscreenTournament .tournamentStandingsHeader {
+  position:sticky;
+  top:0;
+  padding:8px;
+  background:#211534;
+  border-radius:10px;
+}
+body.snookerFullscreenTournament .tournamentStandings .small {font-size:.85em}
+body.snookerFullscreenTournament #tournamentFullscreenToggle {font-size:clamp(13px,2vw,18px)}

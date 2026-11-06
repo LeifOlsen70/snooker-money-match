@@ -6,6 +6,43 @@
   let tournament = null;
   let openMatch = null;
   let drafting = false;
+  let view = 'rounds';
+
+  function setTournamentFullscreen(enabled) {
+    document.body.classList.toggle('snookerFullscreenTournament', enabled);
+    const button = $('tournamentFullscreenToggle');
+    if (button) {
+      button.textContent = enabled ? 'Vollbild aus' : 'Vollbild an';
+      button.setAttribute('aria-pressed', String(enabled));
+    }
+  }
+
+  function showTournamentView(nextView) {
+    if (view === nextView || !tournament || drafting) return;
+    if (openMatch !== null && !confirm('Ergebniseingabe ohne Speichern verlassen?')) return;
+    openMatch = null;
+    view = nextView;
+    renderTournament();
+    window.scrollTo(0, 0);
+  }
+
+  let touchStart = null;
+  panel.addEventListener('touchstart', event => {
+    touchStart = event.touches.length === 1 && !event.target.closest('input, select, textarea')
+      ? event.touches[0] : null;
+  }, {passive: true});
+  panel.addEventListener('touchcancel', () => { touchStart = null; }, {passive: true});
+  panel.addEventListener('touchend', event => {
+    const start = touchStart;
+    touchStart = null;
+    if (!start || event.touches.length || !event.changedTouches.length) return;
+    const end = event.changedTouches[0];
+    const dx = end.clientX - start.clientX;
+    const dy = end.clientY - start.clientY;
+    if (Math.abs(dx) > 75 && Math.abs(dx) > Math.abs(dy) * 1.6) {
+      showTournamentView(dx < 0 ? 'standings' : 'rounds');
+    }
+  }, {passive: true});
 
   try {
     const saved = JSON.parse(localStorage.getItem(key));
@@ -15,6 +52,7 @@
   }
 
   function showMode(mode) {
+    setTournamentFullscreen(false);
     $('modeStart').classList.toggle('hidden', mode !== 'home');
     $('singleMode').classList.toggle('hidden', mode !== 'single');
     panel.classList.toggle('hidden', mode !== 'tournament');
@@ -26,12 +64,15 @@
 
   $('openSingle').onclick = () => showMode('single');
   $('singleHome').onclick = () => showMode('home');
-  $('openTournament').onclick = () => showMode('tournament');
+  $('openTournament').onclick = () => {
+    view = 'rounds';
+    showMode('tournament');
+  };
 
   // Only confirmed results and assigned byes count toward the standings.
   function standings() {
     const rows = tournament.players.map((name, id) => ({
-      name, id, wins: 0, byes: 0, diff: 0, money: 0, breaks: []
+      name, id, wins: 0, byes: 0, diff: 0, breaks: []
     }));
     for (const round of tournament.rounds) {
       if (round.bye !== null) rows[round.bye].byes++;
@@ -45,10 +86,7 @@
         b.diff += second - first;
         match.result.breaks.forEach((breaks, i) => {
           const player = i === 0 ? a : b;
-          for (const points of breaks) {
-            player.breaks.push(points);
-            player.money += breakValue(points);
-          }
+          player.breaks.push(...breaks);
         });
       }
     }
@@ -210,6 +248,9 @@
       <h4>${names.join(' – ')}</h4>
       <p class="tournamentStatus">${status}${match.result ? ` · ${match.result.frames.join(':')}` : ''}</p>
       ${renderMatchTime(match, index)}
+      ${match.result && !editing ? match.result.breaks.map((breaks, i) =>
+        breaks.length ? `<p class="small"><strong>${names[i]}</strong> · Breaks: ${breaks.join(', ')}</p>` : ''
+      ).join('') : ''}
       ${!tournament.ended && openMatch === null ? `<div class="tournamentActions">
         ${!match.result && !match.table && !blocked && freeTable ? `<button type="button" class="secondary" data-start="${index}">An Tisch ${freeTable} starten</button>` : ''}
         ${!blocked || match.result ? `<button type="button" class="secondary" data-edit="${index}">${match.result ? 'Ergebnis korrigieren' : 'Ergebnis eintragen'}</button>` : ''}
@@ -237,12 +278,18 @@
       return `<tr><td>${place}</td><td>${esc(row.name)}</td><td>${row.points}</td>
         <td>${row.wins}</td><td>${row.diff > 0 ? '+' : ''}${row.diff}</td></tr>`;
     });
-    return `<div class="card"><h3>${tournament.ended ? 'Abschlusstabelle' : 'Zwischenstand'}</h3>
+    const playedBreaks = rows.filter(row => row.breaks.length);
+    return `<div class="card tournamentStandings">
+      <div class="tournamentStandingsHeader">
+        <h3>${tournament.ended ? 'Abschlusstabelle' : 'Zwischenstand'}</h3>
+        <button type="button" class="secondary" id="tournamentFullscreenToggle" aria-pressed="false">Vollbild an</button>
+      </div>
       <table class="tournamentTable"><thead><tr><th>Pl.</th><th>Spieler</th><th>Pkt.</th><th>Siege</th><th>Frame-Δ</th></tr></thead>
       <tbody>${tableRows.join('')}</tbody></table>
       <p class="small">1 Punkt je Matchsieg oder Freilos. Bei Punktgleichheit zählt die Frame-Differenz.</p>
-      <details><summary>Break-Abrechnung</summary>
-        ${rows.map(row => `<p class="small"><strong>${esc(row.name)}</strong> · ${euro(row.money)} · ${row.breaks.join(', ') || 'keine Breaks ab 20'}</p>`).join('')}
+      <details open><summary>Gespielte Breaks ab 20</summary>
+        ${playedBreaks.map(row => `<p class="small"><strong>${esc(row.name)}</strong> · ${row.breaks.join(', ')}</p>`).join('')
+          || '<p class="small">Bisher keine Breaks eingetragen.</p>'}
       </details></div>`;
   }
 
@@ -305,10 +352,18 @@
       <input id="tournamentFileInput" type="file" accept=".json,application/json" class="hidden">
       <p class="tournamentStatus" id="tournamentBackupStatus" role="status"></p>
     </div>`);
-    if (tournament) $('saveTournamentFile').onclick = () => shareJsonFile(
-      {app: 'Snooker Swiss Tournament', version: 1, tournament},
-      `${defaultFilename()}_Turnier.json`, 'Snooker-Turnier speichern'
-    );
+    if (tournament) $('saveTournamentFile').onclick = async () => {
+      const status = $('tournamentBackupStatus');
+      status.textContent = '';
+      try {
+        await shareJsonFile(
+          {app: 'Snooker Swiss Tournament', version: 1, tournament},
+          `${defaultFilename()}_Turnier.json`, 'Snooker-Turnier speichern'
+        );
+      } catch (error) {
+        status.textContent = 'Turnierdatei konnte nicht gespeichert werden.';
+      }
+    };
     const input = $('tournamentFileInput');
     $('restoreTournamentFile').onclick = () => input.click();
     input.onchange = async () => {
@@ -325,6 +380,7 @@
         tournament = backup.tournament;
         drafting = false;
         openMatch = null;
+        view = 'rounds';
         renderTournament();
         $('tournamentBackupStatus').textContent = 'Turnier wiederhergestellt.';
       } catch (error) {
@@ -334,6 +390,7 @@
   }
 
   function renderTournament() {
+    setTournamentFullscreen(false);
     panel.innerHTML = '<button type="button" id="tournamentHome" class="secondary tournamentTop">← Startseite</button>';
     $('tournamentHome').onclick = () => {
       if (openMatch !== null && !confirm('Ergebniseingabe ohne Speichern verlassen?')) return;
@@ -346,6 +403,23 @@
       renderSetup();
       panel.prepend(home);
       renderBackupControls();
+      return;
+    }
+
+    panel.insertAdjacentHTML('beforeend', `
+      <nav class="tournamentActions tournamentViews" aria-label="Turnieransicht">
+        <button type="button" id="tournamentRoundsView" class="${view === 'rounds' ? 'primary' : 'secondary'}"
+          aria-pressed="${view === 'rounds'}">Runden</button>
+        <button type="button" id="tournamentStandingsView" class="${view === 'standings' ? 'primary' : 'secondary'}"
+          aria-pressed="${view === 'standings'}">${tournament.ended ? 'Abschlusstabelle' : 'Zwischenstand'}</button>
+      </nav>`);
+    $('tournamentRoundsView').onclick = () => showTournamentView('rounds');
+    $('tournamentStandingsView').onclick = () => showTournamentView('standings');
+    if (view === 'standings') {
+      panel.insertAdjacentHTML('beforeend', renderStandings());
+      $('tournamentFullscreenToggle').onclick = () => {
+        setTournamentFullscreen(!document.body.classList.contains('snookerFullscreenTournament'));
+      };
       return;
     }
 
@@ -373,7 +447,7 @@
       }
       return roundComplete && roundIndex < number - 1
         ? `<details class="card" ${openMatch?.startsWith(`${roundIndex}:`) ? 'open' : ''}><summary>${title} · abgeschlossen</summary>${content}</details>`
-        : `<div class="card"><h3>${title}</h3>${content}</div>`;
+        : `<div class="card"><h3>${title}${roundComplete ? ' · abgeschlossen' : tournament.ended ? '' : ' · läuft'}</h3>${content}</div>`;
     });
     panel.insertAdjacentHTML('beforeend', `
       <div class="card">
@@ -383,7 +457,7 @@
           ? `${openRounds.length === 1 ? 'Laufende Runde' : 'Laufende Runden'} · ${openRounds.join(', ')}`
           : `Runde ${number} abgeschlossen`}</p>
         <div class="tournamentActions">
-          ${nextRound ? '<button type="button" class="primary" id="nextTournamentRound">Nächste Runde starten</button>' : ''}
+          ${nextRound ? `<button type="button" class="primary" id="nextTournamentRound">${complete ? 'Nächste Runde starten' : 'Neue Runde starten'}</button>` : ''}
           ${!tournament.ended && openMatch === null && tournament.limit === null
             ? '<button type="button" class="secondary" id="endTournament">Turnier beenden</button>' : ''}
           ${!tournament.ended && openMatch === null && complete && number === tournament.limit
@@ -392,8 +466,8 @@
         </div>
       </div>
     `);
-    if (openMatch === null) renderBackupControls();
-    panel.insertAdjacentHTML('beforeend', roundCards.reverse().join('') + renderStandings());
+    renderBackupControls();
+    panel.insertAdjacentHTML('beforeend', roundCards.reverse().join(''));
     updateClocks();
 
     function matchAt(index) {
