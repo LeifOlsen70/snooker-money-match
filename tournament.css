@@ -1,0 +1,33 @@
+.modeChoices,.tournamentActions,.tournamentFields {
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(min(100%,145px),1fr));
+  gap:10px;
+}
+#singleHome {
+  position:fixed;
+  top:calc(env(safe-area-inset-top) + 5px);
+  left:5px;
+  z-index:20;
+  width:auto;
+  min-height:28px;
+  padding:3px 8px;
+  font-size:12px;
+}
+.snookerFullscreenScore #singleHome {display:none}
+#tournamentMode button {margin:0}
+#tournamentMode label {margin-top:8px}
+#tournamentMode select {width:100%;min-height:42px}
+#tournamentMode .tournamentTop {margin-bottom:10px}
+#tournamentMode .card h2,#tournamentMode .card h3 {margin-top:0}
+#tournamentMode .tournamentMatch {margin:12px 0;padding:12px;border:1px solid #775b87;border-radius:10px}
+#tournamentMode .tournamentMatch h4 {margin:0 0 5px;overflow-wrap:anywhere}
+#tournamentMode .tournamentMatch form {margin-top:10px}
+#tournamentMode .tournamentTable {width:100%;border-collapse:collapse}
+#tournamentMode .tournamentTable th,#tournamentMode .tournamentTable td {
+  text-align:right;padding:7px 4px;border-bottom:1px solid #775b87;overflow-wrap:anywhere
+}
+#tournamentMode .tournamentTable th:nth-child(2),#tournamentMode .tournamentTable td:nth-child(2) {text-align:left}
+#tournamentMode details {margin-top:9px}
+#tournamentMode summary {cursor:pointer}
+#tournamentMode .tournamentStatus {color:#ffdd91;margin:5px 0}
+#tournamentMode form > button {margin-top:10px}
