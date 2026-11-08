@@ -367,7 +367,7 @@
 
   function renderMatch(match, index, freeTables, blocked) {
     const names = match.players.map(id => esc(tournament.players[id]));
-    let status = 'Wartet';
+    let status = 'Match wartet';
     if (match.result) status = 'Fertig';
     else if (tournament.ended) status = 'Offen bei Turnierende';
     else if (match.table) status = `Am Tisch ${match.table}`;
@@ -382,7 +382,8 @@
       ).join('') : ''}
       ${!tournament.ended && openMatch === null ? `<div class="tournamentActions">
         ${!match.result && !match.table && !blocked ? freeTables.map(table => `<button type="button" class="secondary tournamentStart tournamentPulse" data-start="${index}" data-table="${table}">An Tisch ${table} starten</button>`).join('') : ''}
-        ${!blocked || match.result ? `<button type="button" class="secondary ${match.result ? 'tournamentCorrect' : 'tournamentResult'}" data-edit="${index}">${match.result ? 'Ergebnis korrigieren' : 'Ergebnis eintragen'}</button>` : ''}
+        ${!match.result && !match.table && (blocked || !freeTables.length) ? `<div class="tournamentWait tournamentPulse" role="status">Match wartet</div>` : ''}
+        ${match.table || match.result ? `<button type="button" class="secondary ${match.result ? 'tournamentCorrect' : 'tournamentResult'}" data-edit="${index}">${match.result ? 'Ergebnis korrigieren' : 'Ergebnis eintragen'}</button>` : ''}
       </div>` : ''}
       ${editing ? `<form data-result="${index}">
         <div class="tournamentFields">${names.map((name, i) => `<div>
@@ -625,6 +626,8 @@
     });
     panel.querySelectorAll('[data-edit]').forEach(button => {
       button.onclick = () => {
+        const match = matchAt(button.dataset.edit);
+        if (!match.table && !match.result) return;
         openMatch = button.dataset.edit;
         renderTournament();
         panel.querySelector('[data-result] input').focus();

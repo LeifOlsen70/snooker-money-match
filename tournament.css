@@ -111,3 +111,9 @@ body.snookerFullscreenTournament #tournamentFullscreenToggle {font-size:clamp(13
 @media (prefers-reduced-motion:reduce) {
   #tournamentMode .tournamentMatch.tournamentWaiting {animation:none;border-color:#8ce8b5}
 }
+
+#tournamentMode .tournamentWait {
+  background:#235b42;color:#fff;border:1px solid #65be90;
+  border-radius:13px;padding:13px 16px;min-height:48px;box-sizing:border-box;
+  font-weight:800;text-align:center;display:flex;align-items:center;justify-content:center;
+}
