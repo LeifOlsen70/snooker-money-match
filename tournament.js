@@ -505,7 +505,7 @@
       ${editing ? `<form data-result="${index}">
         <div class="tournamentFields">${names.map((name, i) => `<div>
           <label>Frames · ${name}<input name="frames" type="number" min="0" max="${tournament.target}" required value="${match.result?.frames[i] ?? ''}"></label>
-          <label>Breaks ab 20 · ${name}<input name="breaks" type="text" placeholder="z. B. 24, 38" value="${match.result?.breaks[i].join(', ') ?? ''}"></label>
+          <label>Breaks · ${name} (protokolliert ab 20)<input name="breaks" type="text" placeholder="z. B. 24, 38" value="${match.result?.breaks[i].join(', ') ?? ''}"></label>
         </div>`).join('')}</div>
         <p class="tournamentStatus" role="alert"></p>
         <div class="tournamentActions">
@@ -765,13 +765,13 @@
           error.textContent = `Genau ein Spieler muss ${tournament.target} Frames gewonnen haben.`;
           return;
         }
-        if (breaks.flat().some(points => !Number.isInteger(points) || points < 20 || points > 155)) {
-          error.textContent = 'Bitte Breaks als ganze Zahlen von 20 bis 155 eingeben.';
+        if (breaks.flat().some(points => !Number.isInteger(points) || points < 0 || points > 155)) {
+          error.textContent = 'Bitte Breaks als ganze Zahlen von 0 bis 155 eingeben.';
           return;
         }
         const match = matchAt(openMatch);
         if (!match.result && match.startedAt != null) match.finishedAt = Date.now();
-        match.result = {frames, breaks};
+        match.result = {frames, breaks: breaks.map(list => list.filter(points => points >= 20))};
         openMatch = null;
         saveTournament();
       };
