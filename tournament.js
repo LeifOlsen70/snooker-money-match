@@ -341,11 +341,10 @@
           </div>
           <section class="tournamentRoster" aria-label="Gespeicherte Spieler">
             <h3>Spieler auswählen</h3>
-            <p class="small">Namen antippen, um sie für dieses Turnier auszuwählen. Erneutes Tippen entfernt die Auswahl.</p>
+            <p class="small">Namen antippen, um sie für dieses Turnier auszuwählen. Erneutes Tippen entfernt die Auswahl. Zum Löschen eine Zeile nach links wischen oder auf ⋯ tippen.</p>
             <div id="savedTournamentPlayers" class="tournamentPlayerChoices"></div>
             <div class="tournamentRosterAdd"><label>Neuer Spieler<input id="newTournamentPlayerName" type="text" maxlength="60" placeholder="Name"></label><button type="button" class="secondary" id="addTournamentPlayer">Hinzufügen</button></div>
             <p id="tournamentPlayerMessage" class="small" role="status"></p>
-            <details><summary>Gespeicherte Spieler löschen</summary><div id="deleteTournamentPlayers"></div></details>
           </section>
           <div id="tournamentNames" class="tournamentFields"></div>
           <p class="tournamentStatus" id="tournamentSetupError" role="alert"></p>
@@ -357,12 +356,49 @@
     const form = $('tournamentSetup');
     const names = $('tournamentNames');
     const drafts = [];
+    let suppressPickUntil = 0;
     function renderPlayerList() {
       const inputs = Array.from(names.querySelectorAll('input'));
       const selected = new Set(inputs.map(input => input.value.trim().toLocaleLowerCase('de')));
-      $('savedTournamentPlayers').innerHTML = playerNames.map((name,i) => `<button type="button" class="${selected.has(name.toLocaleLowerCase('de')) ? 'primary' : 'secondary'}" data-pick-player="${i}" aria-pressed="${selected.has(name.toLocaleLowerCase('de'))}">${esc(name)}</button>`).join('') || '<p class="small">Noch keine Spieler gespeichert.</p>';
-      $('deleteTournamentPlayers').innerHTML = playerNames.map((name,i) => `<div class="tournamentRosterDelete"><span>${esc(name)}</span><button type="button" class="secondary" data-delete-player="${i}" aria-label="${esc(name)} aus Spielerliste löschen">Löschen</button></div>`).join('');
+      $('savedTournamentPlayers').innerHTML = playerNames.map((name,i) => {
+        const active = selected.has(name.toLocaleLowerCase('de'));
+        return `<div class="tournamentPlayerRow">
+          <button type="button" class="tournamentPlayerDelete" data-delete-player="${i}" hidden>Löschen</button>
+          <div class="tournamentPlayerFace">
+            <button type="button" class="tournamentPlayerPick ${active ? 'selected' : ''}" data-pick-player="${i}" aria-pressed="${active}"><span class="tournamentPlayerCheck" aria-hidden="true">${active ? '✓' : '○'}</span><span>${esc(name)}</span></button>
+            <button type="button" class="tournamentPlayerMore" aria-label="Aktionen für ${esc(name)}" aria-expanded="false">⋯</button>
+          </div>
+        </div>`;
+      }).join('') || '<p class="small">Noch keine Spieler gespeichert.</p>';
+      function reveal(row, open) {
+        if (open) $('savedTournamentPlayers').querySelectorAll('.tournamentPlayerRow').forEach(other => { if (other !== row) reveal(other,false); });
+        row.classList.toggle('deleteOpen',open);
+        row.querySelector('[data-delete-player]').hidden = !open;
+        row.querySelector('.tournamentPlayerMore').setAttribute('aria-expanded',String(open));
+      }
+      $('savedTournamentPlayers').querySelectorAll('.tournamentPlayerRow').forEach(row => {
+        let start = null;
+        row.querySelector('.tournamentPlayerMore').onclick = () => reveal(row,!row.classList.contains('deleteOpen'));
+        row.addEventListener('touchstart', event => {
+          start = event.touches.length === 1 ? {x:event.touches[0].clientX,y:event.touches[0].clientY} : null;
+        }, {passive:true});
+        row.addEventListener('touchcancel', () => { start = null; }, {passive:true});
+        row.addEventListener('touchend', event => {
+          const origin = start; start = null;
+          if (!origin || event.touches.length || !event.changedTouches.length) return;
+          const end = event.changedTouches[0], dx = end.clientX-origin.x, dy = end.clientY-origin.y;
+          if (Math.abs(dx) < 45 || Math.abs(dx) < Math.abs(dy)*1.5) return;
+          suppressPickUntil = Date.now()+450;
+          reveal(row,dx < 0);
+        }, {passive:true});
+        row.addEventListener('keydown', event => {
+          if (event.key === 'Escape') { reveal(row,false); row.querySelector('.tournamentPlayerMore').focus(); }
+        });
+      });
       $('savedTournamentPlayers').querySelectorAll('[data-pick-player]').forEach(button => button.onclick = () => {
+        if (Date.now() < suppressPickUntil) return;
+        const row = button.closest('.tournamentPlayerRow');
+        if (row.classList.contains('deleteOpen')) { reveal(row,false); return; }
         const name = playerNames[Number(button.dataset.pickPlayer)];
         const existing = inputs.find(input => input.value.trim().toLocaleLowerCase('de') === name.toLocaleLowerCase('de'));
         if (existing) existing.value = '';
@@ -373,7 +409,7 @@
         }
         $('tournamentPlayerMessage').textContent = ''; renderPlayerList();
       });
-      $('deleteTournamentPlayers').querySelectorAll('[data-delete-player]').forEach(button => button.onclick = () => {
+      $('savedTournamentPlayers').querySelectorAll('[data-delete-player]').forEach(button => button.onclick = () => {
         const index = Number(button.dataset.deletePlayer), name = playerNames[index];
         if (!confirm(`${name} aus der gespeicherten Spielerliste löschen? Bereits gespielte Turniere bleiben erhalten.`)) return;
         playerNames.splice(index,1); localStorage.setItem(rosterKey,JSON.stringify(playerNames));
