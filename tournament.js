@@ -14,12 +14,24 @@
   function expired() {
     return tournament && tournament.limit === null && tournament.endAt != null && Date.now() >= tournament.endAt;
   }
-  function localDateTime(time) {
+  function localTime(time) {
     const d = new Date(time);
-    return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0,16);
+    return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
   }
-  function endLabel() {
-    return new Date(tournament.endAt).toLocaleString('de-DE', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'});
+  // A clock time always means its next occurrence, including after midnight.
+  function nextEndTime(value, now = Date.now()) {
+    if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(value)) return NaN;
+    const [hours, minutes] = value.split(':').map(Number);
+    const d = new Date(now);
+    d.setHours(hours, minutes, 0, 0);
+    if (d.getTime() <= now) d.setDate(d.getDate() + 1);
+    return d.getTime();
+  }
+  function endLabel() { return localTime(tournament.endAt); }
+  function availableTables() {
+    const occupied = new Set(tournament.rounds.flatMap(round => round.matches)
+      .filter(match => !match.result && match.table).map(match => match.table));
+    return Array.from({length:tournament.tables}, (_, i) => i + 1).filter(table => !occupied.has(table));
   }
   function choice(title, message, options) {
     return new Promise(resolve => {
@@ -37,16 +49,16 @@
     return new Promise(resolve => {
       const dialog = document.createElement('dialog');
       dialog.className = 'tournamentDialog';
-      dialog.innerHTML = `<form><h3>Turnierende ändern</h3><label>Datum und Uhrzeit<input type="datetime-local" required value="${localDateTime(tournament.endAt || Date.now()+3600000)}"></label><p role="alert"></p><div class="tournamentActions"><button>Übernehmen</button><button type="button">Abbrechen</button></div></form>`;
+      dialog.innerHTML = `<form><h3>Turnierende ändern</h3><label>Uhrzeit<input type="time" required value="${localTime(tournament.endAt || Date.now()+3600000)}"></label><p role="alert"></p><div class="tournamentActions"><button>Übernehmen</button><button type="button">Abbrechen</button></div></form>`;
       document.body.append(dialog);
       function done(value) { dialog.close(); dialog.remove(); resolve(value); }
       dialog.querySelector('[type=button]').onclick = () => done(false);
       dialog.oncancel = e => { e.preventDefault(); done(false); };
       dialog.querySelector('form').onsubmit = e => {
         e.preventDefault();
-        const value = new Date(dialog.querySelector('input').value).getTime();
+        const value = nextEndTime(dialog.querySelector('input').value);
         if (!Number.isFinite(value) || value <= Date.now()) {
-          dialog.querySelector('[role=alert]').textContent = 'Bitte eine zukünftige Endzeit eingeben.'; return;
+          dialog.querySelector('[role=alert]').textContent = 'Bitte eine gültige Uhrzeit eingeben.'; return;
         }
         tournament.endAt = value;
         tournament.finishLastRound = false;
@@ -287,8 +299,8 @@
             <label id="tournamentRoundCount">Anzahl Runden
               <input name="rounds" type="number" min="1" max="999" value="3" required>
             </label>
-            <label id="tournamentEndTime" class="hidden">Turnierende · Datum und Uhrzeit
-              <input name="endAt" type="datetime-local" value="${localDateTime(Date.now()+3*3600000)}">
+            <label id="tournamentEndTime" class="hidden">Turnierende · Uhrzeit
+              <input name="endAt" type="time" value="${localTime(Date.now()+3*3600000)}">
             </label>
             <label>Frames zum Matchsieg
               <input name="target" type="number" min="1" max="50" value="2" required>
@@ -333,8 +345,8 @@
         $('tournamentSetupError').textContent = 'Bitte für jeden Spieler einen eindeutigen Namen eingeben.';
         return;
       }
-      if (form.elements.duration.value === 'endless' && !(new Date(form.elements.endAt.value).getTime() > Date.now())) {
-        $('tournamentSetupError').textContent = 'Bitte eine zukünftige Turnier-Endzeit eingeben.'; return;
+      if (form.elements.duration.value === 'endless' && !(nextEndTime(form.elements.endAt.value) > Date.now())) {
+        $('tournamentSetupError').textContent = 'Bitte eine gültige Uhrzeit für das Turnierende eingeben.'; return;
       }
       if (tournament && !confirm('Das bisherige Turnier wird durch das neue ersetzt. Fortfahren?')) return;
       tournament = {
@@ -343,7 +355,7 @@
         target: Number(form.elements.target.value),
         tables: Number(form.elements.tables.value),
         started: Date.now(), ended: null, rounds: [],
-        endAt: form.elements.duration.value === 'endless' ? new Date(form.elements.endAt.value).getTime() : null,
+        endAt: form.elements.duration.value === 'endless' ? nextEndTime(form.elements.endAt.value) : null,
         finishLastRound: false
       };
       drafting = false;
@@ -353,7 +365,7 @@
     };
   }
 
-  function renderMatch(match, index, freeTable, blocked) {
+  function renderMatch(match, index, freeTables, blocked) {
     const names = match.players.map(id => esc(tournament.players[id]));
     let status = 'Wartet';
     if (match.result) status = 'Fertig';
@@ -369,7 +381,7 @@
         breaks.length ? `<p class="small"><strong>${names[i]}</strong> · Breaks: ${breaks.join(', ')}</p>` : ''
       ).join('') : ''}
       ${!tournament.ended && openMatch === null ? `<div class="tournamentActions">
-        ${!match.result && !match.table && !blocked && freeTable ? `<button type="button" class="secondary tournamentStart tournamentPulse" data-start="${index}">An Tisch ${freeTable} starten</button>` : ''}
+        ${!match.result && !match.table && !blocked ? freeTables.map(table => `<button type="button" class="secondary tournamentStart tournamentPulse" data-start="${index}" data-table="${table}">An Tisch ${table} starten</button>`).join('') : ''}
         ${!blocked || match.result ? `<button type="button" class="secondary ${match.result ? 'tournamentCorrect' : 'tournamentResult'}" data-edit="${index}">${match.result ? 'Ergebnis korrigieren' : 'Ergebnis eintragen'}</button>` : ''}
       </div>` : ''}
       ${editing ? `<form data-result="${index}">
@@ -554,8 +566,8 @@
     const number = tournament.rounds.length;
     const unfinished = tournament.rounds.flatMap(round => round.matches.filter(match => !match.result));
     const complete = unfinished.length === 0;
-    const freeTable = Array.from({length:tournament.tables}, (_, i) => i + 1)
-      .find(table => !unfinished.some(match => match.table === table));
+    const freeTables = availableTables();
+    const freeTable = freeTables[0];
     const pendingPlayers = new Set(unfinished.flatMap(match => match.players));
     const readyPlayers = new Set(tournament.players.map((_, id) => id).filter(id => !pendingPlayers.has(id)));
     const nextRound = !tournament.ended && !expired() && !tournament.finishLastRound && openMatch === null && (tournament.limit === null || number < tournament.limit)
@@ -568,14 +580,14 @@
       const roundComplete = round.matches.every(match => match.result);
       const title = `Runde ${roundIndex + 1}${tournament.limit === null ? '' : ` / ${tournament.limit}`}`;
       const content = `${round.bye === null ? '' : `<p class="tournamentStatus">Freilos · ${esc(tournament.players[round.bye])}</p>`}
-        ${round.matches.map((match, i) => renderMatch(match, `${roundIndex}:${i}`, freeTable,
+        ${round.matches.map((match, i) => renderMatch(match, `${roundIndex}:${i}`, freeTables,
           !match.table && match.players.some(id => previousPlayers.has(id)))).join('')}`;
       for (const match of round.matches) {
         if (!match.result) match.players.forEach(id => previousPlayers.add(id));
       }
       return roundComplete && roundIndex < number - 1
         ? `<details class="card" ${openMatch?.startsWith(`${roundIndex}:`) ? 'open' : ''}><summary>${title} · abgeschlossen</summary>${content}</details>`
-        : `<div class="card"><h3>${title}${roundComplete ? ' · abgeschlossen' : tournament.ended ? '' : ' · läuft'}</h3>${content}</div>`;
+        : `<div class="card"><h3>${title}${roundComplete ? ' · abgeschlossen' : tournament.ended ? '' : ' · läuft'}</h3>${roundIndex === number - 1 ? `${nextRound ? `<button type="button" class="primary" id="nextTournamentRound">${complete ? 'Nächste Runde starten' : 'Neue Runde starten'}</button>` : ''}` : ''}${content}</div>`;
     });
     panel.insertAdjacentHTML('beforeend', `
       <div class="card">
@@ -586,7 +598,6 @@
           : `Runde ${number} abgeschlossen`}</p>
         ${tournament.limit === null ? `<p class="tournamentStatus">Turnierende: ${tournament.endAt != null ? endLabel() : 'Noch nicht festgelegt'}${expired() ? ' · Endzeit erreicht' : ''}${tournament.finishLastRound ? ' · Letzte Runde wird zu Ende gespielt' : ''}</p>${!tournament.ended ? '<button type="button" class="secondary" id="changeEndTime">Endzeit ändern</button>' : ''}` : ''}
         <div class="tournamentActions">
-          ${nextRound ? `<button type="button" class="primary" id="nextTournamentRound">${complete ? 'Nächste Runde starten' : 'Neue Runde starten'}</button>` : ''}
           ${tournament.ended ? '<button type="button" class="primary" id="newTournament">Neues Turnier</button>' : ''}
         </div>
       </div>
@@ -603,7 +614,11 @@
     panel.querySelectorAll('[data-start]').forEach(button => {
       button.onclick = () => {
         const match = matchAt(button.dataset.start);
-        match.table = freeTable;
+        const table = Number(button.dataset.table);
+        if (tournament.ended || match.result || match.table || !availableTables().includes(table)) {
+          renderTournament(); return;
+        }
+        match.table = table;
         match.startedAt = Date.now();
         saveTournament();
       };
