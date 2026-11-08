@@ -196,6 +196,7 @@
 
   function showMode(mode) {
     setTournamentFullscreen(false);
+    document.body.classList.toggle('compactTournament', mode === 'tournament');
     $('modeStart').classList.toggle('hidden', mode !== 'home');
     $('singleMode').classList.toggle('hidden', mode !== 'single');
     panel.classList.toggle('hidden', mode !== 'tournament');
@@ -592,15 +593,14 @@
   }
 
   function renderBackupControls() {
-    panel.insertAdjacentHTML('beforeend', `<div class="card">
-      <h3>Turnier sichern</h3>
+    panel.insertAdjacentHTML('beforeend', `<details class="card tournamentBackup"><summary>Turnier sichern · Speichern / Laden</summary>
       <div class="tournamentActions">
         ${tournament ? '<button type="button" class="secondary" id="saveTournamentFile">Turnier speichern</button>' : ''}
         <button type="button" class="secondary" id="restoreTournamentFile">Turnier wiederherstellen</button>
       </div>
       <input id="tournamentFileInput" type="file" accept=".json,application/json" class="hidden">
       <p class="tournamentStatus" id="tournamentBackupStatus" role="status"></p>
-    </div>`);
+    </details>`);
     if (tournament) $('saveTournamentFile').onclick = async () => {
       const status = $('tournamentBackupStatus');
       status.textContent = '';
@@ -703,11 +703,11 @@
         if (!match.result) match.players.forEach(id => previousPlayers.add(id));
       }
       return roundComplete && roundIndex < number - 1
-        ? `<details class="card" ${openMatch?.startsWith(`${roundIndex}:`) ? 'open' : ''}><summary>${title} · abgeschlossen</summary>${content}</details>`
-        : `<div class="card"><h3>${title}${roundComplete ? ' · abgeschlossen' : tournament.ended ? '' : ' · läuft'}</h3>${roundIndex === number - 1 ? `${nextRound ? `<button type="button" class="primary" id="nextTournamentRound">${complete ? 'Nächste Runde starten' : 'Neue Runde starten'}</button>` : ''}` : ''}${content}</div>`;
+        ? `<details class="card tournamentRound" ${openMatch?.startsWith(`${roundIndex}:`) ? 'open' : ''}><summary>${title} · abgeschlossen</summary>${content}</details>`
+        : `<div class="card tournamentRound"><h3>${title}${roundComplete ? ' · abgeschlossen' : tournament.ended ? '' : ' · läuft'}</h3>${roundIndex === number - 1 ? `${nextRound ? `<button type="button" class="primary" id="nextTournamentRound">${complete ? 'Nächste Runde starten' : 'Neue Runde starten'}</button>` : ''}` : ''}${content}</div>`;
     });
     panel.insertAdjacentHTML('beforeend', `
-      <div class="card">
+      <div class="card tournamentOverview">
         <h2>Schweizer Turnier</h2>
         <p>${mode} · First to ${tournament.target} · ${tournament.tables} Tisch(e)</p>
         <p class="tournamentStatus">${tournament.ended ? 'Turnier beendet' : openRounds.length

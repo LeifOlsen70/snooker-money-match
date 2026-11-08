@@ -138,3 +138,27 @@ body.snookerFullscreenTournament #tournamentFullscreenToggle {font-size:clamp(13
 #tournamentMode .tournamentPlayerDelete[hidden] {display:none}
 #tournamentMode .tournamentRosterAdd {border-top:1px solid #775b87;padding-top:14px;margin-top:14px}
 @media (prefers-reduced-motion:reduce) {#tournamentMode .tournamentPlayerFace {transition:none}}
+
+/* Compact round overview; keep touch controls at least 44px tall. */
+body.compactTournament .clubBrand {margin:4px 0 8px;padding:3px;}
+body.compactTournament .clubBrand img {height:48px;width:auto;max-width:100%;object-fit:contain;}
+#tournamentMode button {min-height:44px;padding:8px 10px;font-size:14px;line-height:1.2;border-radius:10px;}
+#tournamentMode .card {padding:10px;margin:8px 0;border-radius:12px;}
+#tournamentMode .tournamentTop {margin-bottom:4px;font-size:13px;}
+#tournamentMode .tournamentActions {gap:6px;grid-template-columns:repeat(auto-fit,minmax(min(100%,110px),1fr));}
+#tournamentMode .tournamentHistory {padding:4px 0;margin-bottom:6px;}
+#tournamentMode #finishTournamentAnytime {min-height:36px;padding:6px 10px;margin-bottom:6px;font-size:12px;}
+#tournamentMode .tournamentViews {margin-bottom:6px;}
+#tournamentMode .tournamentOverview h2 {font-size:18px;margin:0 0 4px;}
+#tournamentMode .tournamentOverview p {font-size:13px;margin:3px 0;}
+#tournamentMode .tournamentBackup {font-size:13px;}
+#tournamentMode .tournamentBackup summary {min-height:24px;line-height:24px;}
+#tournamentMode .tournamentBackup[open] .tournamentActions {margin-top:8px;}
+#tournamentMode .tournamentRound h3 {font-size:16px;margin:0 0 6px;}
+#tournamentMode .tournamentMatch {display:grid;grid-template-columns:minmax(0,1fr) minmax(110px,42%);column-gap:8px;align-items:center;margin:6px 0;padding:7px 8px;border-radius:8px;}
+#tournamentMode .tournamentMatch h4 {grid-column:1;font-size:15px;margin:0 0 3px;}
+#tournamentMode .tournamentMatch p {grid-column:1;font-size:12px;margin:2px 0;}
+#tournamentMode .tournamentMatch > .tournamentActions {grid-column:2;grid-row:1 / span 4;display:flex;flex-direction:column;gap:4px;}
+#tournamentMode .tournamentMatch > form {grid-column:1 / -1;}
+#tournamentMode .tournamentWait {min-height:44px;padding:6px;font-size:12px;border-radius:8px;}
+#tournamentMode #nextTournamentRound {margin:0 0 6px;}
