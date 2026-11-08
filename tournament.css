@@ -117,3 +117,11 @@ body.snookerFullscreenTournament #tournamentFullscreenToggle {font-size:clamp(13
   border-radius:13px;padding:13px 16px;min-height:48px;box-sizing:border-box;
   font-weight:800;text-align:center;display:flex;align-items:center;justify-content:center;
 }
+
+#tournamentMode .tournamentRoster {margin:16px 0;padding:14px;border:1px solid #775b87;border-radius:12px}
+#tournamentMode .tournamentPlayerChoices {display:flex;flex-wrap:wrap;gap:8px}
+#tournamentMode .tournamentPlayerChoices button {width:auto;max-width:100%;overflow-wrap:anywhere}
+#tournamentMode .tournamentRosterAdd {display:flex;align-items:end;gap:10px;margin-top:12px;flex-wrap:wrap}
+#tournamentMode .tournamentRosterAdd label {flex:1 1 160px;min-width:0;margin:0}
+#tournamentMode .tournamentRosterDelete {display:flex;justify-content:space-between;align-items:center;gap:10px;margin:8px 0}
+#tournamentMode .tournamentRosterDelete span {overflow-wrap:anywhere;min-width:0}

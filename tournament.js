@@ -33,6 +33,35 @@
       .filter(match => !match.result && match.table).map(match => match.table));
     return Array.from({length:tournament.tables}, (_, i) => i + 1).filter(table => !occupied.has(table));
   }
+  function hasStartableMatch() {
+    if (!availableTables().length) return false;
+    const earlierPlayers = new Set();
+    for (const round of tournament.rounds) {
+      if (round.matches.some(match => !match.result && !match.table &&
+          match.players.every(id => !earlierPlayers.has(id)))) return true;
+      for (const match of round.matches) {
+        if (!match.result) match.players.forEach(id => earlierPlayers.add(id));
+      }
+    }
+    return false;
+  }
+  const rosterKey = 'snookerSwissPlayerNamesV1';
+  let playerNames = [];
+  try {
+    const stored = JSON.parse(localStorage.getItem(rosterKey));
+    if (Array.isArray(stored)) playerNames = stored.filter(name => typeof name === 'string' && name.trim());
+  } catch (error) { console.warn('Spielerliste konnte nicht geladen werden.', error); }
+  function rememberPlayers(names) {
+    const known = new Set(playerNames.map(name => name.toLocaleLowerCase('de')));
+    for (const raw of names) {
+      const name = raw.trim().slice(0,60);
+      if (name && !known.has(name.toLocaleLowerCase('de'))) {
+        playerNames.push(name); known.add(name.toLocaleLowerCase('de'));
+      }
+    }
+    playerNames.sort((a,b) => a.localeCompare(b,'de'));
+    localStorage.setItem(rosterKey, JSON.stringify(playerNames));
+  }
   function choice(title, message, options) {
     return new Promise(resolve => {
       const dialog = document.createElement('dialog');
@@ -162,6 +191,7 @@
     console.warn('Turnierstand konnte nicht geladen werden.', error);
   }
 
+  if (localStorage.getItem(rosterKey) === null && tournament) rememberPlayers(tournament.players);
   committed = JSON.stringify(tournament);
 
   function showMode(mode) {
@@ -309,6 +339,14 @@
               <input name="tables" type="number" min="1" max="6" value="1" required>
             </label>
           </div>
+          <section class="tournamentRoster" aria-label="Gespeicherte Spieler">
+            <h3>Spieler auswählen</h3>
+            <p class="small">Namen antippen, um sie für dieses Turnier auszuwählen. Erneutes Tippen entfernt die Auswahl.</p>
+            <div id="savedTournamentPlayers" class="tournamentPlayerChoices"></div>
+            <div class="tournamentRosterAdd"><label>Neuer Spieler<input id="newTournamentPlayerName" type="text" maxlength="60" placeholder="Name"></label><button type="button" class="secondary" id="addTournamentPlayer">Hinzufügen</button></div>
+            <p id="tournamentPlayerMessage" class="small" role="status"></p>
+            <details><summary>Gespeicherte Spieler löschen</summary><div id="deleteTournamentPlayers"></div></details>
+          </section>
           <div id="tournamentNames" class="tournamentFields"></div>
           <p class="tournamentStatus" id="tournamentSetupError" role="alert"></p>
           <button class="primary">Turnier starten</button>
@@ -319,11 +357,52 @@
     const form = $('tournamentSetup');
     const names = $('tournamentNames');
     const drafts = [];
+    function renderPlayerList() {
+      const inputs = Array.from(names.querySelectorAll('input'));
+      const selected = new Set(inputs.map(input => input.value.trim().toLocaleLowerCase('de')));
+      $('savedTournamentPlayers').innerHTML = playerNames.map((name,i) => `<button type="button" class="${selected.has(name.toLocaleLowerCase('de')) ? 'primary' : 'secondary'}" data-pick-player="${i}" aria-pressed="${selected.has(name.toLocaleLowerCase('de'))}">${esc(name)}</button>`).join('') || '<p class="small">Noch keine Spieler gespeichert.</p>';
+      $('deleteTournamentPlayers').innerHTML = playerNames.map((name,i) => `<div class="tournamentRosterDelete"><span>${esc(name)}</span><button type="button" class="secondary" data-delete-player="${i}" aria-label="${esc(name)} aus Spielerliste löschen">Löschen</button></div>`).join('');
+      $('savedTournamentPlayers').querySelectorAll('[data-pick-player]').forEach(button => button.onclick = () => {
+        const name = playerNames[Number(button.dataset.pickPlayer)];
+        const existing = inputs.find(input => input.value.trim().toLocaleLowerCase('de') === name.toLocaleLowerCase('de'));
+        if (existing) existing.value = '';
+        else {
+          const empty = inputs.find(input => !input.value.trim());
+          if (!empty) { $('tournamentPlayerMessage').textContent = 'Alle Plätze belegt. Bitte die Spieleranzahl erhöhen oder einen Namen abwählen.'; return; }
+          empty.value = name;
+        }
+        $('tournamentPlayerMessage').textContent = ''; renderPlayerList();
+      });
+      $('deleteTournamentPlayers').querySelectorAll('[data-delete-player]').forEach(button => button.onclick = () => {
+        const index = Number(button.dataset.deletePlayer), name = playerNames[index];
+        if (!confirm(`${name} aus der gespeicherten Spielerliste löschen? Bereits gespielte Turniere bleiben erhalten.`)) return;
+        playerNames.splice(index,1); localStorage.setItem(rosterKey,JSON.stringify(playerNames));
+        inputs.forEach(input => { if (input.value.trim().toLocaleLowerCase('de') === name.toLocaleLowerCase('de')) input.value = ''; });
+        renderPlayerList();
+      });
+    }
+    $('addTournamentPlayer').onclick = () => {
+      const input = $('newTournamentPlayerName'), name = input.value.trim();
+      if (!name) { $('tournamentPlayerMessage').textContent = 'Bitte einen Namen eingeben.'; return; }
+      rememberPlayers([name]); input.value = ''; renderPlayerList();
+      const slot = Array.from(names.querySelectorAll('input')).find(input => !input.value.trim());
+      const alreadySelected = Array.from(names.querySelectorAll('input')).some(input => input.value.trim().toLocaleLowerCase('de') === name.toLocaleLowerCase('de'));
+      if (slot && !alreadySelected) slot.value = playerNames.find(saved => saved.toLocaleLowerCase('de') === name.toLocaleLowerCase('de'));
+      $('tournamentPlayerMessage').textContent = 'Spieler gespeichert.'; renderPlayerList();
+    };
+    $('newTournamentPlayerName').onkeydown = event => {
+      if (event.key === 'Enter') { event.preventDefault(); $('addTournamentPlayer').click(); }
+    };
     function renderNames() {
       names.querySelectorAll('input').forEach((input, i) => { drafts[i] = input.value; });
       names.innerHTML = Array.from({length:Number(form.elements.count.value)}, (_, i) =>
         `<label>Spieler ${i + 1}<input name="player" maxlength="60" required value="${esc(drafts[i] || '')}"></label>`
       ).join('');
+      names.querySelectorAll('input').forEach(input => {
+        input.onchange = () => { rememberPlayers([input.value]); renderPlayerList(); };
+        input.oninput = renderPlayerList;
+      });
+      renderPlayerList();
     }
     renderNames();
     form.elements.count.onchange = renderNames;
@@ -349,6 +428,7 @@
         $('tournamentSetupError').textContent = 'Bitte eine gültige Uhrzeit für das Turnierende eingeben.'; return;
       }
       if (tournament && !confirm('Das bisherige Turnier wird durch das neue ersetzt. Fortfahren?')) return;
+      rememberPlayers(players);
       tournament = {
         players,
         limit: form.elements.duration.value === 'endless' ? null : Number(form.elements.rounds.value),
@@ -571,7 +651,7 @@
     const freeTable = freeTables[0];
     const pendingPlayers = new Set(unfinished.flatMap(match => match.players));
     const readyPlayers = new Set(tournament.players.map((_, id) => id).filter(id => !pendingPlayers.has(id)));
-    const nextRound = !tournament.ended && !expired() && !tournament.finishLastRound && openMatch === null && (tournament.limit === null || number < tournament.limit)
+    const nextRound = !tournament.ended && !hasStartableMatch() && !expired() && !tournament.finishLastRound && openMatch === null && (tournament.limit === null || number < tournament.limit)
       && (complete || (freeTable && readyPlayers.size >= 2))
       ? pairRound(complete ? null : readyPlayers) : null;
     const mode = tournament.limit === null ? 'Endlos' : `${tournament.limit} Runden`;
@@ -661,7 +741,7 @@
       };
     }
     if ($('nextTournamentRound')) $('nextTournamentRound').onclick = () => {
-      if (expired() || tournament.finishLastRound || tournament.ended) { checkDeadline(); return; }
+      if (expired() || tournament.finishLastRound || tournament.ended || hasStartableMatch()) { checkDeadline(); return; }
       openMatch = null;
       tournament.rounds.push(nextRound);
       saveTournament();
