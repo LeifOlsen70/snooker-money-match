@@ -7,6 +7,105 @@
   let openMatch = null;
   let drafting = false;
   let view = 'rounds';
+  let undoStates = [], redoStates = [];
+  let committed = 'null';
+  let deadlineDialog = false;
+  function clone(value) { return JSON.parse(JSON.stringify(value)); }
+  function expired() {
+    return tournament && tournament.limit === null && tournament.endAt != null && Date.now() >= tournament.endAt;
+  }
+  function localDateTime(time) {
+    const d = new Date(time);
+    return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0,16);
+  }
+  function endLabel() {
+    return new Date(tournament.endAt).toLocaleString('de-DE', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'});
+  }
+  function choice(title, message, options) {
+    return new Promise(resolve => {
+      const dialog = document.createElement('dialog');
+      dialog.className = 'tournamentDialog';
+      dialog.innerHTML = `<h3>${esc(title)}</h3><p>${esc(message)}</p><div class="tournamentActions">${options.map(([id,label]) => `<button type="button" data-choice="${id}">${esc(label)}</button>`).join('')}</div>`;
+      document.body.append(dialog);
+      function done(value) { dialog.close(); dialog.remove(); resolve(value); }
+      dialog.querySelectorAll('button').forEach(b => b.onclick = () => done(b.dataset.choice));
+      dialog.oncancel = e => { e.preventDefault(); done('cancel'); };
+      dialog.showModal();
+    });
+  }
+  function editEndTime() {
+    return new Promise(resolve => {
+      const dialog = document.createElement('dialog');
+      dialog.className = 'tournamentDialog';
+      dialog.innerHTML = `<form><h3>Turnierende ändern</h3><label>Datum und Uhrzeit<input type="datetime-local" required value="${localDateTime(tournament.endAt || Date.now()+3600000)}"></label><p role="alert"></p><div class="tournamentActions"><button>Übernehmen</button><button type="button">Abbrechen</button></div></form>`;
+      document.body.append(dialog);
+      function done(value) { dialog.close(); dialog.remove(); resolve(value); }
+      dialog.querySelector('[type=button]').onclick = () => done(false);
+      dialog.oncancel = e => { e.preventDefault(); done(false); };
+      dialog.querySelector('form').onsubmit = e => {
+        e.preventDefault();
+        const value = new Date(dialog.querySelector('input').value).getTime();
+        if (!Number.isFinite(value) || value <= Date.now()) {
+          dialog.querySelector('[role=alert]').textContent = 'Bitte eine zukünftige Endzeit eingeben.'; return;
+        }
+        tournament.endAt = value;
+        tournament.finishLastRound = false;
+        saveTournament(); done(true);
+      };
+      dialog.showModal();
+    });
+  }
+  async function exportTournament(data = tournament) {
+    const suggested = data.filename || `${defaultFilename()}_Turnier.json`;
+    let filename = prompt('Dateiname für die Turnier-Sicherung:', suggested);
+    if (filename === null) return false;
+    filename = filename.trim().replace(/[\\/:*?"<>|]/g, '-');
+    if (!filename) return false;
+    if (!filename.toLowerCase().endsWith('.json')) filename += '.json';
+    data.filename = filename;
+    return (await shareJsonFile({app:'Snooker Swiss Tournament', version:1, tournament:data}, filename, 'Snooker-Turnier speichern')) !== false;
+  }
+  async function finishTournament() {
+    if (openMatch !== null && !confirm('Ergebniseingabe ohne Speichern verlassen?')) return;
+    const result = await choice('Turnier beenden', 'Das Turnier mit den bisher eingetragenen Ergebnissen beenden? Offene Matches werden nicht gewertet.', [
+      ['save','Speichern und beenden'], ['end','Ohne Datei beenden'], ['cancel','Abbrechen']
+    ]);
+    if (result === 'cancel') return;
+    const finished = {...clone(tournament), ended:Date.now()};
+    if (result === 'save') {
+      try { if (!await exportTournament(finished)) return; }
+      catch (error) { alert('Speichern fehlgeschlagen. Das Turnier bleibt geöffnet.'); return; }
+    }
+    tournament = finished; openMatch = null; saveTournament();
+  }
+  async function checkDeadline() {
+    if (!tournament || tournament.ended || drafting || panel.classList.contains('hidden') || !expired() || deadlineDialog || document.querySelector('dialog[open]')) return;
+    if (tournament.finishLastRound) {
+      if (tournament.rounds.every(r => r.matches.every(m => m.result))) {
+        tournament.ended = Date.now(); openMatch = null; saveTournament();
+      }
+      return;
+    }
+    deadlineDialog = true;
+    // Render immediately to remove any previously available next-round button.
+    renderTournament();
+    const result = await choice('Turnierende erreicht', 'Es kann keine weitere Runde erstellt werden. Wie soll es weitergehen?', [
+      ['finish','Letzte Runde zu Ende spielen'], ['change','Endzeit korrigieren']
+    ]);
+    if (result === 'change') await editEndTime();
+    else if (result === 'finish') { tournament.finishLastRound = true; saveTournament(); }
+    deadlineDialog = false;
+  }
+  function historyStep(direction) {
+    if (openMatch !== null && !confirm('Ergebniseingabe ohne Speichern verlassen?')) return;
+    const source = direction < 0 ? undoStates : redoStates;
+    const destination = direction < 0 ? redoStates : undoStates;
+    if (!source.length) return;
+    destination.push(clone(tournament)); tournament = source.pop();
+    openMatch = null; committed = JSON.stringify(tournament);
+    localStorage.setItem(key, committed); renderTournament();
+  }
+
 
   function setTournamentFullscreen(enabled) {
     document.body.classList.toggle('snookerFullscreenTournament', enabled);
@@ -50,6 +149,8 @@
   } catch (error) {
     console.warn('Turnierstand konnte nicht geladen werden.', error);
   }
+
+  committed = JSON.stringify(tournament);
 
   function showMode(mode) {
     setTournamentFullscreen(false);
@@ -159,7 +260,13 @@
   }
 
   function saveTournament() {
-    localStorage.setItem(key, JSON.stringify(tournament));
+    const next = JSON.stringify(tournament);
+    if (next !== committed) {
+      undoStates.push(JSON.parse(committed));
+      if (undoStates.length > 100) undoStates.shift();
+      redoStates = []; committed = next;
+    }
+    localStorage.setItem(key, next);
     renderTournament();
   }
 
@@ -175,10 +282,13 @@
             </label>
             <label>Turnierdauer
               <select name="duration"><option value="fixed">Feste Rundenzahl</option>
-              <option value="endless">Endlos · manuell beenden</option></select>
+              <option value="endless">Nach Zeit · Endlos</option></select>
             </label>
             <label id="tournamentRoundCount">Anzahl Runden
               <input name="rounds" type="number" min="1" max="999" value="3" required>
+            </label>
+            <label id="tournamentEndTime" class="hidden">Turnierende · Datum und Uhrzeit
+              <input name="endAt" type="datetime-local" value="${localDateTime(Date.now()+3*3600000)}">
             </label>
             <label>Frames zum Matchsieg
               <input name="target" type="number" min="1" max="50" value="2" required>
@@ -209,6 +319,8 @@
       const endless = form.elements.duration.value === 'endless';
       $('tournamentRoundCount').classList.toggle('hidden', endless);
       form.elements.rounds.disabled = endless;
+      $('tournamentEndTime').classList.toggle('hidden', !endless);
+      form.elements.endAt.required = endless;
     };
     if (tournament) $('cancelTournamentSetup').onclick = () => {
       drafting = false;
@@ -221,13 +333,18 @@
         $('tournamentSetupError').textContent = 'Bitte für jeden Spieler einen eindeutigen Namen eingeben.';
         return;
       }
+      if (form.elements.duration.value === 'endless' && !(new Date(form.elements.endAt.value).getTime() > Date.now())) {
+        $('tournamentSetupError').textContent = 'Bitte eine zukünftige Turnier-Endzeit eingeben.'; return;
+      }
       if (tournament && !confirm('Das bisherige Turnier wird durch das neue ersetzt. Fortfahren?')) return;
       tournament = {
         players,
         limit: form.elements.duration.value === 'endless' ? null : Number(form.elements.rounds.value),
         target: Number(form.elements.target.value),
         tables: Number(form.elements.tables.value),
-        started: Date.now(), ended: null, rounds: []
+        started: Date.now(), ended: null, rounds: [],
+        endAt: form.elements.duration.value === 'endless' ? new Date(form.elements.endAt.value).getTime() : null,
+        finishLastRound: false
       };
       drafting = false;
       openMatch = null;
@@ -252,8 +369,8 @@
         breaks.length ? `<p class="small"><strong>${names[i]}</strong> · Breaks: ${breaks.join(', ')}</p>` : ''
       ).join('') : ''}
       ${!tournament.ended && openMatch === null ? `<div class="tournamentActions">
-        ${!match.result && !match.table && !blocked && freeTable ? `<button type="button" class="secondary" data-start="${index}">An Tisch ${freeTable} starten</button>` : ''}
-        ${!blocked || match.result ? `<button type="button" class="secondary" data-edit="${index}">${match.result ? 'Ergebnis korrigieren' : 'Ergebnis eintragen'}</button>` : ''}
+        ${!match.result && !match.table && !blocked && freeTable ? `<button type="button" class="secondary tournamentStart tournamentPulse" data-start="${index}">An Tisch ${freeTable} starten</button>` : ''}
+        ${!blocked || match.result ? `<button type="button" class="secondary ${match.result ? 'tournamentCorrect' : 'tournamentResult'}" data-edit="${index}">${match.result ? 'Ergebnis korrigieren' : 'Ergebnis eintragen'}</button>` : ''}
       </div>` : ''}
       ${editing ? `<form data-result="${index}">
         <div class="tournamentFields">${names.map((name, i) => `<div>
@@ -284,6 +401,7 @@
         <h3>${tournament.ended ? 'Abschlusstabelle' : 'Zwischenstand'}</h3>
         <button type="button" class="secondary" id="tournamentFullscreenToggle" aria-pressed="false">Vollbild an</button>
       </div>
+      ${tournament.limit === null && tournament.endAt != null ? `<p class="small">Turnierende: ${endLabel()}</p>` : ''}
       <table class="tournamentTable"><thead><tr><th>Pl.</th><th>Spieler</th><th>Pkt.</th><th>Siege</th><th>Frame-Δ</th></tr></thead>
       <tbody>${tableRows.join('')}</tbody></table>
       <p class="small">1 Punkt je Matchsieg oder Freilos. Bei Punktgleichheit zählt die Frame-Differenz.</p>
@@ -319,7 +437,9 @@
       || !integer(data.tables, 1, 6) || !integer(data.target, 1, 50)
       || !Array.isArray(data.rounds) || !data.rounds.length
       || !(data.limit === null || integer(data.limit, data.rounds.length, 999))
-      || !timestamp(data.ended)) return false;
+      || !timestamp(data.ended) || !timestamp(data.endAt)
+      || !(data.finishLastRound == null || typeof data.finishLastRound === 'boolean')
+      || !(data.filename == null || typeof data.filename === 'string')) return false;
     const validPlayer = id => integer(id, 0, data.players.length - 1);
     return data.rounds.every(round => {
       if (!round || !Array.isArray(round.matches) || round.matches.length !== Math.floor(data.players.length / 2)
@@ -356,10 +476,7 @@
       const status = $('tournamentBackupStatus');
       status.textContent = '';
       try {
-        await shareJsonFile(
-          {app: 'Snooker Swiss Tournament', version: 1, tournament},
-          `${defaultFilename()}_Turnier.json`, 'Snooker-Turnier speichern'
-        );
+        if (await exportTournament()) { saveTournament(); $('tournamentBackupStatus').textContent = 'Turnierdatei bereitgestellt.'; }
       } catch (error) {
         status.textContent = 'Turnierdatei konnte nicht gespeichert werden.';
       }
@@ -376,12 +493,11 @@
           throw new Error('Ungültige Turnierdatei');
         }
         if (tournament && !confirm('Den aktuellen Turnierstand durch die Sicherung ersetzen?')) return;
-        localStorage.setItem(key, JSON.stringify(backup.tournament));
         tournament = backup.tournament;
         drafting = false;
         openMatch = null;
         view = 'rounds';
-        renderTournament();
+        saveTournament();
         $('tournamentBackupStatus').textContent = 'Turnier wiederhergestellt.';
       } catch (error) {
         $('tournamentBackupStatus').textContent = 'Turnier konnte nicht wiederhergestellt werden. Bitte eine gültige Turnier-Sicherung auswählen.';
@@ -390,6 +506,13 @@
   }
 
   function renderTournament() {
+    const previousForm = panel.querySelector('[data-result]');
+    const draftIndex = previousForm?.dataset.result;
+    const draftValues = previousForm ? Array.from(previousForm.querySelectorAll('input'), input => input.value) : [];
+    if (draftIndex === openMatch) queueMicrotask(() => {
+      const form = panel.querySelector('[data-result]');
+      if (form?.dataset.result === draftIndex) form.querySelectorAll('input').forEach((input, i) => { input.value = draftValues[i]; });
+    });
     setTournamentFullscreen(false);
     panel.innerHTML = '<button type="button" id="tournamentHome" class="secondary tournamentTop">← Startseite</button>';
     $('tournamentHome').onclick = () => {
@@ -397,11 +520,16 @@
       openMatch = null;
       showMode('home');
     };
+    panel.insertAdjacentHTML('beforeend', `<div class="tournamentActions tournamentHistory"><button type="button" class="secondary" id="tournamentUndo" ${undoStates.length ? '' : 'disabled'}>↶ Zurück</button><button type="button" class="secondary" id="tournamentRedo" ${redoStates.length ? '' : 'disabled'}>Vor ↷</button>${tournament && !tournament.ended && !drafting ? '<button type="button" class="secondary tournamentEnd" id="finishTournamentAnytime">Turnier beenden</button>' : ''}</div>`);
+    $('tournamentUndo').onclick = () => historyStep(-1);
+    $('tournamentRedo').onclick = () => historyStep(1);
+    if ($('finishTournamentAnytime')) $('finishTournamentAnytime').onclick = finishTournament;
     if (!tournament || drafting) {
       // Keep the home control outside the setup form.
       const home = $('tournamentHome');
+      const history = panel.querySelector('.tournamentHistory');
       renderSetup();
-      panel.prepend(home);
+      panel.prepend(home, history);
       renderBackupControls();
       return;
     }
@@ -430,7 +558,7 @@
       .find(table => !unfinished.some(match => match.table === table));
     const pendingPlayers = new Set(unfinished.flatMap(match => match.players));
     const readyPlayers = new Set(tournament.players.map((_, id) => id).filter(id => !pendingPlayers.has(id)));
-    const nextRound = !tournament.ended && openMatch === null && (tournament.limit === null || number < tournament.limit)
+    const nextRound = !tournament.ended && !expired() && !tournament.finishLastRound && openMatch === null && (tournament.limit === null || number < tournament.limit)
       && (complete || (freeTable && readyPlayers.size >= 2))
       ? pairRound(complete ? null : readyPlayers) : null;
     const mode = tournament.limit === null ? 'Endlos' : `${tournament.limit} Runden`;
@@ -456,16 +584,14 @@
         <p class="tournamentStatus">${tournament.ended ? 'Turnier beendet' : openRounds.length
           ? `${openRounds.length === 1 ? 'Laufende Runde' : 'Laufende Runden'} · ${openRounds.join(', ')}`
           : `Runde ${number} abgeschlossen`}</p>
+        ${tournament.limit === null ? `<p class="tournamentStatus">Turnierende: ${tournament.endAt != null ? endLabel() : 'Noch nicht festgelegt'}${expired() ? ' · Endzeit erreicht' : ''}${tournament.finishLastRound ? ' · Letzte Runde wird zu Ende gespielt' : ''}</p>${!tournament.ended ? '<button type="button" class="secondary" id="changeEndTime">Endzeit ändern</button>' : ''}` : ''}
         <div class="tournamentActions">
           ${nextRound ? `<button type="button" class="primary" id="nextTournamentRound">${complete ? 'Nächste Runde starten' : 'Neue Runde starten'}</button>` : ''}
-          ${!tournament.ended && openMatch === null && tournament.limit === null
-            ? '<button type="button" class="secondary" id="endTournament">Turnier beenden</button>' : ''}
-          ${!tournament.ended && openMatch === null && complete && number === tournament.limit
-            ? '<button type="button" class="primary" id="endTournament">Turnier abschließen</button>' : ''}
           ${tournament.ended ? '<button type="button" class="primary" id="newTournament">Neues Turnier</button>' : ''}
         </div>
       </div>
     `);
+    if ($('changeEndTime')) $('changeEndTime').onclick = editEndTime;
     renderBackupControls();
     panel.insertAdjacentHTML('beforeend', roundCards.reverse().join(''));
     updateClocks();
@@ -517,14 +643,9 @@
       };
     }
     if ($('nextTournamentRound')) $('nextTournamentRound').onclick = () => {
+      if (expired() || tournament.finishLastRound || tournament.ended) { checkDeadline(); return; }
       openMatch = null;
       tournament.rounds.push(nextRound);
-      saveTournament();
-    };
-    if ($('endTournament')) $('endTournament').onclick = () => {
-      if (!complete && !confirm('Es gibt noch offene Matches. Turnier mit den bisher eingetragenen Ergebnissen beenden?')) return;
-      tournament.ended = Date.now();
-      openMatch = null;
       saveTournament();
     };
     if ($('newTournament')) $('newTournament').onclick = () => {
@@ -534,5 +655,5 @@
   }
 
   showMode('home');
-  setInterval(updateClocks, 1000);
+  setInterval(() => { updateClocks(); checkDeadline(); }, 1000);
 })();

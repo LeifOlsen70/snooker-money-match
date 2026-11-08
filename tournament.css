@@ -70,3 +70,17 @@ body.snookerFullscreenTournament .tournamentStandingsHeader {
 }
 body.snookerFullscreenTournament .tournamentStandings .small {font-size:.85em}
 body.snookerFullscreenTournament #tournamentFullscreenToggle {font-size:clamp(13px,2vw,18px)}
+
+#tournamentMode .tournamentHistory {margin-bottom:12px}
+#tournamentMode button.tournamentStart {background:#235b42;color:#fff;border:1px solid #65be90}
+#tournamentMode button.tournamentResult {background:#234c80;color:#fff;border:1px solid #72a7e8}
+#tournamentMode button.tournamentCorrect {background:#8b581f;color:#fff;border:1px solid #e2ae65}
+#tournamentMode button.tournamentEnd {background:#783746;color:#fff}
+#tournamentMode button:disabled {opacity:.4;cursor:default}
+@keyframes tournamentPulse {0%,100% {box-shadow:0 0 0 0 #65be9010;filter:brightness(1)} 50% {box-shadow:0 0 0 4px #65be9033;filter:brightness(1.15)}}
+#tournamentMode .tournamentPulse {animation:tournamentPulse 2.4s ease-in-out infinite}
+@media (prefers-reduced-motion:reduce) {#tournamentMode .tournamentPulse {animation:none}}
+.tournamentDialog {background:#21152e;color:#fff2d6;border:1px solid #cca452;border-radius:16px;padding:22px;width:min(90vw,480px);max-height:85dvh;overflow:auto}
+.tournamentDialog::backdrop {background:#000a}
+.tournamentDialog input {width:100%;box-sizing:border-box;margin:12px 0;min-height:44px;color-scheme:dark}
+.tournamentDialog button {background:#47305e;color:#fff2d6;min-height:48px;padding:10px;border-radius:10px;border:1px solid #9975ae;font:inherit;cursor:pointer}
