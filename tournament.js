@@ -373,7 +373,7 @@
     else if (match.table) status = `Am Tisch ${match.table}`;
     else if (blocked) status = 'Wartet auf ein früheres Match';
     const editing = !tournament.ended && openMatch === index;
-    return `<article class="tournamentMatch">
+    return `<article class="tournamentMatch ${!match.result && !match.table && !tournament.ended ? 'tournamentWaiting' : ''}">
       <h4>${names.join(' – ')}</h4>
       <p class="tournamentStatus">${status}${match.result ? ` · ${match.result.frames.join(':')}` : ''}</p>
       ${renderMatchTime(match, index)}
@@ -532,7 +532,7 @@
       openMatch = null;
       showMode('home');
     };
-    panel.insertAdjacentHTML('beforeend', `<div class="tournamentActions tournamentHistory"><button type="button" class="secondary" id="tournamentUndo" ${undoStates.length ? '' : 'disabled'}>↶ Zurück</button><button type="button" class="secondary" id="tournamentRedo" ${redoStates.length ? '' : 'disabled'}>Vor ↷</button>${tournament && !tournament.ended && !drafting ? '<button type="button" class="secondary tournamentEnd" id="finishTournamentAnytime">Turnier beenden</button>' : ''}</div>`);
+    panel.insertAdjacentHTML('beforeend', `<div class="tournamentActions tournamentHistory"><button type="button" class="secondary" id="tournamentUndo" ${undoStates.length ? '' : 'disabled'}>↶ Zurück</button><button type="button" class="secondary" id="tournamentRedo" ${redoStates.length ? '' : 'disabled'}>Vor ↷</button></div>${tournament && !tournament.ended && !drafting ? '<button type="button" class="secondary tournamentEnd" id="finishTournamentAnytime">Turnier beenden</button>' : ''}`);
     $('tournamentUndo').onclick = () => historyStep(-1);
     $('tournamentRedo').onclick = () => historyStep(1);
     if ($('finishTournamentAnytime')) $('finishTournamentAnytime').onclick = finishTournament;

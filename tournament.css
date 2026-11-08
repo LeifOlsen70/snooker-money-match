@@ -86,3 +86,28 @@ body.snookerFullscreenTournament #tournamentFullscreenToggle {font-size:clamp(13
 .tournamentDialog button {background:#47305e;color:#fff2d6;min-height:48px;padding:10px;border-radius:10px;border:1px solid #9975ae;font:inherit;cursor:pointer}
 
 #tournamentMode #nextTournamentRound {width:100%;margin:0 0 16px}
+
+/* Keep native iOS time controls inside their grid cell. */
+#tournamentMode .tournamentFields > * {min-width:0}
+#tournamentMode input,#tournamentMode select {box-sizing:border-box;min-width:0;max-width:100%}
+#tournamentMode input[type="time"],.tournamentDialog input[type="time"] {
+  appearance:none;-webkit-appearance:none;display:block;width:100%;min-width:0;
+  box-sizing:border-box;height:48px;min-height:48px;padding:10px 12px;font-size:17px;line-height:1.2;
+}
+#tournamentMode input[type="time"]::-webkit-date-and-time-value {text-align:center;min-width:0}
+#tournamentMode #changeEndTime {padding:9px 14px;min-height:42px;font-size:15px;line-height:1.2;width:auto;max-width:100%}
+#tournamentMode .tournamentHistory {
+  position:sticky;top:env(safe-area-inset-top,0px);z-index:40;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  padding:8px 0;background:#100b1c;border-bottom:1px solid #775b87;
+  box-shadow:0 6px 12px #0005;
+}
+#tournamentMode #finishTournamentAnytime {margin-bottom:12px}
+@keyframes tournamentWaitingPulse {
+  0%,100% {border-color:#775b87;box-shadow:0 0 0 0 #65be9000}
+  50% {border-color:#8ce8b5;box-shadow:0 0 15px 3px #65be9066}
+}
+#tournamentMode .tournamentMatch.tournamentWaiting {animation:tournamentWaitingPulse 1.6s ease-in-out infinite}
+@media (prefers-reduced-motion:reduce) {
+  #tournamentMode .tournamentMatch.tournamentWaiting {animation:none;border-color:#8ce8b5}
+}
