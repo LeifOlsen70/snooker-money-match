@@ -228,8 +228,8 @@
   };
 
   // Only confirmed results and assigned byes count toward the standings.
-  function standings(rounds = tournament.rounds) {
-    const rows = tournament.players.map((name, id) => ({
+  function standings(rounds = tournament.rounds, data = tournament) {
+    const rows = data.players.map((name, id) => ({
       name, id, played: 0, wins: 0, draws: 0, byes: 0, diff: 0, breaks: []
     }));
     for (const round of rounds) {
@@ -256,11 +256,53 @@
       }
     }
     for (const row of rows) {
-      row.points = tournament.framesPerMatch == null
+      row.points = data.framesPerMatch == null
         ? row.wins + row.byes
-        : 2 * row.wins + row.draws + tournament.byePoints * row.byes;
+        : 2 * row.wins + row.draws + data.byePoints * row.byes;
     }
     return rows.sort((a, b) => b.points - a.points || b.diff - a.diff || a.id - b.id);
+  }
+
+  function dayKey(data) {
+    return JSON.stringify(data.started ?? data.players);
+  }
+
+  function overallDays(previous, incoming) {
+    const days = new Map((incoming?.overallDays ?? []).map(day => [day.id, day]));
+    for (const day of previous?.overallDays ?? []) days.set(day.id, day);
+    if (previous?.ended) {
+      const id = dayKey(previous);
+      const rows = standings(previous.rounds, previous).map(({name, points}) => ({name, points}));
+      days.set(id, {id, rows});
+    }
+    if (incoming) days.delete(dayKey(incoming));
+    return [...days.values()];
+  }
+
+  function renderOverall() {
+    const totals = new Map();
+    const rows = [
+      ...(tournament.overallDays ?? []).filter(day => day.id !== dayKey(tournament)).flatMap(day => day.rows),
+      ...standings()
+    ];
+    for (const {name, points} of rows) {
+      const id = name.trim().toLocaleLowerCase('de');
+      totals.set(id, {name, points: (totals.get(id)?.points ?? 0) + points});
+    }
+    const ranked = [...totals.values()].sort((a, b) => b.points - a.points || a.name.localeCompare(b.name, 'de'));
+    let place = 1;
+    const tableRows = ranked.map(({name, points}, index) => {
+      if (index > 0 && ranked[index - 1].points !== points) place = index + 1;
+      return `<tr><td>${place}</td><td>${esc(name)}</td><td>${formatPoints(points)}</td></tr>`;
+    });
+    return `<div class="card tournamentStandings">
+      <div class="tournamentStandingsHeader">
+        <h3>Gesamt</h3>
+        <button type="button" class="secondary" id="tournamentFullscreenToggle" aria-pressed="false">Vollbild an</button>
+      </div>
+      <table class="tournamentTable"><thead><tr><th>Pl.</th><th>Spieler</th><th>Pkt.</th></tr></thead>
+      <tbody>${tableRows.join('')}</tbody></table>
+    </div>`;
   }
 
   function pairingHistory(rounds) {
@@ -616,6 +658,7 @@
       rememberPlayers(players);
       tournament = {
         players,
+        overallDays: overallDays(tournament),
         limit: form.elements.duration.value === 'endless' ? null : Number(form.elements.rounds.value),
         framesPerMatch: Number(form.elements.framesPerMatch.value),
         byePoints: Number(form.elements.byePoints.value),
@@ -723,6 +766,10 @@
       || !timestamp(data.ended) || !timestamp(data.endAt)
       || !(data.finishLastRound == null || typeof data.finishLastRound === 'boolean')
       || !(data.filename == null || typeof data.filename === 'string')) return false;
+    if (data.overallDays != null && (!Array.isArray(data.overallDays) ||
+      !data.overallDays.every(day => day && typeof day.id === 'string' && Array.isArray(day.rows) &&
+        day.rows.every(row => row && typeof row.name === 'string' && row.name.trim() &&
+          Number.isFinite(row.points) && row.points >= 0)))) return false;
     const validPlayer = id => integer(id, 0, data.players.length - 1);
     return data.rounds.every(round => {
       if (!round || !Array.isArray(round.matches) || !round.matches.length || round.matches.length > Math.floor(data.players.length / 2)
@@ -775,7 +822,8 @@
           throw new Error('Ungültige Turnierdatei');
         }
         if (tournament && !confirm('Den aktuellen Turnierstand durch die Sicherung ersetzen?')) return;
-        tournament = backup.tournament;
+        const incoming = backup.tournament;
+        tournament = {...incoming, overallDays: overallDays(tournament, incoming)};
         drafting = false;
         openMatch = null;
         view = 'rounds';
@@ -822,11 +870,14 @@
           aria-pressed="${view === 'rounds'}">Runden</button>
         <button type="button" id="tournamentStandingsView" class="${view === 'standings' ? 'primary' : 'secondary'}"
           aria-pressed="${view === 'standings'}">${tournament.ended ? 'Abschlusstabelle' : 'Zwischenstand'}</button>
+        <button type="button" id="tournamentOverallView" class="${view === 'overall' ? 'primary' : 'secondary'}"
+          aria-pressed="${view === 'overall'}">Gesamt</button>
       </nav>`);
     $('tournamentRoundsView').onclick = () => showTournamentView('rounds');
     $('tournamentStandingsView').onclick = () => showTournamentView('standings');
-    if (view === 'standings') {
-      panel.insertAdjacentHTML('beforeend', renderStandings());
+    $('tournamentOverallView').onclick = () => showTournamentView('overall');
+    if (view === 'standings' || view === 'overall') {
+      panel.insertAdjacentHTML('beforeend', view === 'overall' ? renderOverall() : renderStandings());
       $('tournamentFullscreenToggle').onclick = () => {
         setTournamentFullscreen(!document.body.classList.contains('snookerFullscreenTournament'));
       };
