@@ -286,7 +286,7 @@
     return {graph, fresh, realLeft};
   }
 
-  function pairRound(readyPlayers = null, rounds = tournament.rounds) {
+  function pairRound(early = null, rounds = tournament.rounds) {
     const rows = standings(rounds);
     const byeId = rows.length;
     const {graph: remaining, fresh, realLeft} = pairingHistory(rounds);
@@ -349,13 +349,14 @@
       const byePair = pairs.find(([, b]) => b === byeId);
       const bye = byePair ? byePair[0] : null;
       const matches = pairs.filter(([, b]) => b !== byeId);
-      if (!matches.length || (readyPlayers && !matches.some(([a, b]) =>
-        readyPlayers.has(a) && readyPlayers.has(b)))) return;
+      if (!matches.length) return;
+      const startable = early ? matches.filter(([a, b]) => early.readyPlayers.has(a) && early.readyPlayers.has(b)).length : 0;
+      const tablesFilled = early ? Math.min(startable, early.freeTableCount) : 0;
       const rankGap = matches.reduce((sum, [a, b]) => sum + (rank[b] - rank[a]) ** 2, 0);
-      candidates.push({pairs: [...pairs], matches, bye, rankGap});
+      candidates.push({pairs: [...pairs], matches, bye, tablesFilled, rankGap});
     }
     function compareCandidates(a, b) {
-      return b.matches.length - a.matches.length
+      return b.tablesFilled - a.tablesFilled || b.matches.length - a.matches.length
         || (a.bye !== null && b.bye !== null ? rows[rank[a.bye]].byes - rows[rank[b.bye]].byes || rank[b.bye] - rank[a.bye] : 0)
         || a.rankGap - b.rankGap;
     }
@@ -365,7 +366,7 @@
     const degree = mask => mask.toString(2).replace(/0/g, '').length;
     const regular = graph.every(mask => degree(mask) === degree(graph[0]));
     let pairing = regular && candidates.find(candidate => canFinish(removePairs(graph, candidate.pairs)));
-    if (!pairing && realLeft && !readyPlayers) {
+    if (!pairing && realLeft) {
       // Older schedules can leave a graph that cannot be split into full rounds.
       // Finish all unused pairings, without awarding points for extra rests.
       if (!candidates.length) {
@@ -635,7 +636,7 @@
     else if (tournament.ended) status = 'Offen bei Turnierende';
     else if (match.table) status = `Am Tisch ${match.table}`;
     else if (match.paused) status = 'Pausiert';
-    else if (blocked) status = 'Wartet auf ein früheres Match';
+    else if (blocked) status = 'Wartet auf ein Ergebnis';
     const editing = !tournament.ended && openMatch === index;
     const waiting = !match.result && !match.table && !tournament.ended;
     return `<article class="tournamentMatch">
@@ -834,12 +835,13 @@
     const unfinished = tournament.rounds.flatMap(round => round.matches.filter(match => !match.result));
     const complete = unfinished.length === 0;
     const freeTables = availableTables();
-    const freeTable = freeTables[0];
+    // Keep at most one round ahead of the latest round that has seen activity.
+    const latestHasActivity = tournament.rounds.at(-1).matches.some(match => match.table || match.result || match.paused);
     const pendingPlayers = new Set(unfinished.flatMap(match => match.players));
     const readyPlayers = new Set(tournament.players.map((_, id) => id).filter(id => !pendingPlayers.has(id)));
     const nextRound = !tournament.ended && !hasStartableMatch() && !expired() && !tournament.finishLastRound && openMatch === null && (tournament.limit === null || number < tournament.limit)
-      && (complete || (freeTable && readyPlayers.size >= 2))
-      ? pairRound(complete ? null : readyPlayers) : null;
+      && (complete || (freeTables.length && latestHasActivity))
+      ? pairRound(complete ? null : {readyPlayers, freeTableCount: freeTables.length}) : null;
     const replacement = !tournament.ended && openMatch === null ? replacementRound() : null;
     const mode = tournament.limit === null ? 'Endlos' : `${tournament.limit} Runden`;
     const openRounds = tournament.rounds.flatMap((round, i) => round.matches.some(match => !match.result) ? [i + 1] : []);
