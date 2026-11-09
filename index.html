@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#0f5f37">
-  <meta name="application-version" content="7.27">
+  <meta name="application-version" content="7.28">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="Snooker Match">
@@ -336,10 +336,10 @@ body.snookerFullscreenScore #scorerPage.displayOnly{background:#090613!important
   text-shadow:0 1px 2px #0009;
 }
 </style>
-  <link rel="stylesheet" href="tournament.css?v=7.27">
+  <link rel="stylesheet" href="tournament.css?v=7.28">
 </head>
 <body>
-<div id="appVersionTag" aria-label="App-Version 7.27">v7.27</div>
+<div id="appVersionTag" aria-label="App-Version 7.28">v7.28</div>
 <div class="app">
   <h1 class="clubBrand" aria-label="Flensburger Snooker Club – Snooker Money Match"><img src="flensburger-snooker-club.png" alt="Flensburger Snooker Club" width="430" height="125"><span class="visuallyHidden">Snooker Money Match</span></h1><div id="offlineStatus" class="hidden" aria-live="polite"></div>
 
@@ -606,10 +606,11 @@ function startMatch(){
   render();
 }
 
-function resetToSetup(){
+function resetToSetup(publish=true){
   lastMatchTransition=null;
+  clearRedo();
   localStorage.removeItem('snookerMoneyMatchState');
-  window.dispatchEvent(new Event('snooker-state-changed'));
+  if(publish) window.dispatchEvent(new Event('snooker-state-changed'));
   state = null;
   $('match').classList.add('hidden');
   $('scorerPage').classList.add('hidden');
@@ -1014,20 +1015,32 @@ function persist(){
   }
 }
 
-function restore(){
+function applySingleState(raw){
+  const next = JSON.parse(raw);
   lastMatchTransition=null;
   clearRedo();
+  state=next;
+  if(!Array.isArray(state.completedMatches)) state.completedMatches = [];
+  if(!Array.isArray(state.payments)) state.payments = [];
+  $('setup').classList.add('hidden');
+  showView(activeView);
+  render();
+}
+
+function restore(){
   const saved = localStorage.getItem('snookerMoneyMatchState');
   if(!saved) return;
-  try{
-    state = JSON.parse(saved);
-    if(!Array.isArray(state.completedMatches)) state.completedMatches = [];
-    if(!Array.isArray(state.payments)) state.payments = [];
-    $('setup').classList.add('hidden');
-    showView('scorer');
-    render();
-  }catch(e){}
+  try{applySingleState(saved);}catch(e){}
 }
+
+window.addEventListener('snooker-single-received', ({detail:raw})=>{
+  if(raw===''){
+    resetToSetup(false);
+    return;
+  }
+  applySingleState(raw);
+  localStorage.setItem('snookerMoneyMatchState',raw);
+});
 
 function esc(s){
   return String(s).replace(/[&<>"']/g,m=>({
@@ -1077,13 +1090,13 @@ const config={apiKey:'AIzaSyBgmv1v5APpPReJ4olWCusUhhGGevcvRcE',authDomain:'snook
 const owner='SRx2kZD2jzdM3Q6RVVOjioAuHuw1';
 const app=initializeApp(config),auth=getAuth(app),db=getFirestore(app),e=id=>document.getElementById(id),msg=t=>e('fbStatus').textContent=t;
 const permitted=()=>auth.currentUser?.uid===owner;
-let unsubscribe=null, initialized=false, remoteApplying=false, writeTimer=null, writing=false, pending=false;
+let unsubscribe=null, initialized=false, writeTimer=null, writing=false, pending=false;
 let lastCloudRaw=null;
 const cloudDoc=()=>doc(db,'privateSnooker',owner);
 const localRaw=()=>localStorage.getItem('snookerMoneyMatchState');
 function valid(raw){try{const x=JSON.parse(raw);return Array.isArray(x.players)&&Number.isFinite(Number(x.target))}catch{return false}}
 function syncNow(){
-  if(!permitted()||!initialized||remoteApplying)return;
+  if(!permitted()||!initialized)return;
   pending=true;
   clearTimeout(writeTimer);
   writeTimer=setTimeout(flush,450);
@@ -1253,32 +1266,17 @@ onAuthStateChanged(auth,u=>{
       applyTournamentSnapshot(data?.tournamentSync??null,data?.tournamentRevision??0);
       receiveTable(data?.tournamentTable);
     }
+    if(snap.metadata.hasPendingWrites || snap.metadata.fromCache)return;
     const raw=data?.state??null;
     if(first){
       first=false;initialized=true;
-      if(raw&&valid(raw)){
-        lastCloudRaw=raw;
-        if(localRaw()!==raw){
-          // Existing cloud backup is authoritative when signing in on another device.
-          remoteApplying=true;
-          localStorage.setItem('snookerMoneyMatchState',raw);
-          location.reload();return;
-        }
-      }else if(localRaw())syncNow();
+      if(raw==null && localRaw())syncNow();
       msg('✅ Live-Synchronisierung aktiv');
-      return;
     }
-    if(snap.metadata.hasPendingWrites)return;
     if(raw===lastCloudRaw||writing||pending)return;
     lastCloudRaw=raw;
-    if(raw&&valid(raw)&&localRaw()!==raw){
-      remoteApplying=true;
-      localStorage.setItem('snookerMoneyMatchState',raw);
-      location.reload();
-    }else if(raw===''&&localRaw()){
-      remoteApplying=true;
-      localStorage.removeItem('snookerMoneyMatchState');
-      location.reload();
+    if((raw===''||valid(raw)) && localRaw()!==raw){
+      window.dispatchEvent(new CustomEvent('snooker-single-received',{detail:raw}));
     }
   },err=>{
     const reason=err.code||err.message;
@@ -1289,7 +1287,7 @@ onAuthStateChanged(auth,u=>{
 e('fbLogin').onclick=async()=>{try{await signInWithEmailAndPassword(auth,e('fbEmail').value.trim(),e('fbPass').value);e('fbPass').value=''}catch(err){msg('Anmeldung fehlgeschlagen: '+err.code)}};
 e('fbLogout').onclick=async()=>{await signOut(auth)};
 e('fbSave').onclick=async()=>{if(!permitted()){msg('Bitte zuerst anmelden.');return}const raw=localStorage.getItem('snookerMoneyMatchState');if(!raw){msg('Kein lokaler Spielstand vorhanden.');return}if(!confirm('Cloud-Sicherung überschreiben?'))return;try{await setDoc(cloudDoc(),{state:raw,updatedAt:new Date().toISOString()},{merge:true});lastCloudRaw=raw;msg('✅ In Cloud gesichert')}catch(err){msg('Fehler: '+err.code)}};
-e('fbLoad').onclick=async()=>{if(!permitted()){msg('Bitte zuerst anmelden.');return}try{const snap=await getDoc(cloudDoc());if(!snap.exists()){msg('Noch keine Cloud-Sicherung vorhanden.');return}const raw=snap.data().state,obj=JSON.parse(raw);if(!Array.isArray(obj.players)||!Number.isFinite(Number(obj.target)))throw Error('Ungültige Daten');if(!confirm('Lokalen Spielstand durch Cloud-Sicherung ersetzen?'))return;localStorage.setItem('snookerMoneyMatchState',raw);location.reload()}catch(err){msg('Laden fehlgeschlagen: '+(err.code||err.message))}};
+e('fbLoad').onclick=async()=>{if(!permitted()){msg('Bitte zuerst anmelden.');return}try{const snap=await getDoc(cloudDoc());if(!snap.exists()){msg('Noch keine Cloud-Sicherung vorhanden.');return}const raw=snap.data().state,obj=JSON.parse(raw);if(!Array.isArray(obj.players)||!Number.isFinite(Number(obj.target)))throw Error('Ungültige Daten');if(!confirm('Lokalen Spielstand durch Cloud-Sicherung ersetzen?'))return;window.dispatchEvent(new CustomEvent('snooker-single-received',{detail:raw}));msg('✅ Cloud-Spielstand geladen')}catch(err){msg('Laden fehlgeschlagen: '+(err.code||err.message))}};
 </script><script>
 // Geräteindividuelle Ansicht: nicht Teil des Matches und niemals Firebase-synchronisiert.
 (function(){
@@ -1308,6 +1306,6 @@ e('fbLoad').onclick=async()=>{if(!permitted()){msg('Bitte zuerst anmelden.');ret
  btn.addEventListener('click',()=>setDisplay(!page.classList.contains('displayOnly')));
 })();
 </script>
-<script src="tournament.js?v=7.27"></script>
+<script src="tournament.js?v=7.28"></script>
 </body>
 </html>
