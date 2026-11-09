@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#0f5f37">
-  <meta name="application-version" content="7.33">
+  <meta name="application-version" content="7.34">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="Snooker Match">
@@ -336,10 +336,10 @@ body.snookerFullscreenScore #scorerPage.displayOnly{background:#090613!important
   text-shadow:0 1px 2px #0009;
 }
 </style>
-  <link rel="stylesheet" href="tournament.css?v=7.33">
+  <link rel="stylesheet" href="tournament.css?v=7.34">
 </head>
 <body>
-<div id="appVersionTag" aria-label="App-Version 7.33">v7.33</div>
+<div id="appVersionTag" aria-label="App-Version 7.34">v7.34</div>
 <div class="app">
   <h1 class="clubBrand" aria-label="Flensburger Snooker Club – Snooker Money Match"><img src="flensburger-snooker-club.png" alt="Flensburger Snooker Club" width="430" height="125"><span class="visuallyHidden">Snooker Money Match</span></h1><div id="offlineStatus" class="hidden" aria-live="polite"></div>
 
@@ -1245,17 +1245,71 @@ window.addEventListener('snooker-tournament-view',({detail})=>{
   pendingTable=detail;
   flushTable();
 });
+const rosterStorage='snookerSwissPlayerNamesV1';
+const rosterQueueKey='snookerSwissRosterPendingV1';
+let rosterQueue=[], rosterCloud=null, rosterWriting=false;
+function localRoster(){
+  try{return JSON.parse(localStorage.getItem(rosterStorage))??[];}catch{return [];}
+}
+function saveRosterQueue(){
+  localStorage.setItem(rosterQueueKey,JSON.stringify(rosterQueue));
+}
+function receiveRoster(entry){
+  if(entry && Array.isArray(entry.names) && entry.names.every(name=>typeof name==='string') &&
+      (!rosterCloud || entry.revision>=rosterCloud.revision))rosterCloud=entry;
+  if(rosterCloud&&!rosterWriting&&!rosterQueue.length){
+    window.dispatchEvent(new CustomEvent('snooker-roster-received',{detail:rosterCloud.names}));
+  }
+}
+async function flushRoster(){
+  if(!permitted()||!tournamentReady||rosterWriting||(rosterCloud&&!rosterQueue.length))return;
+  const count=rosterQueue.length, changes=rosterQueue.slice(0,count), local=localRoster();
+  if(!count&&!local.length)return;
+  rosterWriting=true;
+  try{
+    const entry=await runTransaction(db,async transaction=>{
+      const existing=(await transaction.get(cloudDoc())).data()?.tournamentRoster;
+      if(existing&&!count)return existing;
+      const key=name=>name.toLocaleLowerCase('de');
+      const names=new Map((existing?.names??local).map(name=>[key(name),name]));
+      for(const {before,after} of changes){
+        const next=new Map(after.map(name=>[key(name),name]));
+        for(const name of before)if(!next.has(key(name)))names.delete(key(name));
+        const previous=new Set(before);
+        for(const name of after)if(!previous.has(name))names.set(key(name),name);
+      }
+      const entry={names:[...names.values()],revision:(existing?.revision??0)+1};
+      transaction.set(cloudDoc(),{tournamentRoster:entry},{merge:true});
+      return entry;
+    });
+    rosterQueue.splice(0,count);
+    saveRosterQueue();
+    rosterWriting=false;
+    receiveRoster(entry);
+    if(rosterQueue.length)flushRoster();
+  }catch(err){
+    rosterWriting=false;
+    tournamentConnection('Spielerliste lokal gespeichert. Synchronisierung ausstehend: '+(err.code||err.message));
+  }
+}
+window.addEventListener('snooker-roster-change',({detail})=>{
+  if(!permitted())return;
+  rosterQueue.push(detail);
+  saveRosterQueue();
+  flushRoster();
+});
 window.addEventListener('snooker-state-changed',syncNow);
-window.addEventListener('online',()=>{if(pending)flush();flushTournament();flushTable()});
+window.addEventListener('online',()=>{if(pending)flush();flushTournament();flushTable();flushRoster()});
 onAuthStateChanged(auth,u=>{
   if(unsubscribe){unsubscribe();unsubscribe=null}
   initialized=false;pending=false;clearTimeout(writeTimer);
   tournamentReady=false;pendingTournament=null;tournamentRevision=-1;latestTournament=null;
-  pendingTable=null;lastTable=null;
+  pendingTable=null;lastTable=null;rosterCloud=null;rosterQueue=[];
   tournamentConnection(permitted()?'Turnier-Synchronisierung wird verbunden …':'Für Live-Sync auf beiden Geräten im Einzelmodus anmelden.');
   if(!u){msg('Nicht angemeldet');return}
   if(!permitted()){msg('⚠️ Konto nicht freigegeben');return}
   try{pendingTournament=JSON.parse(localStorage.getItem(tournamentPendingKey));}catch{pendingTournament=null;}
+  try{rosterQueue=JSON.parse(localStorage.getItem(rosterQueueKey))??[];}catch{rosterQueue=[];}
   msg('⏳ Verbinde Live-Synchronisierung …');
   let first=true;
   unsubscribe=onSnapshot(cloudDoc(),{includeMetadataChanges:true},snap=>{
@@ -1276,6 +1330,8 @@ onAuthStateChanged(auth,u=>{
       }
       applyTournamentSnapshot(data?.tournamentSync??null,data?.tournamentRevision??0);
       receiveTable(data?.tournamentTable);
+      receiveRoster(data?.tournamentRoster);
+      flushRoster();
     }
     if(snap.metadata.hasPendingWrites || snap.metadata.fromCache)return;
     const raw=data?.state??null;
@@ -1317,6 +1373,6 @@ e('fbLoad').onclick=async()=>{if(!permitted()){msg('Bitte zuerst anmelden.');ret
  btn.addEventListener('click',()=>setDisplay(!page.classList.contains('displayOnly')));
 })();
 </script>
-<script src="tournament.js?v=7.33"></script>
+<script src="tournament.js?v=7.34"></script>
 </body>
 </html>

@@ -62,15 +62,22 @@
   }
   const rosterKey = 'snookerSwissPlayerNamesV1';
   let playerNames = [];
+  let refreshPlayerList = null;
   try {
     const stored = JSON.parse(localStorage.getItem(rosterKey));
     if (Array.isArray(stored)) playerNames = stored.filter(name => typeof name === 'string' && name.trim());
   } catch (error) { console.warn('Spielerliste konnte nicht geladen werden.', error); }
-  function savePlayerNames(next) {
+  function savePlayerNames(next, publish = true) {
     next.sort((a,b) => a.localeCompare(b,'de'));
+    if (JSON.stringify(playerNames) === JSON.stringify(next)) return;
+    const before = playerNames;
     localStorage.setItem(rosterKey, JSON.stringify(next));
     playerNames = next;
+    if (publish) window.dispatchEvent(new CustomEvent('snooker-roster-change', {detail:{before, after:next}}));
+    else refreshPlayerList?.();
   }
+  window.addEventListener('snooker-roster-received', ({detail}) => savePlayerNames([...detail], false));
+
   function rememberPlayers(names) {
     const next = [...playerNames];
     const known = new Set(playerNames.map(name => name.toLocaleLowerCase('de')));
@@ -851,6 +858,7 @@
       });
       renderPlayerList();
     }
+    refreshPlayerList = renderPlayerList;
     renderNames();
     form.elements.count.onchange = renderNames;
     form.elements.duration.onchange = () => {
@@ -1185,6 +1193,7 @@
   }
 
   function renderTournament() {
+    refreshPlayerList = null;
     applyRemoteTournament();
     const previousForm = panel.querySelector('[data-result]');
     const draftIndex = previousForm?.dataset.result;
