@@ -1,9 +1,9 @@
-const CACHE_NAME = 'v7-29-swiss-tournament';
+const CACHE_NAME = 'v7-30-swiss-tournament';
 const APP_SHELL = [
   './',
   './index.html',
-  './tournament.js?v=7.29',
-  './tournament.css?v=7.29',
+  './tournament.js?v=7.30',
+  './tournament.css?v=7.30',
   './manifest.webmanifest',
   './icon-192.png',
   './icon-512.png',

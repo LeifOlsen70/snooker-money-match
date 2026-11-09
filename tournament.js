@@ -6,6 +6,7 @@
   let tournament = null;
   let openMatch = null;
   let drafting = false;
+  let draftFreeTournament = false;
   let view = 'rounds';
   let fullscreen = false;
   let liveStatus = 'Für Live-Sync auf beiden Geräten im Einzelmodus anmelden.';
@@ -279,6 +280,33 @@
     return rows.sort((a, b) => b.points - a.points || b.diff - a.diff || a.id - b.id);
   }
 
+  function unpairedTournament(data) {
+    const {parkedTournament, parkedAt, ...active} = data;
+    return active;
+  }
+
+  function switchTournament() {
+    if (openMatch !== null) return;
+    if (!tournament.parkedTournament) {
+      draftFreeTournament = true;
+      drafting = true;
+      renderTournament();
+      return;
+    }
+    const now = Date.now();
+    const elapsed = Math.max(0, now - (tournament.parkedAt ?? now));
+    const next = clone(tournament.parkedTournament);
+    if (!next.ended) {
+      if (next.endAt != null) next.endAt += elapsed;
+      for (const round of next.rounds) for (const match of round.matches) {
+        if (match.table && !match.result && match.startedAt != null) match.startedAt += elapsed;
+      }
+    }
+    tournament = {...next, parkedTournament:unpairedTournament(tournament), parkedAt:now};
+    view = 'rounds';
+    saveTournament();
+  }
+
   function dayKey(data) {
     return JSON.stringify(data.started ?? data.players);
   }
@@ -338,7 +366,7 @@
       </div>
       ${overallTable(rows)}
       <div class="tournamentSeasons">
-        ${rows.length ? `<button type="button" class="secondary" id="newTournamentSeason" ${data.ended ? '' : 'disabled'}>Neue Saison starten</button>
+        ${!data.freeTournament && rows.length ? `<button type="button" class="secondary" id="newTournamentSeason" ${data.ended ? '' : 'disabled'}>Neue Saison starten</button>
           ${data.ended ? '' : '<p class="small">Für den Saisonwechsel zuerst das laufende Turnier beenden.</p>'}` : ''}
         ${archive.length ? `<details><summary>Saisonarchiv</summary>
           ${archive.map((season, index) => `<details>
@@ -352,7 +380,7 @@
   }
 
   function startTournamentSeason() {
-    if (!tournament?.ended) return;
+    if (!tournament?.ended || tournament.freeTournament) return;
     const rows = overallRows(tournament);
     if (!rows.length) return;
     const now = Date.now();
@@ -521,7 +549,7 @@
   function renderSetup() {
     panel.innerHTML = `
       <div class="card">
-        <h2>Schweizer Turnier anlegen</h2>
+        <h2>${draftFreeTournament || tournament?.freeTournament ? 'Freies Turnier anlegen' : 'Club Liga Saison · Turnier anlegen'}</h2>
         <form id="tournamentSetup">
           <div class="tournamentFields">
             <label>Spieleranzahl
@@ -714,6 +742,7 @@
     };
     if (tournament) $('cancelTournamentSetup').onclick = () => {
       drafting = false;
+      draftFreeTournament = false;
       renderTournament();
     };
     form.onsubmit = event => {
@@ -726,13 +755,19 @@
       if (form.elements.duration.value === 'endless' && !(nextEndTime(form.elements.endAt.value) > Date.now())) {
         $('tournamentSetupError').textContent = 'Bitte eine gültige Uhrzeit für das Turnierende eingeben.'; return;
       }
-      if (tournament && !confirm('Das bisherige Turnier wird durch das neue ersetzt. Fortfahren?')) return;
+      if (tournament && !draftFreeTournament && !confirm('Das bisherige Turnier wird durch das neue ersetzt. Fortfahren?')) return;
       rememberPlayers(players);
+      const freeTournament = draftFreeTournament || tournament?.freeTournament === true;
+      const parkedTournament = draftFreeTournament ? unpairedTournament(tournament) : tournament?.parkedTournament;
+      const parkedAt = draftFreeTournament ? Date.now() : tournament?.parkedAt;
       tournament = {
         players,
-        overallDays: overallDays(tournament),
-        seasonStarted: tournament?.seasonStarted,
-        seasonArchive: tournament?.seasonArchive,
+        freeTournament,
+        parkedTournament,
+        parkedAt,
+        overallDays: freeTournament ? [] : overallDays(tournament),
+        seasonStarted: freeTournament ? undefined : tournament?.seasonStarted,
+        seasonArchive: freeTournament ? undefined : tournament?.seasonArchive,
         limit: form.elements.duration.value === 'endless' ? null : Number(form.elements.rounds.value),
         framesPerMatch: Number(form.elements.framesPerMatch.value),
         byePoints: Number(form.elements.byePoints.value),
@@ -742,7 +777,9 @@
         finishLastRound: false
       };
       drafting = false;
+      draftFreeTournament = false;
       openMatch = null;
+      view = 'rounds';
       tournament.rounds.push(pairRound());
       saveTournament();
     };
@@ -827,7 +864,7 @@
     }
   }
 
-  function validBackup(data) {
+  function validBackup(data, allowParked = true) {
     const integer = (value, min, max) => Number.isInteger(value) && value >= min && value <= max;
     const timestamp = value => value == null || (Number.isFinite(value) && value >= 0);
     if (!data || !Array.isArray(data.players) || !integer(data.players.length, 2, 12)
@@ -848,6 +885,10 @@
       !data.seasonArchive.every(season => season && Number.isFinite(season.ended) && typeof season.name === 'string' &&
         Array.isArray(season.rows) && season.rows.every(row => row && typeof row.name === 'string' &&
           Number.isFinite(row.points) && Number.isInteger(row.place) && Number.isInteger(row.appearances)))))) return false;
+    if ((data.freeTournament != null && typeof data.freeTournament !== 'boolean') ||
+      !timestamp(data.parkedAt) || (data.parkedTournament != null &&
+        (!allowParked || Boolean(data.freeTournament) === Boolean(data.parkedTournament.freeTournament) ||
+          !validBackup(data.parkedTournament, false)))) return false;
     const validPlayer = id => integer(id, 0, data.players.length - 1);
     return data.rounds.every(round => {
       if (!round || !Array.isArray(round.matches) || !round.matches.length || round.matches.length > Math.floor(data.players.length / 2)
@@ -901,13 +942,22 @@
         }
         if (tournament && !confirm('Den aktuellen Turnierstand durch die Sicherung ersetzen?')) return;
         const incoming = backup.tournament;
-        const seasonStarted = Math.max(tournament?.seasonStarted ?? 0, incoming.seasonStarted ?? 0);
-        const archive = new Map((incoming.seasonArchive ?? []).map(season => [season.ended, season]));
-        for (const season of tournament?.seasonArchive ?? []) archive.set(season.ended, season);
-        tournament = {...incoming, seasonStarted,
-          seasonArchive:[...archive.values()].sort((a,b) => b.ended - a.ended),
-          overallDays:overallDays(tournament, incoming).filter(day => !seasonStarted || Number(day.id) >= seasonStarted)};
-
+        const opposite = tournament && Boolean(tournament.freeTournament) !== Boolean(incoming.freeTournament);
+        const previous = opposite ? tournament.parkedTournament : tournament;
+        const parkedTournament = opposite ? unpairedTournament(tournament)
+          : tournament?.parkedTournament ?? incoming.parkedTournament;
+        const parkedAt = opposite ? Date.now() : tournament?.parkedAt ?? incoming.parkedAt;
+        if (incoming.freeTournament) {
+          tournament = {...incoming, parkedTournament, parkedAt};
+        } else {
+          const seasonStarted = Math.max(previous?.seasonStarted ?? 0, incoming.seasonStarted ?? 0);
+          const archive = new Map((incoming.seasonArchive ?? []).map(season => [season.ended, season]));
+          for (const season of previous?.seasonArchive ?? []) archive.set(season.ended, season);
+          tournament = {...incoming, parkedTournament, parkedAt, seasonStarted,
+            seasonArchive:[...archive.values()].sort((a,b) => b.ended - a.ended),
+            overallDays:overallDays(previous, incoming).filter(day => !seasonStarted || Number(day.id) >= seasonStarted)};
+        }
+        draftFreeTournament = false;
         drafting = false;
         openMatch = null;
         view = 'rounds';
@@ -998,6 +1048,8 @@
     $('tournamentHome').onclick = () => {
       if (openMatch !== null && !confirm('Ergebniseingabe ohne Speichern verlassen?')) return;
       openMatch = null;
+      drafting = false;
+      draftFreeTournament = false;
       showMode('home');
     };
     panel.insertAdjacentHTML('beforeend', `<div class="tournamentActions tournamentHistory"><button type="button" class="secondary" id="tournamentUndo" ${undoStates.length ? '' : 'disabled'}>↶ Zurück</button><button type="button" class="secondary" id="tournamentRedo" ${redoStates.length ? '' : 'disabled'}>Vor ↷</button></div>${tournament && !tournament.ended && !drafting ? '<button type="button" class="secondary tournamentEnd" id="finishTournamentAnytime">Turnier beenden</button>' : ''}`);
@@ -1014,6 +1066,12 @@
       renderLiveStatus();
       return;
     }
+
+    panel.insertAdjacentHTML('beforeend', `<div class="card tournamentActions">
+      <strong>${tournament.freeTournament ? 'Freies Turnier' : 'Club Liga Saison'}</strong>
+      ${!tournament.freeTournament || tournament.parkedTournament ? `<button type="button" class="secondary" id="switchTournamentType" ${openMatch !== null ? 'disabled' : ''}>${tournament.freeTournament ? 'Zur Club Liga Saison' : tournament.parkedTournament ? 'Zum freien Turnier' : 'Freies Turnier starten'}</button>` : ''}
+    </div>`);
+    if ($('switchTournamentType')) $('switchTournamentType').onclick = switchTournament;
 
     panel.insertAdjacentHTML('beforeend', `
       <nav class="tournamentActions tournamentViews" aria-label="Turnieransicht">
@@ -1154,6 +1212,7 @@
       saveTournament();
     };
     if ($('newTournament')) $('newTournament').onclick = () => {
+      draftFreeTournament = false;
       drafting = true;
       renderTournament();
     };
