@@ -128,16 +128,15 @@ body.snookerFullscreenTournament #tournamentFullscreenToggle {font-size:clamp(13
 
 #tournamentMode .tournamentPlayerChoices {display:block}
 #tournamentMode .tournamentPlayerRow {position:relative;overflow:hidden;border:1px solid #775b87;border-radius:10px;margin:8px 0;touch-action:pan-y}
-#tournamentMode .tournamentPlayerFace {position:relative;display:flex;background:#24162e;transition:transform .2s ease}
-#tournamentMode .tournamentPlayerRow.deleteOpen .tournamentPlayerFace {transform:translateX(-88px)}
+#tournamentMode .tournamentPlayerFace {display:flex;background:#24162e}
 #tournamentMode .tournamentPlayerChoices .tournamentPlayerPick {flex:1;display:flex;align-items:center;gap:12px;width:100%;min-width:0;min-height:48px;border-radius:0;background:#24162e;color:#f6eddc;text-align:left}
 #tournamentMode .tournamentPlayerChoices .tournamentPlayerPick.selected {background:#584021;color:#ffe4a3}
 #tournamentMode .tournamentPlayerCheck {flex:none;font-size:22px}
 #tournamentMode .tournamentPlayerChoices .tournamentPlayerMore {width:44px;flex:none;border-radius:0;background:#24162e;color:#f6eddc;font-size:24px;padding:6px}
-#tournamentMode .tournamentPlayerChoices .tournamentPlayerDelete {position:absolute;right:0;top:0;bottom:0;width:88px;max-width:none;border-radius:0;background:#bd3046;color:white;padding:8px;font-size:14px}
-#tournamentMode .tournamentPlayerDelete[hidden] {display:none}
+#tournamentMode .tournamentPlayerActions:not([hidden]) {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));border-top:1px solid #775b87}
+#tournamentMode .tournamentPlayerChoices .tournamentPlayerActions button {width:100%;border-radius:0;background:#47305e;color:#fff2d6}
+#tournamentMode .tournamentPlayerChoices .tournamentPlayerActions .tournamentPlayerDelete {background:#bd3046;color:white}
 #tournamentMode .tournamentRosterAdd {border-top:1px solid #775b87;padding-top:14px;margin-top:14px}
-@media (prefers-reduced-motion:reduce) {#tournamentMode .tournamentPlayerFace {transition:none}}
 
 /* Compact round overview; keep touch controls at least 44px tall. */
 body.compactTournament .clubBrand {margin:4px 0 8px;padding:3px;}

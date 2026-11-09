@@ -60,16 +60,21 @@
     const stored = JSON.parse(localStorage.getItem(rosterKey));
     if (Array.isArray(stored)) playerNames = stored.filter(name => typeof name === 'string' && name.trim());
   } catch (error) { console.warn('Spielerliste konnte nicht geladen werden.', error); }
+  function savePlayerNames(next) {
+    next.sort((a,b) => a.localeCompare(b,'de'));
+    localStorage.setItem(rosterKey, JSON.stringify(next));
+    playerNames = next;
+  }
   function rememberPlayers(names) {
+    const next = [...playerNames];
     const known = new Set(playerNames.map(name => name.toLocaleLowerCase('de')));
     for (const raw of names) {
       const name = raw.trim().slice(0,60);
       if (name && !known.has(name.toLocaleLowerCase('de'))) {
-        playerNames.push(name); known.add(name.toLocaleLowerCase('de'));
+        next.push(name); known.add(name.toLocaleLowerCase('de'));
       }
     }
-    playerNames.sort((a,b) => a.localeCompare(b,'de'));
-    localStorage.setItem(rosterKey, JSON.stringify(playerNames));
+    savePlayerNames(next);
   }
   function choice(title, message, options) {
     return new Promise(resolve => {
@@ -367,7 +372,7 @@
           </div>
           <section class="tournamentRoster" aria-label="Gespeicherte Spieler">
             <h3>Spieler auswählen</h3>
-            <p class="small">Namen antippen, um sie für dieses Turnier auszuwählen. Erneutes Tippen entfernt die Auswahl. Zum Löschen eine Zeile nach links wischen oder auf ⋯ tippen.</p>
+            <p class="small">Namen antippen, um sie für dieses Turnier auszuwählen oder abzuwählen. Zum Bearbeiten oder Löschen auf ⋯ tippen oder die Zeile nach links wischen.</p>
             <div id="savedTournamentPlayers" class="tournamentPlayerChoices"></div>
             <div class="tournamentRosterAdd"><label>Neuer Spieler<input id="newTournamentPlayerName" type="text" maxlength="60" placeholder="Name"></label><button type="button" class="secondary" id="addTournamentPlayer">Hinzufügen</button></div>
             <p id="tournamentPlayerMessage" class="small" role="status"></p>
@@ -383,28 +388,75 @@
     const names = $('tournamentNames');
     const drafts = [];
     let suppressPickUntil = 0;
+    function editPlayer(name, inputs) {
+      const dialog = document.createElement('dialog');
+      dialog.className = 'tournamentDialog';
+      dialog.setAttribute('aria-label', 'Spielername bearbeiten');
+      dialog.innerHTML = `<form><h3>Spielername bearbeiten</h3><label>Spielername<input type="text" maxlength="60" required></label><p role="alert"></p><div class="tournamentActions"><button>Speichern</button><button type="button">Abbrechen</button></div></form>`;
+      const input = dialog.querySelector('input');
+      const message = dialog.querySelector('[role=alert]');
+      input.value = name;
+      function close() { dialog.close(); dialog.remove(); }
+      dialog.querySelector('[type=button]').onclick = close;
+      dialog.oncancel = event => { event.preventDefault(); close(); };
+      dialog.querySelector('form').onsubmit = event => {
+        event.preventDefault();
+        const corrected = input.value.trim();
+        if (!corrected) {
+          message.textContent = 'Bitte einen Namen eingeben.';
+          return;
+        }
+        if (corrected === name) { close(); return; }
+        const oldKey = name.toLocaleLowerCase('de');
+        const newKey = corrected.toLocaleLowerCase('de');
+        const draftNames = [...inputs.map(field => field.value), ...drafts.slice(inputs.length)];
+        if (newKey !== oldKey && [...playerNames, ...draftNames].some(value => value?.trim().toLocaleLowerCase('de') === newKey)) {
+          message.textContent = 'Dieser Name wird bereits verwendet.';
+          return;
+        }
+        const rename = value => value?.trim().toLocaleLowerCase('de') === oldKey ? corrected : value;
+        try {
+          savePlayerNames(playerNames.map(rename));
+        } catch (error) {
+          message.textContent = 'Der Name konnte auf diesem Gerät nicht gespeichert werden.';
+          return;
+        }
+        inputs.forEach(field => { field.value = rename(field.value); });
+        drafts.forEach((value, index) => { drafts[index] = rename(value); });
+        close();
+        $('tournamentPlayerMessage').textContent = 'Spielername gespeichert.';
+        renderPlayerList();
+        const index = playerNames.indexOf(corrected);
+        panel.querySelector(`[data-pick-player="${index}"]`)?.focus();
+      };
+      document.body.append(dialog);
+      dialog.showModal();
+      input.select();
+    }
     function renderPlayerList() {
       const inputs = Array.from(names.querySelectorAll('input'));
       const selected = new Set(inputs.map(input => input.value.trim().toLocaleLowerCase('de')));
       $('savedTournamentPlayers').innerHTML = playerNames.map((name,i) => {
         const active = selected.has(name.toLocaleLowerCase('de'));
         return `<div class="tournamentPlayerRow">
-          <button type="button" class="tournamentPlayerDelete" data-delete-player="${i}" hidden>Löschen</button>
           <div class="tournamentPlayerFace">
             <button type="button" class="tournamentPlayerPick ${active ? 'selected' : ''}" data-pick-player="${i}" aria-pressed="${active}"><span class="tournamentPlayerCheck" aria-hidden="true">${active ? '✓' : '○'}</span><span>${esc(name)}</span></button>
             <button type="button" class="tournamentPlayerMore" aria-label="Aktionen für ${esc(name)}" aria-expanded="false">⋯</button>
+          </div>
+          <div class="tournamentPlayerActions" hidden>
+            <button type="button" data-edit-player="${i}">Bearbeiten</button>
+            <button type="button" class="tournamentPlayerDelete" data-delete-player="${i}">Löschen</button>
           </div>
         </div>`;
       }).join('') || '<p class="small">Noch keine Spieler gespeichert.</p>';
       function reveal(row, open) {
         if (open) $('savedTournamentPlayers').querySelectorAll('.tournamentPlayerRow').forEach(other => { if (other !== row) reveal(other,false); });
-        row.classList.toggle('deleteOpen',open);
-        row.querySelector('[data-delete-player]').hidden = !open;
+        row.querySelector('.tournamentPlayerActions').hidden = !open;
         row.querySelector('.tournamentPlayerMore').setAttribute('aria-expanded',String(open));
       }
       $('savedTournamentPlayers').querySelectorAll('.tournamentPlayerRow').forEach(row => {
         let start = null;
-        row.querySelector('.tournamentPlayerMore').onclick = () => reveal(row,!row.classList.contains('deleteOpen'));
+        row.querySelector('.tournamentPlayerMore').onclick = () => reveal(row,row.querySelector('.tournamentPlayerActions').hidden);
         row.addEventListener('touchstart', event => {
           start = event.touches.length === 1 ? {x:event.touches[0].clientX,y:event.touches[0].clientY} : null;
         }, {passive:true});
@@ -424,7 +476,7 @@
       $('savedTournamentPlayers').querySelectorAll('[data-pick-player]').forEach(button => button.onclick = () => {
         if (Date.now() < suppressPickUntil) return;
         const row = button.closest('.tournamentPlayerRow');
-        if (row.classList.contains('deleteOpen')) { reveal(row,false); return; }
+        if (!row.querySelector('.tournamentPlayerActions').hidden) { reveal(row,false); return; }
         const name = playerNames[Number(button.dataset.pickPlayer)];
         const existing = inputs.find(input => input.value.trim().toLocaleLowerCase('de') === name.toLocaleLowerCase('de'));
         if (existing) existing.value = '';
@@ -435,10 +487,13 @@
         }
         $('tournamentPlayerMessage').textContent = ''; renderPlayerList();
       });
+      $('savedTournamentPlayers').querySelectorAll('[data-edit-player]').forEach(button => button.onclick = () => {
+        editPlayer(playerNames[Number(button.dataset.editPlayer)], inputs);
+      });
       $('savedTournamentPlayers').querySelectorAll('[data-delete-player]').forEach(button => button.onclick = () => {
         const index = Number(button.dataset.deletePlayer), name = playerNames[index];
         if (!confirm(`${name} aus der gespeicherten Spielerliste löschen? Bereits gespielte Turniere bleiben erhalten.`)) return;
-        playerNames.splice(index,1); localStorage.setItem(rosterKey,JSON.stringify(playerNames));
+        savePlayerNames(playerNames.filter((_, i) => i !== index));
         inputs.forEach(input => { if (input.value.trim().toLocaleLowerCase('de') === name.toLocaleLowerCase('de')) input.value = ''; });
         renderPlayerList();
       });
