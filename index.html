@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#0f5f37">
-  <meta name="application-version" content="7.26">
+  <meta name="application-version" content="7.27">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="Snooker Match">
@@ -336,10 +336,10 @@ body.snookerFullscreenScore #scorerPage.displayOnly{background:#090613!important
   text-shadow:0 1px 2px #0009;
 }
 </style>
-  <link rel="stylesheet" href="tournament.css?v=7.26">
+  <link rel="stylesheet" href="tournament.css?v=7.27">
 </head>
 <body>
-<div id="appVersionTag" aria-label="App-Version 7.26">v7.26</div>
+<div id="appVersionTag" aria-label="App-Version 7.27">v7.27</div>
 <div class="app">
   <h1 class="clubBrand" aria-label="Flensburger Snooker Club – Snooker Money Match"><img src="flensburger-snooker-club.png" alt="Flensburger Snooker Club" width="430" height="125"><span class="visuallyHidden">Snooker Money Match</span></h1><div id="offlineStatus" class="hidden" aria-live="polite"></div>
 
@@ -1072,7 +1072,7 @@ if('serviceWorker' in navigator){
 <script type="module">
 import {initializeApp} from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js';
 import {getAuth,signInWithEmailAndPassword,signOut,onAuthStateChanged} from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-auth.js';
-import {getFirestore,doc,getDoc,setDoc,onSnapshot} from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore.js';
+import {getFirestore,doc,getDoc,setDoc,onSnapshot,runTransaction} from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore.js';
 const config={apiKey:'AIzaSyBgmv1v5APpPReJ4olWCusUhhGGevcvRcE',authDomain:'snooker-money-match.firebaseapp.com',projectId:'snooker-money-match',storageBucket:'snooker-money-match.firebasestorage.app',messagingSenderId:'423302158497',appId:'1:423302158497:web:706c1fec068959b7bbb8e0'};
 const owner='SRx2kZD2jzdM3Q6RVVOjioAuHuw1';
 const app=initializeApp(config),auth=getAuth(app),db=getFirestore(app),e=id=>document.getElementById(id),msg=t=>e('fbStatus').textContent=t;
@@ -1099,48 +1099,159 @@ async function flush(){
   }catch(err){pending=true;msg('⚠️ Synchronisierung ausstehend: '+(err.code||err.message));}
   finally{writing=false;if(pending&&navigator.onLine){clearTimeout(writeTimer);writeTimer=setTimeout(flush,1500)}}
 }
-let queuedTournament = null, tournamentWriting = false, lastTournamentRaw = null;
+let tournamentWriting=false, tournamentReady=false, tournamentRevision=-1, latestTournament=null;
+let pendingTournament=null, pendingTable=null, writingTable=false, lastTable=null;
+const tournamentKey='snookerSwissTournamentV1';
+const tournamentPendingKey='snookerSwissPendingSyncV1';
+let sendingTournament=null;
+function persistTournamentQueue(){
+  const queued=sendingTournament ? {...sendingTournament,after:pendingTournament?.after??sendingTournament.after} : pendingTournament;
+  if(queued)localStorage.setItem(tournamentPendingKey,JSON.stringify(queued));
+  else localStorage.removeItem(tournamentPendingKey);
+}
+const same=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
 function tournamentConnection(message){
   window.dispatchEvent(new CustomEvent('snooker-tournament-connection',{detail:{available:permitted(),message}}));
 }
+function applyTournamentSnapshot(raw, revision){
+  if(revision<tournamentRevision)return;
+  tournamentRevision=revision;
+  latestTournament=raw;
+  if(!tournamentWriting&&!pendingTournament&&raw!==null){
+    window.dispatchEvent(new CustomEvent('snooker-tournament-received',{detail:raw}));
+  }
+}
+function mergeTournament(before, after, remote){
+  if(same(before,remote)||same(after,remote))return after;
+  if(same(before,after))return remote;
+  if(!before||!after||!remote)throw Error('tournament-conflict');
+  // Merge only match edits on the same schedule. A concurrent round or
+  // tournament replacement requires a fresh attempt against the new state.
+  const schedule=({rounds,filename,...settings})=>[settings,rounds.map(round=>[round.bye,round.matches.map(match=>match.players)])];
+  if(!same(schedule(before),schedule(after))||!same(schedule(before),schedule(remote)))throw Error('tournament-conflict');
+  const merged={...remote,rounds:remote.rounds.map((round,r)=>({...round,matches:round.matches.map((match,m)=>{
+    const previous=before.rounds[r].matches[m], next=after.rounds[r].matches[m];
+    if(same(previous,next))return match;
+    if(!same(previous,match)&&!same(next,match))throw Error('tournament-conflict');
+    return next;
+  })}))};
+  const tables=new Set(), players=new Set();
+  for(const round of merged.rounds)for(const match of round.matches){
+    if(!match.table||match.result)continue;
+    if(tables.has(match.table)||match.players.some(id=>players.has(id)))throw Error('tournament-conflict');
+    tables.add(match.table);
+    match.players.forEach(id=>players.add(id));
+  }
+  return merged;
+}
 async function flushTournament(){
-  if(tournamentWriting || queuedTournament === null || !permitted())return;
-  const raw=queuedTournament;
-  queuedTournament=null;
+  if(tournamentWriting||!pendingTournament||!permitted()||!tournamentReady)return;
+  const batch=pendingTournament;
+  pendingTournament=null;
   tournamentWriting=true;
+  sendingTournament=batch;
+  persistTournamentQueue();
+  let rejected=false;
   try{
-    await setDoc(cloudDoc(),{tournamentState:raw},{merge:true});
-    tournamentConnection('Turnierstand live gesendet.');
+    const {raw,revision}=await runTransaction(db,async transaction=>{
+      const snap=await transaction.get(cloudDoc());
+      const state=snap.data();
+      const previousRevision=state?.tournamentRevision??0;
+      const remote=state?.tournamentSync??null;
+      const raw=batch.seed
+        ? remote??batch.after
+        : JSON.stringify(mergeTournament(JSON.parse(batch.before),JSON.parse(batch.after),JSON.parse(remote??'null')));
+      if(raw===remote)return {raw,revision:previousRevision};
+      transaction.set(cloudDoc(),{tournamentSync:raw,tournamentRevision:previousRevision+1},{merge:true});
+      return {raw,revision:previousRevision+1};
+    });
+    applyTournamentSnapshot(raw,revision);
+    tournamentConnection('Turnier live synchronisiert.');
   }catch(err){
-    tournamentConnection('Turnierstand konnte nicht gesendet werden: '+(err.code||err.message));
-  }finally{
-    tournamentWriting=false;
-    if(queuedTournament !== null)flushTournament();
+    if(err.message==='tournament-conflict'){
+      pendingTournament=null;
+      rejected=true;
+      tournamentConnection('Gleichzeitige Änderung. Bitte letzten Stand prüfen und die Eingabe bei Bedarf wiederholen.');
+    }else{
+      pendingTournament={...batch,after:pendingTournament?.after??batch.after};
+      tournamentConnection('Turnier lokal gespeichert. Live-Sync ausstehend: '+(err.code||err.message));
+      return;
+    }
+  }finally{tournamentWriting=false;sendingTournament=null;persistTournamentQueue();}
+  if(pendingTournament)flushTournament();
+  else{
+    if(rejected){
+      try{
+        const snap=await getDoc(cloudDoc());
+        if(!pendingTournament&&!tournamentWriting)applyTournamentSnapshot(snap.data()?.tournamentSync??latestTournament,snap.data()?.tournamentRevision??tournamentRevision);
+      }catch{applyTournamentSnapshot(latestTournament,tournamentRevision);}
+    }else applyTournamentSnapshot(latestTournament,tournamentRevision);
   }
 }
 window.addEventListener('snooker-tournament-publish',({detail})=>{
   if(!permitted())return;
-  queuedTournament=detail;
+  pendingTournament=pendingTournament ? {...pendingTournament,after:detail.after} : detail;
+  persistTournamentQueue();
   flushTournament();
 });
-window.addEventListener('snooker-tournament-stop',()=>{queuedTournament=null;});
+function receiveTable(table){
+  if((table==='standings'||table==='overall')&&table!==lastTable&&!pendingTable&&!writingTable){
+    lastTable=table;
+    window.dispatchEvent(new CustomEvent('snooker-tournament-view-received',{detail:table}));
+  }
+}
+async function flushTable(){
+  if(!pendingTable||writingTable||!permitted()||!tournamentReady)return;
+  const table=pendingTable;
+  pendingTable=null;
+  writingTable=true;
+  let sent=false;
+  try{
+    await setDoc(cloudDoc(),{tournamentTable:table},{merge:true});
+    lastTable=table;
+    sent=true;
+  }catch(err){
+    pendingTable??=table;
+    tournamentConnection('Tabellenwechsel konnte nicht synchronisiert werden: '+(err.code||err.message));
+  }finally{writingTable=false;}
+  if(sent&&pendingTable)flushTable();
+}
+window.addEventListener('snooker-tournament-view',({detail})=>{
+  if(!permitted())return;
+  pendingTable=detail;
+  flushTable();
+});
 window.addEventListener('snooker-state-changed',syncNow);
-window.addEventListener('online',()=>{if(pending)flush()});
+window.addEventListener('online',()=>{if(pending)flush();flushTournament();flushTable()});
 onAuthStateChanged(auth,u=>{
   if(unsubscribe){unsubscribe();unsubscribe=null}
   initialized=false;pending=false;clearTimeout(writeTimer);
-  queuedTournament=null;lastTournamentRaw=null;
-  tournamentConnection(permitted()?'Live-Verbindung verfügbar.':'Für Live-Anzeige im Einzelmodus anmelden.');
+  tournamentReady=false;pendingTournament=null;tournamentRevision=-1;latestTournament=null;
+  pendingTable=null;lastTable=null;
+  tournamentConnection(permitted()?'Turnier-Synchronisierung wird verbunden …':'Für Live-Sync auf beiden Geräten im Einzelmodus anmelden.');
   if(!u){msg('Nicht angemeldet');return}
   if(!permitted()){msg('⚠️ Konto nicht freigegeben');return}
+  try{pendingTournament=JSON.parse(localStorage.getItem(tournamentPendingKey));}catch{pendingTournament=null;}
   msg('⏳ Verbinde Live-Synchronisierung …');
   let first=true;
-  unsubscribe=onSnapshot(cloudDoc(),snap=>{
+  unsubscribe=onSnapshot(cloudDoc(),{includeMetadataChanges:true},snap=>{
     const data=snap.data();
-    const tournamentRaw=data?.tournamentState;
-    if(typeof tournamentRaw==='string' && tournamentRaw!==lastTournamentRaw && !snap.metadata.hasPendingWrites){
-      lastTournamentRaw=tournamentRaw;
-      window.dispatchEvent(new CustomEvent('snooker-tournament-received',{detail:tournamentRaw}));
+    if(!snap.metadata.fromCache&&!snap.metadata.hasPendingWrites){
+      if(!tournamentReady){
+        tournamentReady=true;
+        if(!data?.tournamentSync){
+          const local=localStorage.getItem(tournamentKey);
+          const initial=local&&local!=='null'?local:data?.tournamentState;
+          if(pendingTournament||initial){
+            pendingTournament={seed:true,after:pendingTournament?.after??initial};
+          }
+        }
+        tournamentConnection('Turnier-Synchronisierung aktiv.');
+        flushTournament();
+        flushTable();
+      }
+      applyTournamentSnapshot(data?.tournamentSync??null,data?.tournamentRevision??0);
+      receiveTable(data?.tournamentTable);
     }
     const raw=data?.state??null;
     if(first){
@@ -1197,6 +1308,6 @@ e('fbLoad').onclick=async()=>{if(!permitted()){msg('Bitte zuerst anmelden.');ret
  btn.addEventListener('click',()=>setDisplay(!page.classList.contains('displayOnly')));
 })();
 </script>
-<script src="tournament.js?v=7.26"></script>
+<script src="tournament.js?v=7.27"></script>
 </body>
 </html>
