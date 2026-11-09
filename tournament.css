@@ -27,6 +27,11 @@
   text-align:right;padding:7px 4px;border-bottom:1px solid #775b87;overflow-wrap:anywhere
 }
 #tournamentMode .tournamentTable th:nth-child(2),#tournamentMode .tournamentTable td:nth-child(2) {text-align:left}
+@media (max-width:420px) {
+  #tournamentMode .tournamentTable {font-size:.875rem}
+  #tournamentMode .tournamentTable th,#tournamentMode .tournamentTable td {padding-inline:3px}
+  #tournamentMode .tournamentTable th {white-space:nowrap}
+}
 #tournamentMode details {margin-top:9px}
 #tournamentMode summary {cursor:pointer}
 #tournamentMode .tournamentStatus {color:#ffdd91;margin:5px 0}

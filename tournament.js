@@ -230,13 +230,15 @@
   // Only confirmed results and assigned byes count toward the standings.
   function standings(rounds = tournament.rounds) {
     const rows = tournament.players.map((name, id) => ({
-      name, id, wins: 0, draws: 0, byes: 0, diff: 0, breaks: []
+      name, id, played: 0, wins: 0, draws: 0, byes: 0, diff: 0, breaks: []
     }));
     for (const round of rounds) {
       if (round.bye !== null) rows[round.bye].byes++;
       for (const match of round.matches) {
         if (!match.result) continue;
         const [a, b] = match.players.map(id => rows[id]);
+        a.played++;
+        b.played++;
         const [first, second] = match.result.frames;
         if (first === second) {
           a.draws++;
@@ -672,7 +674,7 @@
       const previous = rows[index - 1];
       if (previous && (previous.points !== row.points || previous.diff !== row.diff)) place = index + 1;
       return `<tr><td>${place}</td><td>${esc(row.name)}</td><td>${formatPoints(row.points)}</td>
-        <td>${row.wins}</td><td>${row.diff > 0 ? '+' : ''}${row.diff}</td></tr>`;
+        <td>${row.played + row.byes}</td><td>${row.wins}</td><td>${row.draws}</td><td>${row.diff > 0 ? '+' : ''}${row.diff}</td></tr>`;
     });
     const playedBreaks = rows.filter(row => row.breaks.length);
     return `<div class="card tournamentStandings">
@@ -681,7 +683,7 @@
         <button type="button" class="secondary" id="tournamentFullscreenToggle" aria-pressed="false">Vollbild an</button>
       </div>
       ${tournament.limit === null && tournament.endAt != null ? `<p class="small">Turnierende: ${endLabel()}</p>` : ''}
-      <table class="tournamentTable"><thead><tr><th>Pl.</th><th>Spieler</th><th>Pkt.</th><th>Siege</th><th>Frame-Δ</th></tr></thead>
+      <table class="tournamentTable"><thead><tr><th>Pl.</th><th>Spieler</th><th>Pkt.</th><th title="Matches mit Ergebnis plus Freilose">Spiele</th><th>Siege</th><th title="Unentschieden">Remis</th><th>Frame-Δ</th></tr></thead>
       <tbody>${tableRows.join('')}</tbody></table>
       <p class="small">${tournament.framesPerMatch == null ? '1 Punkt je Matchsieg oder Freilos.' : `Sieg: 2 · Unentschieden: 1 · Niederlage: 0 · Freilos: ${formatPoints(tournament.byePoints)}`} Bei Punktgleichheit zählt die Frame-Differenz.</p>
       <details open><summary>Gespielte Breaks ab 20</summary>
