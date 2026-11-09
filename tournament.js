@@ -228,11 +228,11 @@
   };
 
   // Only confirmed results and assigned byes count toward the standings.
-  function standings() {
+  function standings(rounds = tournament.rounds) {
     const rows = tournament.players.map((name, id) => ({
       name, id, wins: 0, draws: 0, byes: 0, diff: 0, breaks: []
     }));
-    for (const round of tournament.rounds) {
+    for (const round of rounds) {
       if (round.bye !== null) rows[round.bye].byes++;
       for (const match of round.matches) {
         if (!match.result) continue;
@@ -261,68 +261,133 @@
     return rows.sort((a, b) => b.points - a.points || b.diff - a.diff || a.id - b.id);
   }
 
-  function pairRound(readyPlayers = null) {
-    const rows = standings();
-    if (tournament.rounds.length === 0) {
+  function pairingHistory(rounds) {
+    const count = tournament.players.length;
+    const size = count + count % 2;
+    const full = (1 << size) - 1;
+    const fresh = () => Array.from({length: size}, (_, id) => full ^ (1 << id));
+    let graph = fresh();
+    let realLeft = count * (count - 1) / 2;
+    for (const round of rounds) {
+      if (realLeft === 0) {
+        graph = fresh();
+        realLeft = count * (count - 1) / 2;
+      }
+      for (const {players: [a, b]} of round.matches) {
+        if (graph[a] & (1 << b)) realLeft--;
+        graph[a] &= ~(1 << b);
+        graph[b] &= ~(1 << a);
+      }
+      if (round.bye !== null) {
+        graph[round.bye] &= ~(1 << count);
+        graph[count] &= ~(1 << round.bye);
+      }
+    }
+    return {graph, fresh, realLeft};
+  }
+
+  function pairRound(readyPlayers = null, rounds = tournament.rounds) {
+    const rows = standings(rounds);
+    const byeId = rows.length;
+    const {graph: remaining, fresh, realLeft} = pairingHistory(rounds);
+    // A new cycle starts only after all matches in the previous one are finished.
+    if (!realLeft && rounds.some(round => round.matches.some(match => !match.result))) return null;
+    const graph = realLeft ? remaining : fresh();
+    if (!rounds.length) {
       for (let i = rows.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [rows[i], rows[j]] = [rows[j], rows[i]];
       }
     }
-    let bye = null;
-    if (rows.length % 2) {
-      const fewestByes = Math.min(...rows.map(row => row.byes));
-      const index = rows.findLastIndex(row => row.byes === fewestByes
-        && (readyPlayers?.size !== 2 || !readyPlayers.has(row.id)));
-      if (index === -1) return null;
-      bye = rows.splice(index, 1)[0].id;
+    const order = rows.map(row => row.id);
+    if (graph.length > byeId) order.push(byeId);
+    const full = (1 << graph.length) - 1;
+
+    function visitPairings(edges, mask, pairs, visit, allowRest = false) {
+      if (!mask) return visit(pairs);
+      const a = order.find(id => mask & (1 << id));
+      const rest = mask ^ (1 << a);
+      for (const b of order) {
+        if (!(edges[a] & rest & (1 << b))) continue;
+        pairs.push([a, b]);
+        const stop = visitPairings(edges, rest ^ (1 << b), pairs, visit, allowRest);
+        pairs.pop();
+        if (stop) return true;
+      }
+      return allowRest && visitPairings(edges, rest, pairs, visit, true);
     }
 
-    const meetings = tournament.players.map(() => tournament.players.map(() => 0));
-    for (const round of tournament.rounds) {
-      for (const {players: [a, b]} of round.matches) {
-        meetings[a][b]++;
-        meetings[b][a]++;
+    function removePairs(edges, pairs) {
+      const next = [...edges];
+      for (const [a, b] of pairs) {
+        next[a] &= ~(1 << b);
+        next[b] &= ~(1 << a);
       }
-    }
-    // Find the best complete pairing, comparing repeat count, point gaps,
-    // and the frequency of any unavoidable rematches in that order.
-    const memo = new Map();
-    function bestPairing(mask, needsReadyMatch) {
-      if (!mask) return needsReadyMatch ? null : {cost: [0, 0, 0], pairs: []};
-      const memoKey = mask * 2 + Number(needsReadyMatch);
-      if (memo.has(memoKey)) return memo.get(memoKey);
-      const first = rows.findIndex((_, index) => mask & (1 << index));
-      const remaining = mask ^ (1 << first);
-      const a = rows[first];
-      let best;
-      for (let second = first + 1; second < rows.length; second++) {
-        if (!(remaining & (1 << second))) continue;
-        const b = rows[second];
-        const previous = meetings[a.id][b.id];
-        const ready = readyPlayers?.has(a.id) && readyPlayers.has(b.id);
-        const rest = bestPairing(remaining ^ (1 << second), needsReadyMatch && !ready);
-        if (!rest) continue;
-        const cost = [
-          rest.cost[0] + Number(previous > 0),
-          rest.cost[1] + Math.abs(a.points - b.points),
-          rest.cost[2] + previous
-        ];
-        const difference = best && cost.findIndex((value, index) => value !== best.cost[index]);
-        if (!best || (difference >= 0 && cost[difference] < best.cost[difference])) {
-          best = {cost, pairs: [[a.id, b.id], ...rest.pairs]};
-        }
-      }
-      memo.set(memoKey, best);
-      return best;
+      return next;
     }
 
-    const pairing = bestPairing((1 << rows.length) - 1, readyPlayers !== null);
+    const impossible = new Set();
+    function canFinish(edges) {
+      if (!edges.some(Boolean)) return true;
+      if (edges.some(mask => !mask)) return false;
+      const key = edges.join(',');
+      if (impossible.has(key)) return false;
+      // Any full schedule must use this edge in one of its remaining rounds.
+      const a = order[0];
+      const edge = edges[a] & -edges[a];
+      const b = Math.log2(edge);
+      const mask = full ^ (1 << a) ^ edge;
+      if (visitPairings(edges, mask, [[a, b]], pairs => canFinish(removePairs(edges, pairs)))) return true;
+      impossible.add(key);
+      return false;
+    }
+
+    const rank = [];
+    rows.forEach((row, index) => { rank[row.id] = index; });
+    const candidates = [];
+    function addCandidate(pairs) {
+      const byePair = pairs.find(([, b]) => b === byeId);
+      const bye = byePair ? byePair[0] : null;
+      const matches = pairs.filter(([, b]) => b !== byeId);
+      if (!matches.length || (readyPlayers && !matches.some(([a, b]) =>
+        readyPlayers.has(a) && readyPlayers.has(b)))) return;
+      const rankGap = matches.reduce((sum, [a, b]) => sum + (rank[b] - rank[a]) ** 2, 0);
+      candidates.push({pairs: [...pairs], matches, bye, rankGap});
+    }
+    function compareCandidates(a, b) {
+      return b.matches.length - a.matches.length
+        || (a.bye !== null && b.bye !== null ? rows[rank[a.bye]].byes - rows[rank[b.bye]].byes || rank[b.bye] - rank[a.bye] : 0)
+        || a.rankGap - b.rankGap;
+    }
+
+    visitPairings(graph, full, [], addCandidate);
+    candidates.sort(compareCandidates);
+    const degree = mask => mask.toString(2).replace(/0/g, '').length;
+    const regular = graph.every(mask => degree(mask) === degree(graph[0]));
+    let pairing = regular && candidates.find(candidate => canFinish(removePairs(graph, candidate.pairs)));
+    if (!pairing && realLeft && !readyPlayers) {
+      // Older schedules can leave a graph that cannot be split into full rounds.
+      // Finish all unused pairings, without awarding points for extra rests.
+      if (!candidates.length) {
+        visitPairings(graph.slice(0, byeId), (1 << byeId) - 1, [], addCandidate, true);
+        candidates.sort(compareCandidates);
+      }
+      pairing = candidates[0];
+    }
     if (!pairing) return null;
-    const matches = pairing.pairs.map(players => ({
-      players, table: null, result: null
-    }));
-    return {matches, bye};
+    return {
+      matches: pairing.matches.map(players => ({players, table: null, result: null})),
+      bye: pairing.bye
+    };
+  }
+
+  function replacementRound() {
+    const rounds = tournament.rounds.slice(0, -1);
+    const last = tournament.rounds.at(-1);
+    if (!rounds.length || last.matches.some(match => match.result || match.table || match.startedAt != null)) return null;
+    const {graph, realLeft} = pairingHistory(rounds);
+    if (!realLeft || !last.matches.some(({players: [a, b]}) => !(graph[a] & (1 << b)))) return null;
+    return pairRound(null, rounds);
   }
 
   function saveTournament() {
@@ -657,8 +722,8 @@
       || !(data.filename == null || typeof data.filename === 'string')) return false;
     const validPlayer = id => integer(id, 0, data.players.length - 1);
     return data.rounds.every(round => {
-      if (!round || !Array.isArray(round.matches) || round.matches.length !== Math.floor(data.players.length / 2)
-        || !(data.players.length % 2 ? validPlayer(round.bye) : round.bye === null)) return false;
+      if (!round || !Array.isArray(round.matches) || !round.matches.length || round.matches.length > Math.floor(data.players.length / 2)
+        || !(round.bye === null || (data.players.length % 2 && validPlayer(round.bye)))) return false;
       const players = round.bye === null ? [] : [round.bye];
       for (const match of round.matches) {
         if (!match || !Array.isArray(match.players) || match.players.length !== 2
@@ -673,7 +738,7 @@
           || !Array.isArray(result.breaks) || result.breaks.length !== 2
           || !result.breaks.every(list => Array.isArray(list) && list.every(value => integer(value, 20, 155)))) return false;
       }
-      return new Set(players).size === data.players.length;
+      return new Set(players).size === players.length;
     });
   }
 
@@ -775,6 +840,7 @@
     const nextRound = !tournament.ended && !hasStartableMatch() && !expired() && !tournament.finishLastRound && openMatch === null && (tournament.limit === null || number < tournament.limit)
       && (complete || (freeTable && readyPlayers.size >= 2))
       ? pairRound(complete ? null : readyPlayers) : null;
+    const replacement = !tournament.ended && openMatch === null ? replacementRound() : null;
     const mode = tournament.limit === null ? 'Endlos' : `${tournament.limit} Runden`;
     const openRounds = tournament.rounds.flatMap((round, i) => round.matches.some(match => !match.result) ? [i + 1] : []);
     const previousPlayers = new Set();
@@ -789,7 +855,7 @@
       }
       return roundComplete && roundIndex < number - 1
         ? `<details class="card tournamentRound" ${openMatch?.startsWith(`${roundIndex}:`) ? 'open' : ''}><summary>${title} · abgeschlossen</summary>${content}</details>`
-        : `<div class="card tournamentRound"><h3>${title}${roundComplete ? ' · abgeschlossen' : tournament.ended ? '' : ' · läuft'}</h3>${roundIndex === number - 1 ? `${nextRound ? `<button type="button" class="primary" id="nextTournamentRound">${complete ? 'Nächste Runde starten' : 'Neue Runde starten'}</button>` : ''}` : ''}${content}</div>`;
+        : `<div class="card tournamentRound"><h3>${title}${roundComplete ? ' · abgeschlossen' : tournament.ended ? '' : ' · läuft'}</h3>${roundIndex === number - 1 ? `${replacement ? '<button type="button" class="secondary" id="repairTournamentRound">Paarungen neu erstellen</button>' : ''}${nextRound ? `<button type="button" class="primary" id="nextTournamentRound">${complete ? 'Nächste Runde starten' : 'Neue Runde starten'}</button>` : ''}` : ''}${content}</div>`;
     });
     panel.insertAdjacentHTML('beforeend', `
       <div class="card tournamentOverview">
@@ -871,6 +937,11 @@
         saveTournament();
       };
     }
+    if ($('repairTournamentRound')) $('repairTournamentRound').onclick = () => {
+      if (!confirm('Die Paarungen der letzten, noch nicht gestarteten Runde neu erstellen?')) return;
+      tournament.rounds[number - 1] = replacement;
+      saveTournament();
+    };
     if ($('nextTournamentRound')) $('nextTournamentRound').onclick = () => {
       if (expired() || tournament.finishLastRound || tournament.ended || hasStartableMatch()) { checkDeadline(); return; }
       openMatch = null;

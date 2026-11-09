@@ -1,4 +1,4 @@
-Snooker Money Match v7.19
+Snooker Money Match v7.20
 Alle Dateien auf GitHub hochladen und die App anschließend neu öffnen.
 Im Turniermodus sichern und laden die beiden Schaltflächen eine JSON-Datei.
 Die Matchzeit startet mit der Tischzuweisung und endet beim Speichern des Ergebnisses.
@@ -7,6 +7,14 @@ Alternativ die Schaltflächen Runden und Zwischenstand verwenden.
 In der Tabelle schaltet „Vollbild an/aus“ die große Anzeige ein und aus.
 Gespielte Breaks ab 20 stehen in der Tabelle und bei den abgeschlossenen Matches.
 Die Live-Synchronisierung gilt für den Einzelmodus. Turniere werden lokal gespeichert.
+
+Neu in v7.20:
+- Neue Paarungen folgen möglichst der Tabelle und berücksichtigen alle noch nötigen Runden.
+- Bei acht Spielern umfasst ein Durchgang sieben Runden mit 28 verschiedenen Paarungen.
+- Der nächste Durchgang beginnt nach Abschluss aller Matches des vorigen Durchgangs.
+- Bei ungerader Spielerzahl gibt es in einem regulären Durchgang ein Freilos pro Spieler.
+- Enthält die letzte, noch ungespielte Runde eine vorzeitige Wiederholung, können ihre Paarungen neu erstellt werden.
+- Ältere Turniere mit ungünstigen Paarungen können zusätzliche Runden mit weniger Matches benötigen.
 
 Neu in v7.19:
 - Spielerliste: Über ⋯ oder Wischen nach links lässt sich ein gespeicherter Name bearbeiten.
@@ -24,11 +32,12 @@ Neu in v7.18:
 - Bestehende JSON-Turniersicherungen können weiterhin geladen werden.
 
 Installation: Alle enthaltenen Dateien im bisherigen GitHub-Ordner ersetzen.
-App danach neu öffnen, gegebenenfalls einmal aktualisieren. Unten muss v7.19 stehen.
+App danach neu öffnen, gegebenenfalls einmal aktualisieren. Unten muss v7.20 stehen.
 Vor dem Update das laufende Turnier als JSON sichern.
 Die Speicherung einer Datei wird je nach Gerät über Teilen oder Download ausgeführt.
 
 Prüfung: JavaScript-Syntax und automatisierte Tests der Turnierlogik bestanden.
+Die Paarungslogik wurde mit 2 bis 12 Spielern und älteren Turnierständen getestet.
 Ein vollständiger Browsertest und ein Test auf iOS stehen noch aus.
 
 Änderungen v7.18:
