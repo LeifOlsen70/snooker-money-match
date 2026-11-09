@@ -6,6 +6,7 @@
   let tournament = null;
   let openMatch = null;
   let drafting = false;
+  let eloExpanded = false;
   let draftFreeTournament = null;
   let view = 'rounds';
   let fullscreen = false;
@@ -364,6 +365,103 @@
       <tbody>${tableRows.join('')}</tbody></table>`;
   }
 
+  const eloStart = 1000;
+  const eloFactor = 32;
+  const eloName = name => name.trim().toLocaleLowerCase('de');
+
+  function eloMatches(data) {
+    if (!data || data.freeTournament) return [];
+    return data.rounds.flatMap((round, r) => round.matches.flatMap((match, m) => {
+      if (!match.result || !match.eloAt) return [];
+      const [a, b] = match.result.frames;
+      return [{id:JSON.stringify([dayKey(data), r, m]), at:match.eloAt,
+        names:match.players.map(id => data.players[id]), score:a === b ? .5 : Number(a > b)}];
+    }));
+  }
+
+  function carryElo(previous, incoming) {
+    const resetAt = Math.max(previous?.elo?.resetAt ?? 0, incoming?.elo?.resetAt ?? 0);
+    const games = new Map();
+    for (const game of [...incoming?.elo?.games ?? [], ...previous?.elo?.games ?? [],
+      ...eloMatches(previous)]) {
+      if (game.at > resetAt) games.set(game.id, game);
+    }
+    const edits = new Map();
+    for (const edit of [...incoming?.elo?.edits ?? [], ...previous?.elo?.edits ?? []]) {
+      if (edit.at > resetAt) edits.set(JSON.stringify([edit.at, eloName(edit.name)]), edit);
+    }
+    return {resetAt, games:[...games.values()], edits:[...edits.values()]};
+  }
+
+  function eloEvents(data) {
+    const games = new Map((data.elo?.games ?? []).map(game => [game.id, game]));
+    for (const game of eloMatches(data)) games.set(game.id, game);
+    return [...games.values(), ...data.elo?.edits ?? []]
+      .filter(event => event.at > (data.elo?.resetAt ?? 0))
+      .sort((a,b) => a.at - b.at || (a.id ?? eloName(a.name)).localeCompare(b.id ?? eloName(b.name), 'de'));
+  }
+
+  function nextEloTime(data) {
+    return Math.max(Date.now(), (data.elo?.resetAt ?? 0) + 1,
+      (eloEvents(data).at(-1)?.at ?? 0) + 1);
+  }
+
+  function eloRows(data) {
+    const players = new Map();
+    function player(name) {
+      const id = eloName(name);
+      if (!players.has(id)) players.set(id, {name, rating:eloStart});
+      return players.get(id);
+    }
+    for (const {name} of overallRows(data)) player(name);
+    for (const season of data.seasonArchive ?? []) for (const {name} of season.rows) player(name);
+    for (const name of data.players) player(name);
+    for (const event of eloEvents(data)) {
+      if (event.names) {
+        const [a,b] = event.names.map(player);
+        const expected = 1 / (1 + 10 ** ((b.rating - a.rating) / 400));
+        const change = eloFactor * (event.score - expected);
+        a.rating += change;
+        b.rating -= change;
+      } else {
+        player(event.name).rating = event.rating;
+      }
+    }
+    return [...players.values()].sort((a,b) => b.rating - a.rating || a.name.localeCompare(b.name, 'de'));
+  }
+
+  function renderElo(data) {
+    const rows = eloRows(data);
+    return `<details class="tournamentSeasons" ${eloExpanded ? 'open' : ''} id="tournamentElo">
+      <summary>Elo-Wertung</summary>
+      <table class="tournamentTable"><thead><tr><th>Pl.</th><th>Spieler</th><th>Elo</th></tr></thead>
+        <tbody>${rows.map((row, index) => `<tr><td>${index + 1}</td><td>${esc(row.name)}</td><td>${Math.round(row.rating)}
+          <button type="button" class="secondary" data-edit-elo="${index}" aria-label="Elo von ${esc(row.name)} ändern">Ändern</button></td></tr>`).join('')}</tbody>
+      </table>
+      <button type="button" class="secondary tournamentEnd" id="resetTournamentElo">Elo für alle auf 1000 setzen</button>
+    </details>`;
+  }
+
+  function editElo(row) {
+    const value = prompt(`Neue Elo-Zahl für ${row.name} (0–9999):`, String(Math.round(row.rating)));
+    if (value === null) return;
+    const rating = Number(value.trim());
+    if (!/^\d{1,4}$/.test(value.trim())) {
+      alert('Bitte eine ganze Elo-Zahl zwischen 0 und 9999 eingeben.');
+      return;
+    }
+    const at = nextEloTime(tournament);
+    tournament.elo ??= {resetAt:0,games:[],edits:[]};
+    tournament.elo.edits.push({at,name:row.name,rating});
+    saveTournament();
+  }
+
+  function resetElo() {
+    if (!confirm('Die Elo-Wertung aller Spieler auf 1000 zurücksetzen und die bisherigen Elo-Änderungen verwerfen?')) return;
+    tournament.elo = {resetAt:nextEloTime(tournament),games:[],edits:[]};
+    saveTournament();
+  }
+
   function renderOverall(data) {
     const rows = overallRows(data);
     const archive = data.seasonArchive ?? [];
@@ -373,6 +471,7 @@
         <button type="button" class="secondary" id="tournamentFullscreenToggle" aria-pressed="false">Vollbild an</button>
       </div>
       ${overallTable(rows)}
+      ${data.freeTournament ? '' : renderElo(data)}
       <div class="tournamentSeasons">
         ${!data.freeTournament && rows.length ? `<button type="button" class="secondary" id="newTournamentSeason" ${data.ended ? '' : 'disabled'}>Neue Saison starten</button>
           ${data.ended ? '' : '<p class="small">Für den Saisonwechsel zuerst das laufende Turnier beenden.</p>'}` : ''}
@@ -795,6 +894,7 @@
         parkedTournament,
         parkedAt,
         overallDays: freeTournament ? [] : overallDays(previous),
+        elo: freeTournament ? undefined : carryElo(previous),
         seasonStarted: freeTournament ? undefined : previous?.seasonStarted,
         seasonArchive: freeTournament ? undefined : previous?.seasonArchive,
         limit: form.elements.duration.value === 'endless' ? null : Number(form.elements.rounds.value),
@@ -918,6 +1018,12 @@
       !timestamp(data.parkedAt) || (data.parkedTournament != null &&
         (!allowParked || Boolean(data.freeTournament) === Boolean(data.parkedTournament.freeTournament) ||
           !validBackup(data.parkedTournament, false)))) return false;
+    const name = value => typeof value === 'string' && value.trim();
+    if (data.elo != null && (!timestamp(data.elo.resetAt) || !Array.isArray(data.elo.games) ||
+      !data.elo.games.every(game => game && typeof game.id === 'string' && Number.isFinite(game.at) && game.at > 0 &&
+        Array.isArray(game.names) && game.names.length === 2 && game.names.every(name) && [0,.5,1].includes(game.score)) ||
+      !Array.isArray(data.elo.edits) || !data.elo.edits.every(edit => edit && Number.isFinite(edit.at) && edit.at > 0 &&
+        name(edit.name) && integer(edit.rating, 0, 9999)))) return false;
     const validPlayer = id => integer(id, 0, data.players.length - 1);
     return data.rounds.every(round => {
       if (!round || !Array.isArray(round.matches) || !round.matches.length || round.matches.length > Math.floor(data.players.length / 2)
@@ -926,7 +1032,7 @@
       for (const match of round.matches) {
         if (!match || !Array.isArray(match.players) || match.players.length !== 2
           || !match.players.every(validPlayer) || !(match.table === null || integer(match.table, 1, data.tables))
-          || !timestamp(match.startedAt) || !timestamp(match.finishedAt)
+          || !timestamp(match.startedAt) || !timestamp(match.finishedAt) || !timestamp(match.eloAt)
           || !(match.paused == null || typeof match.paused === 'boolean')
           || (match.paused && (match.table !== null || match.result !== null))) return false;
         players.push(...match.players);
@@ -983,6 +1089,7 @@
           const archive = new Map((incoming.seasonArchive ?? []).map(season => [season.ended, season]));
           for (const season of previous?.seasonArchive ?? []) archive.set(season.ended, season);
           tournament = {...incoming, parkedTournament, parkedAt, seasonStarted,
+            elo:carryElo(previous, incoming),
             seasonArchive:[...archive.values()].sort((a,b) => b.ended - a.ended),
             overallDays:overallDays(previous, incoming).filter(day => !seasonStarted || Number(day.id) >= seasonStarted)};
         }
@@ -1053,6 +1160,15 @@
     panel.insertAdjacentHTML('beforeend', view === 'overall' ? renderOverall(data) : renderStandings(data));
     setTournamentFullscreen(fullscreen);
     $('tournamentFullscreenToggle').onclick = () => setTournamentFullscreen(!fullscreen);
+    const elo = $('tournamentElo');
+    if (elo) {
+      const rows = eloRows(data);
+      elo.ontoggle = () => { eloExpanded = elo.open; };
+      $('resetTournamentElo').onclick = resetElo;
+      elo.querySelectorAll('[data-edit-elo]').forEach(button => {
+        button.onclick = () => editElo(rows[Number(button.dataset.editElo)]);
+      });
+    }
     if ($('newTournamentSeason')) $('newTournamentSeason').onclick = startTournamentSeason;
     panel.querySelectorAll('[data-delete-season]').forEach(button => {
       const season = data.seasonArchive[Number(button.dataset.deleteSeason)];
@@ -1225,7 +1341,10 @@
           return;
         }
         const match = matchAt(openMatch);
-        if (!match.result && match.startedAt != null) match.finishedAt = Date.now();
+        if (!match.result) {
+          if (match.startedAt != null) match.finishedAt = Date.now();
+          if (!tournament.freeTournament) match.eloAt = nextEloTime(tournament);
+        }
         match.result = {frames, breaks: breaks.map(list => list.filter(points => points >= 20))};
         openMatch = null;
         saveTournament();
