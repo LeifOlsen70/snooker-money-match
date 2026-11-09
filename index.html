@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#0f5f37">
-  <meta name="application-version" content="7.24">
+  <meta name="application-version" content="7.25">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="Snooker Match">
@@ -336,10 +336,10 @@ body.snookerFullscreenScore #scorerPage.displayOnly{background:#090613!important
   text-shadow:0 1px 2px #0009;
 }
 </style>
-  <link rel="stylesheet" href="tournament.css?v=7.24">
+  <link rel="stylesheet" href="tournament.css?v=7.25">
 </head>
 <body>
-<div id="appVersionTag" aria-label="App-Version 7.24">v7.24</div>
+<div id="appVersionTag" aria-label="App-Version 7.25">v7.25</div>
 <div class="app">
   <h1 class="clubBrand" aria-label="Flensburger Snooker Club – Snooker Money Match"><img src="flensburger-snooker-club.png" alt="Flensburger Snooker Club" width="430" height="125"><span class="visuallyHidden">Snooker Money Match</span></h1><div id="offlineStatus" class="hidden" aria-live="polite"></div>
 
@@ -1093,23 +1093,56 @@ async function flush(){
   pending=false;writing=true;
   const raw=localRaw();
   try{
-    await setDoc(cloudDoc(),{state:raw||'',updatedAt:new Date().toISOString()});
+    await setDoc(cloudDoc(),{state:raw||'',updatedAt:new Date().toISOString()},{merge:true});
     lastCloudRaw=raw||'';
     msg('✅ Live synchronisiert');
   }catch(err){pending=true;msg('⚠️ Synchronisierung ausstehend: '+(err.code||err.message));}
   finally{writing=false;if(pending&&navigator.onLine){clearTimeout(writeTimer);writeTimer=setTimeout(flush,1500)}}
 }
+let queuedTournament = null, tournamentWriting = false, lastTournamentRaw = null;
+function tournamentConnection(message){
+  window.dispatchEvent(new CustomEvent('snooker-tournament-connection',{detail:{available:permitted(),message}}));
+}
+async function flushTournament(){
+  if(tournamentWriting || queuedTournament === null || !permitted())return;
+  const raw=queuedTournament;
+  queuedTournament=null;
+  tournamentWriting=true;
+  try{
+    await setDoc(cloudDoc(),{tournamentState:raw},{merge:true});
+    tournamentConnection('Turnierstand live gesendet.');
+  }catch(err){
+    tournamentConnection('Turnierstand konnte nicht gesendet werden: '+(err.code||err.message));
+  }finally{
+    tournamentWriting=false;
+    if(queuedTournament !== null)flushTournament();
+  }
+}
+window.addEventListener('snooker-tournament-publish',({detail})=>{
+  if(!permitted())return;
+  queuedTournament=detail;
+  flushTournament();
+});
+window.addEventListener('snooker-tournament-stop',()=>{queuedTournament=null;});
 window.addEventListener('snooker-state-changed',syncNow);
 window.addEventListener('online',()=>{if(pending)flush()});
 onAuthStateChanged(auth,u=>{
   if(unsubscribe){unsubscribe();unsubscribe=null}
   initialized=false;pending=false;clearTimeout(writeTimer);
+  queuedTournament=null;lastTournamentRaw=null;
+  tournamentConnection(permitted()?'Live-Verbindung verfügbar.':'Für Live-Anzeige im Einzelmodus anmelden.');
   if(!u){msg('Nicht angemeldet');return}
   if(!permitted()){msg('⚠️ Konto nicht freigegeben');return}
   msg('⏳ Verbinde Live-Synchronisierung …');
   let first=true;
   unsubscribe=onSnapshot(cloudDoc(),snap=>{
-    const raw=snap.exists()?snap.data().state:null;
+    const data=snap.data();
+    const tournamentRaw=data?.tournamentState;
+    if(typeof tournamentRaw==='string' && tournamentRaw!==lastTournamentRaw && !snap.metadata.hasPendingWrites){
+      lastTournamentRaw=tournamentRaw;
+      window.dispatchEvent(new CustomEvent('snooker-tournament-received',{detail:tournamentRaw}));
+    }
+    const raw=data?.state??null;
     if(first){
       first=false;initialized=true;
       if(raw&&valid(raw)){
@@ -1136,11 +1169,15 @@ onAuthStateChanged(auth,u=>{
       localStorage.removeItem('snookerMoneyMatchState');
       location.reload();
     }
-  },err=>msg('⚠️ Live-Verbindung fehlgeschlagen: '+(err.code||err.message)));
+  },err=>{
+    const reason=err.code||err.message;
+    msg('⚠️ Live-Verbindung fehlgeschlagen: '+reason);
+    tournamentConnection('Live-Verbindung fehlgeschlagen: '+reason);
+  });
 });
 e('fbLogin').onclick=async()=>{try{await signInWithEmailAndPassword(auth,e('fbEmail').value.trim(),e('fbPass').value);e('fbPass').value=''}catch(err){msg('Anmeldung fehlgeschlagen: '+err.code)}};
 e('fbLogout').onclick=async()=>{await signOut(auth)};
-e('fbSave').onclick=async()=>{if(!permitted()){msg('Bitte zuerst anmelden.');return}const raw=localStorage.getItem('snookerMoneyMatchState');if(!raw){msg('Kein lokaler Spielstand vorhanden.');return}if(!confirm('Cloud-Sicherung überschreiben?'))return;try{await setDoc(cloudDoc(),{state:raw,updatedAt:new Date().toISOString()});lastCloudRaw=raw;msg('✅ In Cloud gesichert')}catch(err){msg('Fehler: '+err.code)}};
+e('fbSave').onclick=async()=>{if(!permitted()){msg('Bitte zuerst anmelden.');return}const raw=localStorage.getItem('snookerMoneyMatchState');if(!raw){msg('Kein lokaler Spielstand vorhanden.');return}if(!confirm('Cloud-Sicherung überschreiben?'))return;try{await setDoc(cloudDoc(),{state:raw,updatedAt:new Date().toISOString()},{merge:true});lastCloudRaw=raw;msg('✅ In Cloud gesichert')}catch(err){msg('Fehler: '+err.code)}};
 e('fbLoad').onclick=async()=>{if(!permitted()){msg('Bitte zuerst anmelden.');return}try{const snap=await getDoc(cloudDoc());if(!snap.exists()){msg('Noch keine Cloud-Sicherung vorhanden.');return}const raw=snap.data().state,obj=JSON.parse(raw);if(!Array.isArray(obj.players)||!Number.isFinite(Number(obj.target)))throw Error('Ungültige Daten');if(!confirm('Lokalen Spielstand durch Cloud-Sicherung ersetzen?'))return;localStorage.setItem('snookerMoneyMatchState',raw);location.reload()}catch(err){msg('Laden fehlgeschlagen: '+(err.code||err.message))}};
 </script><script>
 // Geräteindividuelle Ansicht: nicht Teil des Matches und niemals Firebase-synchronisiert.
@@ -1160,6 +1197,6 @@ e('fbLoad').onclick=async()=>{if(!permitted()){msg('Bitte zuerst anmelden.');ret
  btn.addEventListener('click',()=>setDisplay(!page.classList.contains('displayOnly')));
 })();
 </script>
-<script src="tournament.js?v=7.24"></script>
+<script src="tournament.js?v=7.25"></script>
 </body>
 </html>
