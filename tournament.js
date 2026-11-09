@@ -327,32 +327,43 @@
     return JSON.stringify(data.started ?? data.players);
   }
 
+  function hasMatchResult(data) {
+    return data.rounds.some(round => round.matches.some(match => match.result));
+  }
+
+  function hasDayPoints(day) {
+    // Every recorded result awards points to at least one player.
+    return day.rows.some(row => row.points > 0);
+  }
+
   function overallDays(previous, incoming) {
     const days = new Map((incoming?.overallDays ?? []).map(day => [day.id, day]));
     for (const day of previous?.overallDays ?? []) days.set(day.id, day);
-    if (previous?.ended && (!previous.seasonStarted || previous.started >= previous.seasonStarted)) {
+    if (previous?.ended && hasMatchResult(previous) && (!previous.seasonStarted || previous.started >= previous.seasonStarted)) {
       const id = dayKey(previous);
       const rows = standings(previous.rounds, previous).map(({name, points}) => ({name, points}));
       days.set(id, {id, rows});
     }
     if (incoming) days.delete(dayKey(incoming));
-    return [...days.values()];
+    return [...days.values()].filter(hasDayPoints);
   }
 
   function overallRows(data) {
     const totals = new Map();
     const cutoff = data.seasonStarted ?? 0;
     const rows = (data.overallDays ?? [])
-      .filter(day => day.id !== dayKey(data) && (!cutoff || Number(day.id) >= cutoff))
-      .map(day => day.rows);
-    if (!cutoff || data.started >= cutoff) rows.push(standings(data.rounds, data));
+      .filter(day => hasDayPoints(day) && day.id !== dayKey(data) && (!cutoff || Number(day.id) >= cutoff))
+      .map(day => ({rows:day.rows, completed:true}));
+    if ((!cutoff || data.started >= cutoff) && hasMatchResult(data)) {
+      rows.push({rows:standings(data.rounds, data), completed:Boolean(data.ended)});
+    }
     for (const day of rows) {
       const present = new Set();
-      for (const {name, points} of day) {
+      for (const {name, points} of day.rows) {
         const id = name.trim().toLocaleLowerCase('de');
         const previous = totals.get(id);
         totals.set(id, {name, points: (previous?.points ?? 0) + points,
-          appearances: (previous?.appearances ?? 0) + Number(!present.has(id))});
+          appearances: (previous?.appearances ?? 0) + Number(day.completed && !present.has(id))});
         present.add(id);
       }
     }
