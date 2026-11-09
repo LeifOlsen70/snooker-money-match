@@ -372,7 +372,10 @@
           ${archive.map((season, index) => `<details>
             <summary>${esc(season.name)}</summary>
             ${overallTable(season.rows)}
-            <button type="button" class="secondary" data-export-season="${index}">Tabelle als CSV speichern</button>
+            <div class="tournamentActions">
+              <button type="button" class="secondary" data-export-season="${index}">Tabelle als CSV speichern</button>
+              <button type="button" class="secondary tournamentEnd" data-delete-season="${index}">Saison löschen</button>
+            </div>
           </details>`).join('')}
         </details>` : ''}
       </div>
@@ -389,6 +392,14 @@
     tournament.seasonArchive = [{ended:now,name,rows}, ...(tournament.seasonArchive ?? [])];
     tournament.seasonStarted = now;
     tournament.overallDays = [];
+    saveTournament();
+  }
+
+  function deleteArchivedSeason(season) {
+    const archive = tournament?.seasonArchive;
+    if (!season || !archive?.includes(season)) return;
+    if (!confirm(`„${season.name}“ aus dem Saisonarchiv löschen?`)) return;
+    tournament.seasonArchive = archive.filter(entry => entry !== season);
     saveTournament();
   }
 
@@ -1025,6 +1036,10 @@
     setTournamentFullscreen(fullscreen);
     $('tournamentFullscreenToggle').onclick = () => setTournamentFullscreen(!fullscreen);
     if ($('newTournamentSeason')) $('newTournamentSeason').onclick = startTournamentSeason;
+    panel.querySelectorAll('[data-delete-season]').forEach(button => {
+      const season = data.seasonArchive[Number(button.dataset.deleteSeason)];
+      button.onclick = () => deleteArchivedSeason(season);
+    });
     panel.querySelectorAll('[data-export-season]').forEach(button => {
       button.onclick = () => exportSeason(data.seasonArchive[Number(button.dataset.exportSeason)])
         .catch(() => alert('Die Saisontabelle konnte nicht gespeichert werden.'));
