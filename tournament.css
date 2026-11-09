@@ -167,3 +167,5 @@ body.compactTournament .clubBrand img {height:48px;width:auto;max-width:100%;obj
 #tournamentMode .tournamentMatch > form {grid-column:1 / -1;}
 #tournamentMode .tournamentWait {min-height:44px;padding:6px;font-size:12px;border-radius:8px;}
 #tournamentMode #nextTournamentRound {margin:0 0 6px;}
+
+body.snookerFullscreenTournament .tournamentSeasons {display:none}

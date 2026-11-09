@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#0f5f37">
-  <meta name="application-version" content="7.28">
+  <meta name="application-version" content="7.29">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="Snooker Match">
@@ -336,10 +336,10 @@ body.snookerFullscreenScore #scorerPage.displayOnly{background:#090613!important
   text-shadow:0 1px 2px #0009;
 }
 </style>
-  <link rel="stylesheet" href="tournament.css?v=7.28">
+  <link rel="stylesheet" href="tournament.css?v=7.29">
 </head>
 <body>
-<div id="appVersionTag" aria-label="App-Version 7.28">v7.28</div>
+<div id="appVersionTag" aria-label="App-Version 7.29">v7.29</div>
 <div class="app">
   <h1 class="clubBrand" aria-label="Flensburger Snooker Club – Snooker Money Match"><img src="flensburger-snooker-club.png" alt="Flensburger Snooker Club" width="430" height="125"><span class="visuallyHidden">Snooker Money Match</span></h1><div id="offlineStatus" class="hidden" aria-live="polite"></div>
 
@@ -652,7 +652,10 @@ async function saveGameToFile(){
 }
 
 async function shareJsonFile(data, filename, title){
-  const file = new File([JSON.stringify(data, null, 2)], filename, {type:'application/json'});
+  return shareDownloadFile(new File([JSON.stringify(data, null, 2)], filename, {type:'application/json'}), title);
+}
+
+async function shareDownloadFile(file, title){
   if(navigator.canShare && navigator.canShare({files:[file]})){
     try{
       await navigator.share({files:[file], title});
@@ -664,7 +667,7 @@ async function shareJsonFile(data, filename, title){
   const url = URL.createObjectURL(file);
   const a = document.createElement('a');
   a.href = url;
-  a.download = filename;
+  a.download = file.name;
   document.body.appendChild(a);
   a.click();
   a.remove();
@@ -1306,6 +1309,6 @@ e('fbLoad').onclick=async()=>{if(!permitted()){msg('Bitte zuerst anmelden.');ret
  btn.addEventListener('click',()=>setDisplay(!page.classList.contains('displayOnly')));
 })();
 </script>
-<script src="tournament.js?v=7.28"></script>
+<script src="tournament.js?v=7.29"></script>
 </body>
 </html>

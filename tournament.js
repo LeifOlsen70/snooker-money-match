@@ -286,7 +286,7 @@
   function overallDays(previous, incoming) {
     const days = new Map((incoming?.overallDays ?? []).map(day => [day.id, day]));
     for (const day of previous?.overallDays ?? []) days.set(day.id, day);
-    if (previous?.ended) {
+    if (previous?.ended && (!previous.seasonStarted || previous.started >= previous.seasonStarted)) {
       const id = dayKey(previous);
       const rows = standings(previous.rounds, previous).map(({name, points}) => ({name, points}));
       days.set(id, {id, rows});
@@ -295,12 +295,13 @@
     return [...days.values()];
   }
 
-  function renderOverall(data = tournament) {
+  function overallRows(data) {
     const totals = new Map();
-    const rows = [
-      ...(data.overallDays ?? []).filter(day => day.id !== dayKey(data)).map(day => day.rows),
-      standings(data.rounds, data)
-    ];
+    const cutoff = data.seasonStarted ?? 0;
+    const rows = (data.overallDays ?? [])
+      .filter(day => day.id !== dayKey(data) && (!cutoff || Number(day.id) >= cutoff))
+      .map(day => day.rows);
+    if (!cutoff || data.started >= cutoff) rows.push(standings(data.rounds, data));
     for (const day of rows) {
       const present = new Set();
       for (const {name, points} of day) {
@@ -313,18 +314,65 @@
     }
     const ranked = [...totals.values()].sort((a, b) => b.points - a.points || a.name.localeCompare(b.name, 'de'));
     let place = 1;
-    const tableRows = ranked.map(({name, points, appearances}, index) => {
-      if (index > 0 && ranked[index - 1].points !== points) place = index + 1;
-      return `<tr><td>${place}</td><td>${esc(name)}</td><td>${formatPoints(points)}</td><td>${appearances}</td></tr>`;
+    return ranked.map((row, index) => {
+      if (index > 0 && ranked[index - 1].points !== row.points) place = index + 1;
+      return {...row, place};
     });
+  }
+
+  function overallTable(rows) {
+    if (!rows.length) return '<p class="small">Diese Saison hat noch keine Spieltage.</p>';
+    const tableRows = rows.map(({place, name, points, appearances}) =>
+      `<tr><td>${place}</td><td>${esc(name)}</td><td>${formatPoints(points)}</td><td>${appearances}</td></tr>`);
+    return `<table class="tournamentTable"><thead><tr><th>Pl.</th><th>Spieler</th><th>Pkt.</th><th>Teilnahmen</th></tr></thead>
+      <tbody>${tableRows.join('')}</tbody></table>`;
+  }
+
+  function renderOverall(data) {
+    const rows = overallRows(data);
+    const archive = data.seasonArchive ?? [];
     return `<div class="card tournamentStandings">
       <div class="tournamentStandingsHeader">
         <h3>Gesamt</h3>
         <button type="button" class="secondary" id="tournamentFullscreenToggle" aria-pressed="false">Vollbild an</button>
       </div>
-      <table class="tournamentTable"><thead><tr><th>Pl.</th><th>Spieler</th><th>Pkt.</th><th>Teilnahmen</th></tr></thead>
-      <tbody>${tableRows.join('')}</tbody></table>
+      ${overallTable(rows)}
+      <div class="tournamentSeasons">
+        ${rows.length ? `<button type="button" class="secondary" id="newTournamentSeason" ${data.ended ? '' : 'disabled'}>Neue Saison starten</button>
+          ${data.ended ? '' : '<p class="small">Für den Saisonwechsel zuerst das laufende Turnier beenden.</p>'}` : ''}
+        ${archive.length ? `<details><summary>Saisonarchiv</summary>
+          ${archive.map((season, index) => `<details>
+            <summary>${esc(season.name)}</summary>
+            ${overallTable(season.rows)}
+            <button type="button" class="secondary" data-export-season="${index}">Tabelle als CSV speichern</button>
+          </details>`).join('')}
+        </details>` : ''}
+      </div>
     </div>`;
+  }
+
+  function startTournamentSeason() {
+    if (!tournament?.ended) return;
+    const rows = overallRows(tournament);
+    if (!rows.length) return;
+    const now = Date.now();
+    const name = prompt('Name der Saison, die archiviert werden soll:', `Saison bis ${new Date(now).toLocaleDateString('de-DE')}`)?.trim().slice(0,100);
+    if (!name || !confirm(`„${name}“ archivieren und die neue Gesamtwertung bei null starten?`)) return;
+    tournament.seasonArchive = [{ended:now,name,rows}, ...(tournament.seasonArchive ?? [])];
+    tournament.seasonStarted = now;
+    tournament.overallDays = [];
+    saveTournament();
+  }
+
+  function exportSeason({name, rows}) {
+    const csvName = value => {
+      const safe = /^[\s]*[=+@-]|^[\t\r\n]/.test(value) ? "'" + value : value;
+      return '"' + safe.replaceAll('"', '""') + '"';
+    };
+    const csv = ['Platz;Spieler;Punkte;Teilnahmen', ...rows.map(row =>
+      [row.place,csvName(row.name),formatPoints(row.points),row.appearances].join(';'))].join('\r\n');
+    const filename = name.replace(/[\\/:*?"<>|]/g,'-') + '.csv';
+    return shareDownloadFile(new File(['\uFEFF',csv], filename, {type:'text/csv;charset=utf-8'}), 'Snooker-Saisontabelle speichern');
   }
 
   function pairingHistory(rounds) {
@@ -683,6 +731,8 @@
       tournament = {
         players,
         overallDays: overallDays(tournament),
+        seasonStarted: tournament?.seasonStarted,
+        seasonArchive: tournament?.seasonArchive,
         limit: form.elements.duration.value === 'endless' ? null : Number(form.elements.rounds.value),
         framesPerMatch: Number(form.elements.framesPerMatch.value),
         byePoints: Number(form.elements.byePoints.value),
@@ -794,6 +844,10 @@
       !data.overallDays.every(day => day && typeof day.id === 'string' && Array.isArray(day.rows) &&
         day.rows.every(row => row && typeof row.name === 'string' && row.name.trim() &&
           Number.isFinite(row.points) && row.points >= 0)))) return false;
+    if (!timestamp(data.seasonStarted) || (data.seasonArchive != null && (!Array.isArray(data.seasonArchive) ||
+      !data.seasonArchive.every(season => season && Number.isFinite(season.ended) && typeof season.name === 'string' &&
+        Array.isArray(season.rows) && season.rows.every(row => row && typeof row.name === 'string' &&
+          Number.isFinite(row.points) && Number.isInteger(row.place) && Number.isInteger(row.appearances)))))) return false;
     const validPlayer = id => integer(id, 0, data.players.length - 1);
     return data.rounds.every(round => {
       if (!round || !Array.isArray(round.matches) || !round.matches.length || round.matches.length > Math.floor(data.players.length / 2)
@@ -847,7 +901,13 @@
         }
         if (tournament && !confirm('Den aktuellen Turnierstand durch die Sicherung ersetzen?')) return;
         const incoming = backup.tournament;
-        tournament = {...incoming, overallDays: overallDays(tournament, incoming)};
+        const seasonStarted = Math.max(tournament?.seasonStarted ?? 0, incoming.seasonStarted ?? 0);
+        const archive = new Map((incoming.seasonArchive ?? []).map(season => [season.ended, season]));
+        for (const season of tournament?.seasonArchive ?? []) archive.set(season.ended, season);
+        tournament = {...incoming, seasonStarted,
+          seasonArchive:[...archive.values()].sort((a,b) => b.ended - a.ended),
+          overallDays:overallDays(tournament, incoming).filter(day => !seasonStarted || Number(day.id) >= seasonStarted)};
+
         drafting = false;
         openMatch = null;
         view = 'rounds';
@@ -914,6 +974,11 @@
     panel.insertAdjacentHTML('beforeend', view === 'overall' ? renderOverall(data) : renderStandings(data));
     setTournamentFullscreen(fullscreen);
     $('tournamentFullscreenToggle').onclick = () => setTournamentFullscreen(!fullscreen);
+    if ($('newTournamentSeason')) $('newTournamentSeason').onclick = startTournamentSeason;
+    panel.querySelectorAll('[data-export-season]').forEach(button => {
+      button.onclick = () => exportSeason(data.seasonArchive[Number(button.dataset.exportSeason)])
+        .catch(() => alert('Die Saisontabelle konnte nicht gespeichert werden.'));
+    });
   }
 
   function renderLiveStatus() {
