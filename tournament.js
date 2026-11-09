@@ -33,11 +33,20 @@
       .filter(match => !match.result && match.table).map(match => match.table));
     return Array.from({length:tournament.tables}, (_, i) => i + 1).filter(table => !occupied.has(table));
   }
+  const formatPoints = points => String(points).replace('.', ',');
+
+  function validMatchFrames(frames, rules) {
+    const max = rules.framesPerMatch ?? rules.target;
+    if (frames.length !== 2 || !frames.every(value => Number.isInteger(value) && value >= 0 && value <= max)) return false;
+    if (rules.framesPerMatch != null) return frames[0] + frames[1] === max;
+    return Math.max(...frames) === max && frames[0] !== frames[1];
+  }
+
   function hasStartableMatch() {
     if (!availableTables().length) return false;
     const earlierPlayers = new Set();
     for (const round of tournament.rounds) {
-      if (round.matches.some(match => !match.result && !match.table &&
+      if (round.matches.some(match => !match.result && !match.table && !match.paused &&
           match.players.every(id => !earlierPlayers.has(id)))) return true;
       for (const match of round.matches) {
         if (!match.result) match.players.forEach(id => earlierPlayers.add(id));
@@ -216,7 +225,7 @@
   // Only confirmed results and assigned byes count toward the standings.
   function standings() {
     const rows = tournament.players.map((name, id) => ({
-      name, id, wins: 0, byes: 0, diff: 0, breaks: []
+      name, id, wins: 0, draws: 0, byes: 0, diff: 0, breaks: []
     }));
     for (const round of tournament.rounds) {
       if (round.bye !== null) rows[round.bye].byes++;
@@ -224,8 +233,13 @@
         if (!match.result) continue;
         const [a, b] = match.players.map(id => rows[id]);
         const [first, second] = match.result.frames;
-        const winner = first > second ? a : b;
-        winner.wins++;
+        if (first === second) {
+          a.draws++;
+          b.draws++;
+        } else {
+          const winner = first > second ? a : b;
+          winner.wins++;
+        }
         a.diff += first - second;
         b.diff += second - first;
         match.result.breaks.forEach((breaks, i) => {
@@ -234,7 +248,11 @@
         });
       }
     }
-    for (const row of rows) row.points = row.wins + row.byes;
+    for (const row of rows) {
+      row.points = tournament.framesPerMatch == null
+        ? row.wins + row.byes
+        : 2 * row.wins + row.draws + tournament.byePoints * row.byes;
+    }
     return rows.sort((a, b) => b.points - a.points || b.diff - a.diff || a.id - b.id);
   }
 
@@ -333,8 +351,15 @@
             <label id="tournamentEndTime" class="hidden">Turnierende · Uhrzeit
               <input name="endAt" type="time" value="${localTime(Date.now()+3*3600000)}">
             </label>
-            <label>Frames zum Matchsieg
-              <input name="target" type="number" min="1" max="50" value="2" required>
+            <label>Zu spielende Frames pro Match
+              <input name="framesPerMatch" type="number" min="1" max="50" value="2" required>
+            </label>
+            <label>Punkte pro Freilos
+              <select name="byePoints">
+                <option value="0">0</option>
+                <option value="0.5" selected>0,5</option>
+                <option value="1">1</option>
+              </select>
             </label>
             <label>Verfügbare Tische
               <input name="tables" type="number" min="1" max="6" value="1" required>
@@ -469,7 +494,8 @@
       tournament = {
         players,
         limit: form.elements.duration.value === 'endless' ? null : Number(form.elements.rounds.value),
-        target: Number(form.elements.target.value),
+        framesPerMatch: Number(form.elements.framesPerMatch.value),
+        byePoints: Number(form.elements.byePoints.value),
         tables: Number(form.elements.tables.value),
         started: Date.now(), ended: null, rounds: [],
         endAt: form.elements.duration.value === 'endless' ? nextEndTime(form.elements.endAt.value) : null,
@@ -485,12 +511,14 @@
   function renderMatch(match, index, freeTables, blocked) {
     const names = match.players.map(id => esc(tournament.players[id]));
     let status = 'Match wartet';
-    if (match.result) status = 'Fertig';
+    if (match.result) status = match.result.frames[0] === match.result.frames[1] ? 'Unentschieden' : 'Fertig';
     else if (tournament.ended) status = 'Offen bei Turnierende';
     else if (match.table) status = `Am Tisch ${match.table}`;
+    else if (match.paused) status = 'Pausiert';
     else if (blocked) status = 'Wartet auf ein früheres Match';
     const editing = !tournament.ended && openMatch === index;
-    return `<article class="tournamentMatch ${!match.result && !match.table && !tournament.ended ? 'tournamentWaiting' : ''}">
+    const waiting = !match.result && !match.table && !tournament.ended;
+    return `<article class="tournamentMatch">
       <h4>${names.join(' – ')}</h4>
       <p class="tournamentStatus">${status}${match.result ? ` · ${match.result.frames.join(':')}` : ''}</p>
       ${renderMatchTime(match, index)}
@@ -498,13 +526,13 @@
         breaks.length ? `<p class="small"><strong>${names[i]}</strong> · Breaks: ${breaks.join(', ')}</p>` : ''
       ).join('') : ''}
       ${!tournament.ended && openMatch === null ? `<div class="tournamentActions">
-        ${!match.result && !match.table && !blocked ? freeTables.map(table => `<button type="button" class="secondary tournamentStart tournamentPulse" data-start="${index}" data-table="${table}">An Tisch ${table} starten</button>`).join('') : ''}
-        ${!match.result && !match.table && (blocked || !freeTables.length) ? `<div class="tournamentWait tournamentPulse" role="status">Match wartet</div>` : ''}
+        ${waiting && !match.paused && !blocked ? freeTables.map(table => `<button type="button" class="secondary tournamentStart" data-start="${index}" data-table="${table}">An Tisch ${table} starten</button>`).join('') : ''}
+        ${waiting ? `<button type="button" class="secondary tournamentStart${match.paused ? ' tournamentPulse' : ''}" data-pause="${index}">${match.paused ? 'Pause beenden' : 'Pausieren'}</button>` : ''}
         ${match.table || match.result ? `<button type="button" class="secondary ${match.result ? 'tournamentCorrect' : 'tournamentResult'}" data-edit="${index}">${match.result ? 'Ergebnis korrigieren' : 'Ergebnis eintragen'}</button>` : ''}
       </div>` : ''}
       ${editing ? `<form data-result="${index}">
         <div class="tournamentFields">${names.map((name, i) => `<div>
-          <label>Frames · ${name}<input name="frames" type="number" min="0" max="${tournament.target}" required value="${match.result?.frames[i] ?? ''}"></label>
+          <label>Frames · ${name}<input name="frames" type="number" min="0" max="${tournament.framesPerMatch ?? tournament.target}" required value="${match.result?.frames[i] ?? ''}"></label>
           <label>Breaks · ${name} (protokolliert ab 20)<input name="breaks" type="text" placeholder="z. B. 24, 38" value="${match.result?.breaks[i].join(', ') ?? ''}"></label>
         </div>`).join('')}</div>
         <p class="tournamentStatus" role="alert"></p>
@@ -522,7 +550,7 @@
     const tableRows = rows.map((row, index) => {
       const previous = rows[index - 1];
       if (previous && (previous.points !== row.points || previous.diff !== row.diff)) place = index + 1;
-      return `<tr><td>${place}</td><td>${esc(row.name)}</td><td>${row.points}</td>
+      return `<tr><td>${place}</td><td>${esc(row.name)}</td><td>${formatPoints(row.points)}</td>
         <td>${row.wins}</td><td>${row.diff > 0 ? '+' : ''}${row.diff}</td></tr>`;
     });
     const playedBreaks = rows.filter(row => row.breaks.length);
@@ -534,7 +562,7 @@
       ${tournament.limit === null && tournament.endAt != null ? `<p class="small">Turnierende: ${endLabel()}</p>` : ''}
       <table class="tournamentTable"><thead><tr><th>Pl.</th><th>Spieler</th><th>Pkt.</th><th>Siege</th><th>Frame-Δ</th></tr></thead>
       <tbody>${tableRows.join('')}</tbody></table>
-      <p class="small">1 Punkt je Matchsieg oder Freilos. Bei Punktgleichheit zählt die Frame-Differenz.</p>
+      <p class="small">${tournament.framesPerMatch == null ? '1 Punkt je Matchsieg oder Freilos.' : `Sieg: 2 · Unentschieden: 1 · Niederlage: 0 · Freilos: ${formatPoints(tournament.byePoints)}`} Bei Punktgleichheit zählt die Frame-Differenz.</p>
       <details open><summary>Gespielte Breaks ab 20</summary>
         ${playedBreaks.map(row => `<p class="small"><strong>${esc(row.name)}</strong> · ${row.breaks.join(', ')}</p>`).join('')
           || '<p class="small">Bisher keine Breaks eingetragen.</p>'}
@@ -564,7 +592,9 @@
     const timestamp = value => value == null || (Number.isFinite(value) && value >= 0);
     if (!data || !Array.isArray(data.players) || !integer(data.players.length, 2, 12)
       || !data.players.every(name => typeof name === 'string' && name.trim())
-      || !integer(data.tables, 1, 6) || !integer(data.target, 1, 50)
+      || !integer(data.tables, 1, 6)
+      || (data.framesPerMatch == null ? !integer(data.target, 1, 50)
+        : !integer(data.framesPerMatch, 1, 50) || ![0, 0.5, 1].includes(data.byePoints))
       || !Array.isArray(data.rounds) || !data.rounds.length
       || !(data.limit === null || integer(data.limit, data.rounds.length, 999))
       || !timestamp(data.ended) || !timestamp(data.endAt)
@@ -578,13 +608,13 @@
       for (const match of round.matches) {
         if (!match || !Array.isArray(match.players) || match.players.length !== 2
           || !match.players.every(validPlayer) || !(match.table === null || integer(match.table, 1, data.tables))
-          || !timestamp(match.startedAt) || !timestamp(match.finishedAt)) return false;
+          || !timestamp(match.startedAt) || !timestamp(match.finishedAt)
+          || !(match.paused == null || typeof match.paused === 'boolean')
+          || (match.paused && (match.table !== null || match.result !== null))) return false;
         players.push(...match.players);
         if (match.result === null) continue;
         const result = match.result;
-        if (!result || !Array.isArray(result.frames) || result.frames.length !== 2
-          || !result.frames.every(value => integer(value, 0, data.target))
-          || Math.max(...result.frames) !== data.target || result.frames[0] === result.frames[1]
+        if (!result || !Array.isArray(result.frames) || !validMatchFrames(result.frames, data)
           || !Array.isArray(result.breaks) || result.breaks.length !== 2
           || !result.breaks.every(list => Array.isArray(list) && list.every(value => integer(value, 20, 155)))) return false;
       }
@@ -709,7 +739,7 @@
     panel.insertAdjacentHTML('beforeend', `
       <div class="card tournamentOverview">
         <h2>Schweizer Turnier</h2>
-        <p>${mode} · First to ${tournament.target} · ${tournament.tables} Tisch(e)</p>
+        <p>${mode} · ${tournament.framesPerMatch == null ? `First to ${tournament.target}` : `${tournament.framesPerMatch} Frames pro Match · Freilos: ${formatPoints(tournament.byePoints)} Pkt.`} · ${tournament.tables} Tisch(e)</p>
         <p class="tournamentStatus">${tournament.ended ? 'Turnier beendet' : openRounds.length
           ? `${openRounds.length === 1 ? 'Laufende Runde' : 'Laufende Runden'} · ${openRounds.join(', ')}`
           : `Runde ${number} abgeschlossen`}</p>
@@ -732,11 +762,19 @@
       button.onclick = () => {
         const match = matchAt(button.dataset.start);
         const table = Number(button.dataset.table);
-        if (tournament.ended || match.result || match.table || !availableTables().includes(table)) {
+        if (tournament.ended || match.result || match.table || match.paused || !availableTables().includes(table)) {
           renderTournament(); return;
         }
         match.table = table;
         match.startedAt = Date.now();
+        saveTournament();
+      };
+    });
+    panel.querySelectorAll('[data-pause]').forEach(button => {
+      button.onclick = () => {
+        const match = matchAt(button.dataset.pause);
+        if (tournament.ended || match.result || match.table) return;
+        match.paused = !match.paused;
         saveTournament();
       };
     });
@@ -761,8 +799,10 @@
         const frames = data.getAll('frames').map(Number);
         const breaks = data.getAll('breaks').map(value => value.trim().split(/[,\s]+/).filter(Boolean).map(Number));
         const error = form.querySelector('[role="alert"]');
-        if (Math.max(...frames) !== tournament.target || frames[0] === frames[1]) {
-          error.textContent = `Genau ein Spieler muss ${tournament.target} Frames gewonnen haben.`;
+        if (!validMatchFrames(frames, tournament)) {
+          error.textContent = tournament.framesPerMatch == null
+            ? `Genau ein Spieler muss ${tournament.target} Frames gewonnen haben.`
+            : `Die beiden Ergebnisse müssen zusammen ${tournament.framesPerMatch} Frames ergeben.`;
           return;
         }
         if (breaks.flat().some(points => !Number.isInteger(points) || points < 0 || points > 155)) {
