@@ -483,7 +483,7 @@
   function renderOverall(data) {
     const rows = overallRows(data);
     const archive = data.seasonArchive ?? [];
-    return `<div class="card tournamentStandings">
+    return `<div class="card tournamentStandings tournamentOverall" style="--table-rows:${rows.length + 1}">
       <div class="tournamentStandingsHeader">
         <h3>Gesamt</h3>
         <button type="button" class="secondary" id="tournamentFullscreenToggle" aria-pressed="false">Vollbild an</button>
@@ -979,18 +979,18 @@
         <td>${row.played + row.byes}</td><td>${row.wins}</td><td>${row.draws}</td><td>${row.diff > 0 ? '+' : ''}${row.diff}</td></tr>`;
     });
     const playedBreaks = rows.filter(row => row.breaks.length);
-    return `<div class="card tournamentStandings">
+    return `<div class="card tournamentStandings" style="--table-rows:${rows.length + 1}">
       <div class="tournamentStandingsHeader">
         <h3>${data.ended ? 'Abschlusstabelle' : 'Zwischenstand'}</h3>
         <button type="button" class="secondary" id="tournamentFullscreenToggle" aria-pressed="false">Vollbild an</button>
       </div>
-      ${data.limit === null && data.endAt != null ? `<p class="small">Turnierende: ${localTime(data.endAt)}</p>` : ''}
+      ${data.limit === null && data.endAt != null ? `<p class="small tournamentStandingsInfo">Turnierende: ${localTime(data.endAt)}</p>` : ''}
       <table class="tournamentTable"><thead><tr><th>Pl.</th><th>Spieler</th><th>Pkt.</th><th title="Matches mit Ergebnis plus Freilose">Spiele</th><th>Siege</th><th title="Unentschieden">Remis</th><th>Frame-Δ</th></tr></thead>
       <tbody>${tableRows.join('')}</tbody></table>
-      <p class="small">${data.framesPerMatch == null ? '1 Punkt je Matchsieg oder Freilos.' : `Sieg: 2 · Unentschieden: 1 · Niederlage: 0 · Freilos: ${formatPoints(data.byePoints)}`} Bei Punktgleichheit zählt die Frame-Differenz.</p>
-      <details open><summary>Gespielte Breaks ab 20</summary>
-        ${playedBreaks.map(row => `<p class="small"><strong>${esc(row.name)}</strong> · ${row.breaks.join(', ')}</p>`).join('')
-          || '<p class="small">Bisher keine Breaks eingetragen.</p>'}
+      <p class="small tournamentStandingsInfo">${data.framesPerMatch == null ? '1 Punkt je Matchsieg oder Freilos.' : `Sieg: 2 · Unentschieden: 1 · Niederlage: 0 · Freilos: ${formatPoints(data.byePoints)}`} Bei Punktgleichheit zählt die Frame-Differenz.</p>
+      <details class="tournamentStandingsInfo" open><summary>Gespielte Breaks ab 20</summary>
+        ${playedBreaks.map(row => `<p class="small tournamentStandingsInfo"><strong>${esc(row.name)}</strong> · ${row.breaks.join(', ')}</p>`).join('')
+          || '<p class="small tournamentStandingsInfo">Bisher keine Breaks eingetragen.</p>'}
       </details></div>`;
   }
 

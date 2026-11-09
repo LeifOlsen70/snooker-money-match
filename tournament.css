@@ -62,15 +62,33 @@ body.snookerFullscreenTournament #tournamentMode {
   background:#090613;
 }
 body.snookerFullscreenTournament #tournamentMode > :not(.tournamentStandings) {display:none}
-body.snookerFullscreenTournament .tournamentStandings {
+body.snookerFullscreenTournament #tournamentMode > .tournamentStandings {
+  --table-width-limit:3.5vw;
+  display:flex;
+  flex-direction:column;
+  box-sizing:border-box;
   min-height:100%;
   margin:0;
-  font-size:clamp(16px,2.7vw,30px);
+  padding:6px;
 }
+body.snookerFullscreenTournament #tournamentMode > .tournamentOverall {--table-width-limit:6vw}
+body.snookerFullscreenTournament #tournamentMode .tournamentStandings > .tournamentTable {
+  flex:1 0 auto;
+  font-size:clamp(12px, min(var(--table-width-limit), calc(
+    (100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 72px) / var(--table-rows) / 1.35
+  )), 6rem);
+  line-height:1.15;
+}
+body.snookerFullscreenTournament #tournamentMode .tournamentStandings > .tournamentTable :is(th, td) {
+  padding-block:2px;
+  white-space:normal;
+}
+body.snookerFullscreenTournament #tournamentMode .tournamentStandingsInfo {display:none}
 body.snookerFullscreenTournament .tournamentStandingsHeader {
   position:sticky;
   top:0;
-  padding:8px;
+  padding:0 6px;
+  margin-bottom:4px;
   background:#211534;
   border-radius:10px;
 }
