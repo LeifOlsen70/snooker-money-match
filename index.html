@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#0f5f37">
-  <meta name="application-version" content="7.42">
+  <meta name="application-version" content="7.43">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="Snooker Match">
@@ -328,10 +328,10 @@ body.snookerFullscreenScore #scorerPage.displayOnly{background:#090613!important
   text-shadow:0 1px 2px #0009;
 }
 </style>
-  <link rel="stylesheet" href="tournament.css?v=7.42">
+  <link rel="stylesheet" href="tournament.css?v=7.43">
 </head>
 <body class="modeHome">
-<div id="appVersionTag" aria-label="App-Version 7.42">v7.42</div>
+<div id="appVersionTag" aria-label="App-Version 7.43">v7.43</div>
 <div class="app">
   <h1 class="clubBrand" aria-label="Flensburger Snooker Club – Snooker Money Match"><img src="flensburger-snooker-club.png" alt="Flensburger Snooker Club" width="430" height="125"><span class="visuallyHidden">Snooker Money Match</span></h1><div id="offlineStatus" class="hidden" aria-live="polite"></div>
 
@@ -421,6 +421,7 @@ body.snookerFullscreenScore #scorerPage.displayOnly{background:#090613!important
     <div class="card">
       <h3>Aktuelle Abrechnung</h3>
       <div id="money"></div>
+      <button type="button" class="secondary" id="saveSinglePdfBtn" style="width:100%;margin-top:12px">Abrechnung als PDF speichern</button>
     </div>
 
     <div class="card">
@@ -565,6 +566,7 @@ $('plusBtn').addEventListener('click', ()=>{
 $('startBtn').addEventListener('click', startMatch);
 $('newMatchBtn').addEventListener('click', newOrLoad);
 $('saveGameBtn').addEventListener('click', saveGameToFile);
+$('saveSinglePdfBtn').addEventListener('click', saveSinglePdf);
 $('loadFileInput').addEventListener('change', loadGameFromFile);
 $('undoBtn').addEventListener('click', undo);
 
@@ -806,24 +808,106 @@ function euro(x){
   return sign + x.toLocaleString('de-DE',{style:'currency',currency:'EUR'});
 }
 
+async function saveSinglePdf(){
+  if(!state) return;
+  try{
+    const now = new Date();
+    const money = value => Number(value || 0).toLocaleString('de-DE',{style:'currency',currency:'EUR'});
+    const dateTime = value => {
+      const date = new Date(value);
+      return value && Number.isFinite(date.getTime()) ? date.toLocaleString('de-DE',{dateStyle:'short',timeStyle:'short'}) : '—';
+    };
+    const completed = state.completedMatches || [];
+    const payments = state.payments || [];
+    const sections = [];
+    function addMatch(title, match, getNet, liveScores){
+      const playerRows = match.players.map((player, index) => [
+        player.name, player.frames,
+        ...(liveScores ? [liveScores[index] ?? 0] : []),
+        money(player.breakMoney), euro(getNet(player,index))
+      ]);
+      sections.push({
+        title,
+        note:`Sieg bei ${match.target} Frames · Siegprämie ${money(match.prize)}`,
+        headers:['Spieler','Frames',...(liveScores ? ['Framepunkte'] : []),'Breakprämien','Saldo'],
+        weights:liveScores ? [2.8,1,1.35,1.4,1.15] : [3,1,1.45,1.2],
+        rows:playerRows
+      });
+      const breaks = match.players.flatMap(player => (player.breaks || [])
+        .filter(entry => Number(entry.points) >= 20)
+        .map(entry => [player.name, entry.points, money(entry.money ?? breakValue(Number(entry.points)))]));
+      if(breaks.length){
+        sections.push({title:'Breaks · ' + title, headers:['Spieler','Punkte','Prämie'], weights:[3,1,1.2], rows:breaks});
+      }
+    }
+
+    const winner = state.players[state.winner]?.name;
+    const hasCurrentPlay = state.players.some(player => player.frames || player.breaks?.length) || state.liveFrameScores?.some(Boolean);
+    const currentTitle = winner ? 'Aktuelles Match · Sieger: ' + winner
+      : hasCurrentPlay ? 'Laufendes Match · vorläufig' : 'Aktuelles Match · noch ohne Eingaben';
+    addMatch(currentTitle, state, (_, index) => net(index), state.liveFrameScores || []);
+    sections.push({
+      title:'Kumulierte Abrechnung',
+      note:'Abgeschlossene Matches abzüglich erhaltener und zuzüglich geleisteter Zahlungen.',
+      headers:['Spieler','Matchsaldo','Gezahlt','Erhalten','Offen'],
+      weights:[2.8,1.2,1.1,1.1,1.1],
+      rows:state.players.map((player,index) => {
+        const {matchTotal, paid, received, balance} = cumulativeTotals(index);
+        return [player.name,euro(matchTotal),money(paid),money(received),euro(balance)];
+      })
+    });
+    sections.push({
+      title:'Verrechnete Zahlungen',
+      note:payments.length ? '' : 'Keine Zahlungen eingetragen.',
+      headers:['Datum / Uhrzeit','Von','An','Betrag'],
+      weights:[1.6,2,2,1],
+      rows:payments.map(pay => [dateTime(pay.at),pay.from,pay.to,money(pay.amount)])
+    });
+    completed.forEach(match => addMatch(
+      `Match ${match.number} · Sieger: ${match.winnerName || '—'}`, match, player => Number(player.net || 0)
+    ));
+
+    const title = 'Snooker Money Match · Abrechnung';
+    const subtitle = `Stand ${dateTime(now)} · + Guthaben / − zu zahlen · Breaks ab 20 Punkten`;
+    const file = new File(accountingPdf(title, subtitle, sections), defaultFilename() + '_Abrechnung.pdf', {type:'application/pdf'});
+    await shareDownloadFile(file, title);
+  }catch(error){
+    console.error(error);
+    alert('Die Abrechnung konnte nicht als PDF erstellt werden.');
+  }
+}
 
 function cumulativeNet(i){
+  return cumulativeTotals(i).balance;
+}
+
+function cumulativeTotals(i){
   const name = state.players[i].name;
-  let total = 0;
+  let matchTotal = 0;
 
   const completed = Array.isArray(state.completedMatches) ? state.completedMatches : [];
   completed.forEach(m=>{
     const p = (m.players || []).find(x=>x.name === name);
-    if(p) total += Number(p.net || 0);
+    if(p) matchTotal += Number(p.net || 0);
   });
 
+  let balance = matchTotal;
+  let paid = 0;
+  let received = 0;
   const payments = Array.isArray(state.payments) ? state.payments : [];
   payments.forEach(pay=>{
-    if(pay.from === name) total += Number(pay.amount || 0);
-    if(pay.to === name) total -= Number(pay.amount || 0);
+    const amount = Number(pay.amount || 0);
+    if(pay.from === name){
+      paid += amount;
+      balance += amount;
+    }
+    if(pay.to === name){
+      received += amount;
+      balance -= amount;
+    }
   });
 
-  return total;
+  return {matchTotal,paid,received,balance};
 }
 
 function addPayment(){
@@ -1358,6 +1442,7 @@ e('fbLoad').onclick=async()=>{if(!permitted()){msg('Bitte zuerst anmelden.');ret
  btn.addEventListener('click',()=>setDisplay(!page.classList.contains('displayOnly')));
 })();
 </script>
-<script src="tournament.js?v=7.42"></script>
+<script src="pdf-export.js?v=7.43"></script>
+<script src="tournament.js?v=7.43"></script>
 </body>
 </html>

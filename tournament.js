@@ -538,29 +538,7 @@
     const total = Math.max(1, Math.ceil(rows.length / perPage));
     const weights = headers.map((_, index) => index === 0 ? .65 : index === 1 ? 3 : 1.25);
     const unit = (width - 2 * margin) / weights.reduce((sum, weight) => sum + weight, 0);
-    const chunks = [];
-    const offsets = [0];
-    let length = 0;
-    function append(chunk) {
-      chunks.push(chunk);
-      length += typeof chunk === 'string' ? chunk.length : chunk.byteLength;
-    }
-    function object(id, ...content) {
-      offsets[id] = length;
-      append(id + ' 0 obj\n');
-      content.forEach(append);
-      append('\nendobj\n');
-    }
-    append('%PDF-1.4\n');
-    object(1, '<< /Type /Catalog /Pages 2 0 R >>');
-    const kids = Array.from({length:total}, (_, i) => (3 + 3 * i) + ' 0 R');
-    object(2, `<< /Type /Pages /Count ${total} /Kids [${kids.join(' ')}] >>`);
-    const canvas = document.createElement('canvas');
-    canvas.width = width * 2;
-    canvas.height = height * 2;
-    const ctx = canvas.getContext('2d');
-    ctx.scale(2, 2);
-    for (let page = 0; page < total; page++) {
+    return renderPdfPages(total, (ctx, page) => {
       ctx.fillStyle = '#ffffff';
       ctx.fillRect(0, 0, width, height);
       ctx.fillStyle = '#21152e';
@@ -582,18 +560,7 @@
       ctx.fillStyle = '#51465b';
       ctx.font = '10px sans-serif';
       ctx.fillText(`Seite ${page+1} / ${total}`, margin, height - 28);
-      const jpeg = Uint8Array.from(atob(canvas.toDataURL('image/jpeg', .92).split(',')[1]), c => c.charCodeAt(0));
-      const id = 3 + page * 3;
-      const stream = `q ${width} 0 0 ${height} 0 0 cm /Im0 Do Q\n`;
-      object(id, `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${width} ${height}] /Resources << /XObject << /Im0 ${id+1} 0 R >> >> /Contents ${id+2} 0 R >>`);
-      object(id+1, `<< /Type /XObject /Subtype /Image /Width ${canvas.width} /Height ${canvas.height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${jpeg.length} >>\nstream\n`, jpeg, '\nendstream');
-      object(id+2, `<< /Length ${stream.length} >>\nstream\n${stream}endstream`);
-    }
-    const xref = length;
-    append(`xref\n0 ${offsets.length}\n0000000000 65535 f \n`);
-    for (const offset of offsets.slice(1)) append(String(offset).padStart(10, '0') + ' 00000 n \n');
-    append(`trailer\n<< /Size ${offsets.length} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`);
-    return chunks;
+    });
   }
 
   async function exportTournamentTable(title, table, format) {
