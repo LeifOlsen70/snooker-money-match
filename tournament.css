@@ -1,18 +1,35 @@
 #tournamentMode {touch-action:pan-y pinch-zoom}
-.modeChoices,.tournamentActions,.tournamentFields {
+.tournamentActions,.tournamentFields {
   display:grid;
   grid-template-columns:repeat(auto-fit,minmax(min(100%,145px),1fr));
   gap:10px;
 }
+.modeHome .app {
+  min-height:100dvh;
+  display:grid;
+  grid-template-rows:minmax(max-content,1fr) auto 1fr;
+  align-items:start;
+}
+#modeStart {
+  grid-row:2;
+  width:min(100%,360px);
+  margin:12px auto;
+  text-align:center;
+}
+.modeChoices {
+  display:grid;
+  gap:10px;
+}
+.modeChoices button {min-height:46px}
 #singleHome {
-  position:fixed;
-  top:calc(env(safe-area-inset-top) + 5px);
-  left:5px;
-  z-index:20;
+  display:block;
   width:auto;
-  min-height:28px;
-  padding:3px 8px;
-  font-size:12px;
+  min-height:44px;
+  margin:8px 0;
+  padding:8px 14px;
+  border:1px solid #bb914b;
+  border-radius:10px;
+  font-size:14px;
 }
 .snookerFullscreenScore #singleHome {display:none}
 #tournamentMode button {margin:0}

@@ -237,7 +237,7 @@
     setTournamentFullscreen(false);
     document.body.classList.toggle('compactTournament', mode === 'tournament');
     $('modeStart').classList.toggle('hidden', mode !== 'home');
-    $('tournamentChoice').classList.toggle('hidden', mode !== 'tournament-choice');
+    document.body.classList.toggle('modeHome', mode === 'home');
     $('singleMode').classList.toggle('hidden', mode !== 'single');
     panel.classList.toggle('hidden', mode !== 'tournament');
     document.body.classList.toggle('snookerFullscreenScore',
@@ -248,8 +248,6 @@
 
   $('openSingle').onclick = () => showMode('single');
   $('singleHome').onclick = () => showMode('home');
-  $('openTournament').onclick = () => showMode('tournament-choice');
-  $('tournamentChoiceBack').onclick = () => showMode('home');
   $('openFreeTournament').onclick = () => openTournamentType(true);
   $('openClubLeague').onclick = () => openTournamentType(false);
 
@@ -909,10 +907,10 @@
       form.elements.endAt.required = endless;
     };
     if ($('cancelTournamentSetup')) $('cancelTournamentSetup').onclick = () => {
-      const fromChoice = draftFreeTournament !== null;
+      const fromHome = draftFreeTournament !== null;
       drafting = false;
       draftFreeTournament = null;
-      if (fromChoice) showMode('tournament-choice');
+      if (fromHome) showMode('home');
       else renderTournament();
     };
     if ($('resumeFreeTournament')) $('resumeFreeTournament').onclick = () => {
