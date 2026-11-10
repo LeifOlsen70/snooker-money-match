@@ -163,8 +163,6 @@ body.snookerFullscreenTournament #tournamentFullscreenToggle {font-size:clamp(13
 #tournamentMode .tournamentRosterAdd {border-top:1px solid #775b87;padding-top:14px;margin-top:14px}
 
 /* Compact round overview; keep touch controls at least 44px tall. */
-body.compactTournament .clubBrand {margin:4px 0 8px;padding:3px;}
-body.compactTournament .clubBrand img {height:48px;width:auto;max-width:100%;object-fit:contain;}
 #tournamentMode button {min-height:44px;padding:8px 10px;font-size:14px;line-height:1.2;border-radius:10px;}
 #tournamentMode .card {padding:10px;margin:8px 0;border-radius:12px;}
 #tournamentMode .tournamentTop {margin-bottom:4px;font-size:13px;}
