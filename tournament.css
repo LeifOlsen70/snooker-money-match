@@ -187,3 +187,16 @@ body.compactTournament .clubBrand img {height:48px;width:auto;max-width:100%;obj
 #tournamentMode #nextTournamentRound {margin:0 0 6px;}
 
 body.snookerFullscreenTournament .tournamentSeasons {display:none}
+
+.tournamentResultDialog {box-sizing:border-box;width:min(92vw,390px);padding:14px}
+.tournamentResultDialog h3,.tournamentResultDialog p {margin:0 0 8px}
+.tournamentResultRow {display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:5px;margin-bottom:6px}
+.tournamentResultRow button {min-height:44px;padding:6px 8px}
+.tournamentResultRow [data-frame-add] {display:flex;align-items:center;justify-content:space-between;gap:8px;text-align:left;overflow-wrap:anywhere}
+.tournamentResultRow [data-frame-score] {font-size:1.35em}
+.tournamentResultRow label {grid-column:1 / -1;font-size:.85em}
+.tournamentResultRow label[hidden],.tournamentResultDialog [role="alert"]:empty {display:none}
+.tournamentResultRow input {margin:3px 0 0;padding:6px 8px}
+.tournamentResultActions {display:flex;justify-content:flex-end;gap:6px}
+.tournamentResultActions [type="submit"] {background:#efce79;color:#21152e;font-weight:700}
+.tournamentResultDialog button:disabled {opacity:.65;cursor:default}

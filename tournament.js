@@ -941,13 +941,12 @@
     else if (match.table) status = `Am Tisch ${match.table}`;
     else if (match.paused) status = 'Pausiert';
     else if (blocked) status = 'Wartet auf ein Ergebnis';
-    const editing = !tournament.ended && openMatch === index;
     const waiting = !match.result && !match.table && !tournament.ended;
     return `<article class="tournamentMatch">
       <h4>${names.join(' – ')}</h4>
       <p class="tournamentStatus">${status}${match.result ? ` · ${match.result.frames.join(':')}` : ''}</p>
       ${renderMatchTime(match, index)}
-      ${match.result && !editing ? match.result.breaks.map((breaks, i) =>
+      ${match.result ? match.result.breaks.map((breaks, i) =>
         breaks.length ? `<p class="small"><strong>${names[i]}</strong> · Breaks: ${breaks.join(', ')}</p>` : ''
       ).join('') : ''}
       ${!tournament.ended && openMatch === null ? `<div class="tournamentActions">
@@ -955,18 +954,90 @@
         ${waiting ? `<button type="button" class="secondary tournamentStart${match.paused ? ' tournamentPulse' : ''}" data-pause="${index}">${match.paused ? 'Pause beenden' : 'Pausieren'}</button>` : ''}
         ${match.table || match.result ? `<button type="button" class="secondary ${match.result ? 'tournamentCorrect' : 'tournamentResult'}" data-edit="${index}">${match.result ? 'Ergebnis korrigieren' : 'Ergebnis eintragen'}</button>` : ''}
       </div>` : ''}
-      ${editing ? `<form data-result="${index}">
-        <div class="tournamentFields">${names.map((name, i) => `<div>
-          <label>Frames · ${name}<input name="frames" type="number" min="0" max="${tournament.framesPerMatch ?? tournament.target}" required value="${match.result?.frames[i] ?? ''}"></label>
-          <label>Breaks · ${name} (protokolliert ab 20)<input name="breaks" type="text" placeholder="z. B. 24, 38" value="${match.result?.breaks[i].join(', ') ?? ''}"></label>
-        </div>`).join('')}</div>
-        <p class="tournamentStatus" role="alert"></p>
-        <div class="tournamentActions">
-          <button class="primary">Ergebnis speichern</button>
-          <button type="button" class="secondary" data-close>Abbrechen</button>
-        </div>
-      </form>` : ''}
     </article>`;
+  }
+
+  function openResultDialog(match, index) {
+    if (openMatch !== null || tournament.ended || (!match.table && !match.result)) return;
+    openMatch = index;
+    const names = match.players.map(id => esc(tournament.players[id]));
+    const frames = [...(match.result?.frames ?? [0, 0])];
+    const dialog = document.createElement('dialog');
+    dialog.className = 'tournamentDialog tournamentResultDialog';
+    dialog.setAttribute('aria-labelledby', 'tournamentResultTitle');
+    dialog.innerHTML = `<form>
+      <h3 id="tournamentResultTitle" tabindex="-1" autofocus>${match.result ? 'Ergebnis korrigieren' : 'Ergebnis eintragen'}</h3>
+      <p class="small">${tournament.framesPerMatch == null
+        ? `Bis ${tournament.target} Gewinnframes` : `${tournament.framesPerMatch} Frames insgesamt`} · Name antippen für +1</p>
+      ${names.map((name, i) => `<div class="tournamentResultRow">
+        <button type="button" data-frame-add="${i}">${name}<strong data-frame-score aria-live="polite"></strong></button>
+        <button type="button" data-frame-minus="${i}" aria-label="Einen Frame bei ${name} abziehen">−</button>
+        <button type="button" data-break-toggle="${i}" aria-label="Breaks von ${name}" aria-expanded="false" aria-controls="tournamentBreaks${i}">Breaks</button>
+        <label id="tournamentBreaks${i}" hidden>Breaks · ${name} (ab 20)
+          <input name="breaks" type="text" placeholder="z. B. 24, 38" value="${match.result?.breaks[i].join(', ') ?? ''}">
+        </label>
+      </div>`).join('')}
+      <p class="small" role="alert"></p>
+      <div class="tournamentResultActions">
+        <button type="button" data-close>Abbrechen</button>
+        <button type="submit">Speichern</button>
+      </div>
+    </form>`;
+
+    const form = dialog.querySelector('form');
+    const add = [...form.querySelectorAll('[data-frame-add]')];
+    const minus = [...form.querySelectorAll('[data-frame-minus]')];
+    const save = form.querySelector('[type="submit"]');
+    function update() {
+      const complete = validMatchFrames(frames, tournament);
+      add.forEach((button, i) => {
+        button.querySelector('[data-frame-score]').textContent = frames[i];
+        button.disabled = complete;
+        minus[i].disabled = frames[i] === 0;
+      });
+      save.disabled = !complete;
+    }
+    add.forEach((button, i) => { button.onclick = () => { frames[i]++; update(); }; });
+    minus.forEach((button, i) => { button.onclick = () => { frames[i]--; update(); }; });
+    form.querySelectorAll('[data-break-toggle]').forEach((button, i) => {
+      const field = form.querySelector('#tournamentBreaks' + i);
+      button.onclick = () => {
+        field.hidden = !field.hidden;
+        button.setAttribute('aria-expanded', String(!field.hidden));
+        if (!field.hidden) field.querySelector('input').focus();
+      };
+    });
+    function close() {
+      openMatch = null;
+      dialog.close();
+      dialog.remove();
+    }
+    function cancel() {
+      close();
+      if (remoteTournament) renderTournament();
+    }
+    form.querySelector('[data-close]').onclick = cancel;
+    dialog.oncancel = event => { event.preventDefault(); cancel(); };
+    form.onsubmit = event => {
+      event.preventDefault();
+      if (!validMatchFrames(frames, tournament)) return;
+      const breaks = new FormData(form).getAll('breaks')
+        .map(value => value.trim().split(/[,\s]+/).filter(Boolean).map(Number));
+      if (breaks.flat().some(points => !Number.isInteger(points) || points < 0 || points > 155)) {
+        form.querySelector('[role="alert"]').textContent = 'Bitte Breaks als ganze Zahlen von 0 bis 155 eingeben.';
+        return;
+      }
+      if (!match.result) {
+        if (match.startedAt != null) match.finishedAt = Date.now();
+        if (!tournament.freeTournament) match.eloAt = nextEloTime(tournament);
+      }
+      match.result = {frames, breaks:breaks.map(list => list.filter(points => points >= 20))};
+      close();
+      saveTournament();
+    };
+    update();
+    document.body.append(dialog);
+    dialog.showModal();
   }
 
   function renderStandings(data = tournament) {
@@ -1206,13 +1277,6 @@
   function renderTournament() {
     refreshPlayerList = null;
     applyRemoteTournament();
-    const previousForm = panel.querySelector('[data-result]');
-    const draftIndex = previousForm?.dataset.result;
-    const draftValues = previousForm ? Array.from(previousForm.querySelectorAll('input'), input => input.value) : [];
-    if (draftIndex === openMatch) queueMicrotask(() => {
-      const form = panel.querySelector('[data-result]');
-      if (form?.dataset.result === draftIndex) form.querySelectorAll('input').forEach((input, i) => { input.value = draftValues[i]; });
-    });
     panel.innerHTML = '<button type="button" id="tournamentHome" class="secondary tournamentTop">← Startseite</button>';
     $('tournamentHome').onclick = () => {
       if (openMatch !== null && !confirm('Ergebniseingabe ohne Speichern verlassen?')) return;
@@ -1330,46 +1394,8 @@
       };
     });
     panel.querySelectorAll('[data-edit]').forEach(button => {
-      button.onclick = () => {
-        const match = matchAt(button.dataset.edit);
-        if (!match.table && !match.result) return;
-        openMatch = button.dataset.edit;
-        renderTournament();
-        panel.querySelector('[data-result] input').focus();
-      };
+      button.onclick = () => openResultDialog(matchAt(button.dataset.edit), button.dataset.edit);
     });
-    const form = panel.querySelector('[data-result]');
-    if (form) {
-      form.querySelector('[data-close]').onclick = () => {
-        openMatch = null;
-        renderTournament();
-      };
-      form.onsubmit = event => {
-        event.preventDefault();
-        const data = new FormData(form);
-        const frames = data.getAll('frames').map(Number);
-        const breaks = data.getAll('breaks').map(value => value.trim().split(/[,\s]+/).filter(Boolean).map(Number));
-        const error = form.querySelector('[role="alert"]');
-        if (!validMatchFrames(frames, tournament)) {
-          error.textContent = tournament.framesPerMatch == null
-            ? `Genau ein Spieler muss ${tournament.target} Frames gewonnen haben.`
-            : `Die beiden Ergebnisse müssen zusammen ${tournament.framesPerMatch} Frames ergeben.`;
-          return;
-        }
-        if (breaks.flat().some(points => !Number.isInteger(points) || points < 0 || points > 155)) {
-          error.textContent = 'Bitte Breaks als ganze Zahlen von 0 bis 155 eingeben.';
-          return;
-        }
-        const match = matchAt(openMatch);
-        if (!match.result) {
-          if (match.startedAt != null) match.finishedAt = Date.now();
-          if (!tournament.freeTournament) match.eloAt = nextEloTime(tournament);
-        }
-        match.result = {frames, breaks: breaks.map(list => list.filter(points => points >= 20))};
-        openMatch = null;
-        saveTournament();
-      };
-    }
     if ($('repairTournamentRound')) $('repairTournamentRound').onclick = () => {
       if (!confirm('Die Paarungen der letzten, noch nicht gestarteten Runde neu erstellen?')) return;
       tournament.rounds[number - 1] = replacement;
