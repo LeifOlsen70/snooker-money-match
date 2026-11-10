@@ -451,9 +451,10 @@
     return `<details class="tournamentSeasons" ${eloExpanded ? 'open' : ''} id="tournamentElo">
       <summary>Elo-Wertung</summary>
       <table class="tournamentTable"><thead><tr><th>Pl.</th><th>Spieler</th><th>Elo</th></tr></thead>
-        <tbody>${rows.map((row, index) => `<tr><td>${index + 1}</td><td>${esc(row.name)}</td><td>${Math.round(row.rating)}
+        <tbody>${rows.map((row, index) => `<tr><td>${index + 1}</td><td>${esc(row.name)}</td><td><span data-export-value>${Math.round(row.rating)}</span>
           <button type="button" class="secondary" data-edit-elo="${index}" aria-label="Elo von ${esc(row.name)} ändern">Ändern</button></td></tr>`).join('')}</tbody>
       </table>
+      ${tableExportButtons()}
       <button type="button" class="secondary tournamentEnd" id="resetTournamentElo">Elo für alle auf 1000 setzen</button>
     </details>`;
   }
@@ -487,6 +488,7 @@
         <button type="button" class="secondary" id="tournamentFullscreenToggle" aria-pressed="false">Vollbild an</button>
       </div>
       ${overallTable(rows)}
+      ${rows.length ? tableExportButtons() : ''}
       ${data.freeTournament ? '' : renderElo(data)}
       <div class="tournamentSeasons">
         ${!data.freeTournament && rows.length ? `<button type="button" class="secondary" id="newTournamentSeason" ${data.ended ? '' : 'disabled'}>Neue Saison starten</button>
@@ -495,10 +497,8 @@
           ${archive.map((season, index) => `<details>
             <summary>${esc(season.name)}</summary>
             ${overallTable(season.rows)}
-            <div class="tournamentActions">
-              <button type="button" class="secondary" data-export-season="${index}">Tabelle als CSV speichern</button>
-              <button type="button" class="secondary tournamentEnd" data-delete-season="${index}">Saison löschen</button>
-            </div>
+            ${tableExportButtons()}
+            <button type="button" class="secondary tournamentEnd" data-delete-season="${index}">Saison löschen</button>
           </details>`).join('')}
         </details>` : ''}
       </div>
@@ -526,15 +526,88 @@
     saveTournament();
   }
 
-  function exportSeason({name, rows}) {
-    const csvName = value => {
-      const safe = /^[\s]*[=+@-]|^[\t\r\n]/.test(value) ? "'" + value : value;
+  function tableExportButtons() {
+    return `<div class="tournamentActions tournamentSeasons">
+      <button type="button" class="secondary" data-export-table="csv">CSV speichern</button>
+      <button type="button" class="secondary" data-export-table="pdf">PDF speichern</button>
+    </div>`;
+  }
+
+  function tablePdf(title, [headers, ...rows]) {
+    const width = 595, height = 842, margin = 36, perPage = 25;
+    const total = Math.max(1, Math.ceil(rows.length / perPage));
+    const weights = headers.map((_, index) => index === 0 ? .65 : index === 1 ? 3 : 1.25);
+    const unit = (width - 2 * margin) / weights.reduce((sum, weight) => sum + weight, 0);
+    const chunks = [];
+    const offsets = [0];
+    let length = 0;
+    function append(chunk) {
+      chunks.push(chunk);
+      length += typeof chunk === 'string' ? chunk.length : chunk.byteLength;
+    }
+    function object(id, ...content) {
+      offsets[id] = length;
+      append(id + ' 0 obj\n');
+      content.forEach(append);
+      append('\nendobj\n');
+    }
+    append('%PDF-1.4\n');
+    object(1, '<< /Type /Catalog /Pages 2 0 R >>');
+    const kids = Array.from({length:total}, (_, i) => (3 + 3 * i) + ' 0 R');
+    object(2, `<< /Type /Pages /Count ${total} /Kids [${kids.join(' ')}] >>`);
+    const canvas = document.createElement('canvas');
+    canvas.width = width * 2;
+    canvas.height = height * 2;
+    const ctx = canvas.getContext('2d');
+    ctx.scale(2, 2);
+    for (let page = 0; page < total; page++) {
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, width, height);
+      ctx.fillStyle = '#21152e';
+      ctx.font = 'bold 20px sans-serif';
+      ctx.fillText(title, margin, 53, width - 2 * margin);
+      [headers, ...rows.slice(page * perPage, (page+1) * perPage)].forEach((row, index) => {
+        const top = 72 + index * 27;
+        ctx.fillStyle = index === 0 ? '#302040' : index % 2 ? '#f2eef6' : '#ffffff';
+        ctx.fillRect(margin, top, width - 2 * margin, 27);
+        ctx.fillStyle = index === 0 ? '#ffffff' : '#21152e';
+        ctx.font = index === 0 ? 'bold 11px sans-serif' : '12px sans-serif';
+        let x = margin;
+        row.forEach((value, column) => {
+          const cellWidth = weights[column] * unit;
+          ctx.fillText(value, x + 7, top + 17, cellWidth - 14);
+          x += cellWidth;
+        });
+      });
+      ctx.fillStyle = '#51465b';
+      ctx.font = '10px sans-serif';
+      ctx.fillText(`Seite ${page+1} / ${total}`, margin, height - 28);
+      const jpeg = Uint8Array.from(atob(canvas.toDataURL('image/jpeg', .92).split(',')[1]), c => c.charCodeAt(0));
+      const id = 3 + page * 3;
+      const stream = `q ${width} 0 0 ${height} 0 0 cm /Im0 Do Q\n`;
+      object(id, `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${width} ${height}] /Resources << /XObject << /Im0 ${id+1} 0 R >> >> /Contents ${id+2} 0 R >>`);
+      object(id+1, `<< /Type /XObject /Subtype /Image /Width ${canvas.width} /Height ${canvas.height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${jpeg.length} >>\nstream\n`, jpeg, '\nendstream');
+      object(id+2, `<< /Length ${stream.length} >>\nstream\n${stream}endstream`);
+    }
+    const xref = length;
+    append(`xref\n0 ${offsets.length}\n0000000000 65535 f \n`);
+    for (const offset of offsets.slice(1)) append(String(offset).padStart(10, '0') + ' 00000 n \n');
+    append(`trailer\n<< /Size ${offsets.length} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`);
+    return chunks;
+  }
+
+  async function exportTournamentTable(title, table, format) {
+    const rows = Array.from(table.rows, row => Array.from(row.cells, cell =>
+      (cell.querySelector('[data-export-value]') ?? cell).textContent.trim()));
+    const filename = title.replace(/[\\/:*?"<>|]/g,'-') + '.' + format;
+    if (format === 'pdf') {
+      return shareDownloadFile(new File(tablePdf(title, rows), filename, {type:'application/pdf'}), title);
+    }
+    const csv = rows.map((row, index) => row.map((value, column) => {
+      const safe = index && column === 1 && /^[\s]*[=+@-]|^[\t\r\n]/.test(value) ? "'" + value : value;
       return '"' + safe.replaceAll('"', '""') + '"';
-    };
-    const csv = ['Platz;Spieler;Punkte;Teilnahmen', ...rows.map(row =>
-      [row.place,csvName(row.name),formatPoints(row.points),row.appearances].join(';'))].join('\r\n');
-    const filename = name.replace(/[\\/:*?"<>|]/g,'-') + '.csv';
-    return shareDownloadFile(new File(['\uFEFF',csv], filename, {type:'text/csv;charset=utf-8'}), 'Snooker-Saisontabelle speichern');
+    }).join(';')).join('\r\n');
+    return shareDownloadFile(new File(['\uFEFF',csv], filename, {type:'text/csv;charset=utf-8'}), title);
   }
 
   function pairingHistory(rounds) {
@@ -1090,6 +1163,7 @@
       ${data.limit === null && data.endAt != null ? `<p class="small tournamentStandingsInfo">Turnierende: ${localTime(data.endAt)}</p>` : ''}
       <table class="tournamentTable"><thead><tr><th>Pl.</th><th>Spieler</th><th>Pkt.</th><th title="Matches mit Ergebnis plus Freilose">Spiele</th><th>Siege</th><th title="Unentschieden">Remis</th><th>Frame-Δ</th></tr></thead>
       <tbody>${tableRows.join('')}</tbody></table>
+      ${tableExportButtons()}
       <p class="small tournamentStandingsInfo">${data.framesPerMatch == null ? '1 Punkt je Matchsieg oder Freilos.' : `Sieg: 2 · Unentschieden: 1 · Niederlage: 0 · Freilos: ${formatPoints(data.byePoints)}`} Bei Punktgleichheit zählt die Frame-Differenz.</p>
       <details class="tournamentStandingsInfo" open><summary>Gespielte Breaks ab 20</summary>
         ${playedBreaks.map(row => `<p class="small tournamentStandingsInfo"><strong>${esc(row.name)}</strong> · ${row.breaks.join(', ')}</p>`).join('')
@@ -1297,9 +1371,20 @@
       const season = data.seasonArchive[Number(button.dataset.deleteSeason)];
       button.onclick = () => deleteArchivedSeason(season);
     });
-    panel.querySelectorAll('[data-export-season]').forEach(button => {
-      button.onclick = () => exportSeason(data.seasonArchive[Number(button.dataset.exportSeason)])
-        .catch(() => alert('Die Saisontabelle konnte nicht gespeichert werden.'));
+    panel.querySelectorAll('[data-export-table]').forEach(button => {
+      const details = button.closest('details');
+      const section = details ?? button.closest('.tournamentStandings');
+      const table = section.querySelector(':scope > .tournamentTable');
+      if (!table) { button.disabled = true; return; }
+      const date = tournamentDateLabel(data);
+      const title = details ? details.querySelector('summary').textContent.trim()
+        : view === 'overall' ? (data.freeTournament ? 'Gesamt' : 'Tabelle Saison')
+        : data.freeTournament ? 'Freies Turnier · ' + tournamentTitle(data, true)
+        : data.ended ? tournamentTitle(data, true) : 'Tabelle Turniertag';
+      const datedTitle = date && (!details || details.id === 'tournamentElo') && !title.includes(date)
+        ? title + ' · ' + date : title;
+      button.onclick = () => exportTournamentTable(datedTitle, table, button.dataset.exportTable)
+        .catch(() => alert('Die Tabelle konnte nicht gespeichert werden.'));
     });
   }
 
