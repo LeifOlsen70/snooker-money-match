@@ -485,7 +485,7 @@
     const archive = data.seasonArchive ?? [];
     return `<div class="card tournamentStandings tournamentOverall" style="--table-rows:${rows.length + 1}">
       <div class="tournamentStandingsHeader">
-        <h3>Gesamt</h3>
+        <h3>${data.freeTournament ? 'Gesamt' : 'Tabelle Saison'}</h3>
         <button type="button" class="secondary" id="tournamentFullscreenToggle" aria-pressed="false">Vollbild an</button>
       </div>
       ${overallTable(rows)}
@@ -683,12 +683,41 @@
     renderTournament();
   }
 
+  function localDateValue(time) {
+    const date = new Date(time);
+    return [date.getFullYear(), date.getMonth()+1, date.getDate()]
+      .map(value => String(value).padStart(2,'0')).join('-');
+  }
+
+  function tournamentDateLabel(data) {
+    const date = data.playDate ?? (Number.isFinite(data.started) ? localDateValue(data.started) : '');
+    return date ? date.split('-').reverse().join('.') : '';
+  }
+
+  function tournamentTitle(data, standingsView = false) {
+    if (data.freeTournament) return standingsView ? (data.ended ? 'Abschlusstabelle' : 'Zwischenstand') : 'Freies Turnier';
+    if (standingsView && !data.ended) return 'Tabelle Turniertag';
+    const cutoff = data.seasonStarted ?? 0;
+    const validDay = data.ended && hasMatchResult(data) && (!cutoff || data.started >= cutoff);
+    const earlier = new Set((data.overallDays ?? [])
+      .filter(day => hasDayPoints(day) && Number(day.id) >= cutoff && Number(day.id) < data.started)
+      .map(day => day.id));
+    const title = standingsView
+      ? `Club Liga Spieltag${validDay ? ' ' + (earlier.size+1) : ''}`
+      : 'Club Liga Turnier';
+    const date = tournamentDateLabel(data);
+    return date ? `${title} · ${date}` : title;
+  }
+
   function renderSetup() {
+    const options = (max, selected) => Array.from({length:max}, (_, i) => i+1)
+      .map(value => `<option ${value === selected ? 'selected' : ''}>${value}</option>`).join('');
     panel.innerHTML = `
       <div class="card">
         <h2>${(draftFreeTournament ?? tournament?.freeTournament) ? 'Freies Turnier anlegen' : 'Club Liga Saison · Turnier anlegen'}</h2>
         <form id="tournamentSetup">
-          <div class="tournamentFields">
+          <div class="tournamentFields tournamentSetupFields">
+            <label>Datum<input name="playDate" type="date" required value="${localDateValue(Date.now())}"></label>
             <label>Spieleranzahl
               <select name="count">${Array.from({length:11}, (_, i) =>
                 `<option ${i === 2 ? 'selected' : ''}>${i + 2}</option>`).join('')}</select>
@@ -698,13 +727,13 @@
               <option value="endless">Nach Zeit · Endlos</option></select>
             </label>
             <label id="tournamentRoundCount">Anzahl Runden
-              <input name="rounds" type="number" min="1" max="999" value="3" required>
+              <select name="rounds">${options(999, 3)}</select>
             </label>
-            <label id="tournamentEndTime" class="hidden">Turnierende · Uhrzeit
+            <label id="tournamentEndTime" class="hidden">Endzeit
               <input name="endAt" type="time" value="${localTime(Date.now()+3*3600000)}">
             </label>
-            <label>Zu spielende Frames pro Match
-              <input name="framesPerMatch" type="number" min="1" max="50" value="2" required>
+            <label>Frames pro Match
+              <select name="framesPerMatch">${options(50, 2)}</select>
             </label>
             <label>Punkte pro Freilos
               <select name="byePoints">
@@ -713,8 +742,8 @@
                 <option value="1">1</option>
               </select>
             </label>
-            <label>Verfügbare Tische
-              <input name="tables" type="number" min="1" max="6" value="1" required>
+            <label>Tische
+              <select name="tables">${options(6, 1)}</select>
             </label>
           </div>
           <section class="tournamentRoster" aria-label="Gespeicherte Spieler">
@@ -897,7 +926,12 @@
         $('tournamentSetupError').textContent = 'Bitte für jeden Spieler einen eindeutigen Namen eingeben.';
         return;
       }
-      if (form.elements.duration.value === 'endless' && !(nextEndTime(form.elements.endAt.value) > Date.now())) {
+      const playDate = form.elements.playDate.value;
+      const timed = form.elements.duration.value === 'endless';
+      const endAt = !timed ? null : playDate === localDateValue(Date.now())
+        ? nextEndTime(form.elements.endAt.value)
+        : new Date(playDate + 'T' + form.elements.endAt.value).getTime();
+      if (timed && !(endAt > Date.now())) {
         $('tournamentSetupError').textContent = 'Bitte eine gültige Uhrzeit für das Turnierende eingeben.'; return;
       }
       const freeTournament = draftFreeTournament ?? Boolean(tournament?.freeTournament);
@@ -920,8 +954,8 @@
         framesPerMatch: Number(form.elements.framesPerMatch.value),
         byePoints: Number(form.elements.byePoints.value),
         tables: Number(form.elements.tables.value),
-        started: Date.now(), ended: null, rounds: [],
-        endAt: form.elements.duration.value === 'endless' ? nextEndTime(form.elements.endAt.value) : null,
+        playDate, started: Date.now(), ended: null, rounds: [],
+        endAt,
         finishLastRound: false
       };
       drafting = false;
@@ -1052,7 +1086,7 @@
     const playedBreaks = rows.filter(row => row.breaks.length);
     return `<div class="card tournamentStandings" style="--table-rows:${rows.length + 1}">
       <div class="tournamentStandingsHeader">
-        <h3>${data.ended ? 'Abschlusstabelle' : 'Zwischenstand'}</h3>
+        <h3>${esc(tournamentTitle(data, true))}</h3>
         <button type="button" class="secondary" id="tournamentFullscreenToggle" aria-pressed="false">Vollbild an</button>
       </div>
       ${data.limit === null && data.endAt != null ? `<p class="small tournamentStandingsInfo">Turnierende: ${localTime(data.endAt)}</p>` : ''}
@@ -1093,6 +1127,7 @@
         : !integer(data.framesPerMatch, 1, 50) || ![0, 0.5, 1].includes(data.byePoints))
       || !Array.isArray(data.rounds) || !data.rounds.length
       || !(data.limit === null || integer(data.limit, data.rounds.length, 999))
+      || (data.playDate != null && (typeof data.playDate !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(data.playDate)))
       || !timestamp(data.ended) || !timestamp(data.endAt)
       || !(data.finishLastRound == null || typeof data.finishLastRound === 'boolean')
       || !(data.filename == null || typeof data.filename === 'string')) return false;
@@ -1309,9 +1344,9 @@
         <button type="button" id="tournamentRoundsView" class="${view === 'rounds' ? 'primary' : 'secondary'}"
           aria-pressed="${view === 'rounds'}">Runden</button>
         <button type="button" id="tournamentStandingsView" class="${view === 'standings' ? 'primary' : 'secondary'}"
-          aria-pressed="${view === 'standings'}">${tournament.ended ? 'Abschlusstabelle' : 'Zwischenstand'}</button>
+          aria-pressed="${view === 'standings'}">${tournament.freeTournament ? tournamentTitle(tournament, true) : 'Tabelle Turniertag'}</button>
         <button type="button" id="tournamentOverallView" class="${view === 'overall' ? 'primary' : 'secondary'}"
-          aria-pressed="${view === 'overall'}">Gesamt</button>
+          aria-pressed="${view === 'overall'}">${tournament.freeTournament ? 'Gesamt' : 'Tabelle Saison'}</button>
       </nav>`);
     $('tournamentRoundsView').onclick = () => showTournamentView('rounds');
     $('tournamentStandingsView').onclick = () => showTournamentView('standings');
@@ -1352,7 +1387,7 @@
     });
     panel.insertAdjacentHTML('beforeend', `
       <div class="card tournamentOverview">
-        <h2>Schweizer Turnier</h2>
+        <h2>${esc(tournamentTitle(tournament))}</h2>
         <p>${mode} · ${tournament.framesPerMatch == null ? `First to ${tournament.target}` : `${tournament.framesPerMatch} Frames pro Match · Freilos: ${formatPoints(tournament.byePoints)} Pkt.`} · ${tournament.tables} Tisch(e)</p>
         <p class="tournamentStatus">${tournament.ended ? 'Turnier beendet' : openRounds.length
           ? `${openRounds.length === 1 ? 'Laufende Runde' : 'Laufende Runden'} · ${openRounds.join(', ')}`
