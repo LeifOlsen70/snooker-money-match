@@ -1,4 +1,4 @@
-Snooker Money Match v7.43
+Snooker Money Match v7.44
 Alle Dateien auf GitHub hochladen und die App anschließend neu öffnen.
 Im Turniermodus sichern und laden die beiden Schaltflächen eine JSON-Datei.
 Die Matchzeit startet mit der Tischzuweisung und endet beim Speichern des Ergebnisses.
@@ -7,6 +7,15 @@ Alternativ die Schaltflächen Runden und Zwischenstand verwenden.
 In der Tabelle schaltet „Vollbild an/aus“ die große Anzeige ein und aus.
 Gespielte Breaks ab 20 stehen in der Tabelle und bei den abgeschlossenen Matches.
 Turniere werden lokal gespeichert. Mit Firebase-Anmeldung wird der Turnierstand automatisch über beide Geräte synchronisiert.
+
+Neu in v7.44:
+- Tagesrangfolge: Matchpunkte, Frame-Differenz, direkter Vergleich, Buchholz.
+- Direkter Vergleich bei vollständigen Begegnungen der gleichplatzierten Gruppe. Bei Wiederholungen zählt der Punktedurchschnitt je Gegner.
+- Buchholz summiert die Tagespunkte der Gegner je gespielter Begegnung. Freilose zählen mit den eigenen Tagespunkten als Ersatzgegner.
+- Club Liga: Saisonpunkte nach Teilnehmerzahl bis 1. Geteilte Plätze erhalten den Mittelwert ihrer Platzpunkte.
+- Laufende Tagestabelle zeigt Matchpunkte. Nach Ende stehen Saisonpunkte und Matchpunkte in der Abschlusstabelle.
+- Die Saisontabelle enthält während des laufenden Spieltags vorläufige Platzpunkte. Teilnahmen erst nach Turnierende mit Ergebnis.
+- Bereits gespeicherte Tageszusammenfassungen und Saisonarchive behalten ihre bisherigen Punkte.
 
 Neu in v7.43:
 - Einzel: PDF-Abrechnung mit Spielstand, Breaks, Match-Historie, kumulierten Salden und verrechneten Zahlungen.
@@ -111,7 +120,7 @@ Neu in v7.18:
 - Bestehende JSON-Turniersicherungen können weiterhin geladen werden.
 
 Installation: Alle enthaltenen Dateien im bisherigen GitHub-Ordner ersetzen.
-App danach neu öffnen, gegebenenfalls einmal aktualisieren. Unten muss v7.43 stehen.
+App danach neu öffnen, gegebenenfalls einmal aktualisieren. Unten muss v7.44 stehen.
 Vor dem Update das laufende Turnier als JSON sichern.
 Die Speicherung einer Datei wird je nach Gerät über Teilen oder Download ausgeführt.
 

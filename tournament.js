@@ -254,7 +254,7 @@
   // Only confirmed results and assigned byes count toward the standings.
   function standings(rounds = tournament.rounds, data = tournament) {
     const rows = data.players.map((name, id) => ({
-      name, id, played: 0, wins: 0, draws: 0, byes: 0, diff: 0, breaks: []
+      name, id, played: 0, wins: 0, draws: 0, byes: 0, diff: 0, breaks: [], opponents: []
     }));
     for (const round of rounds) {
       if (round.bye !== null) rows[round.bye].byes++;
@@ -263,6 +263,8 @@
         const [a, b] = match.players.map(id => rows[id]);
         a.played++;
         b.played++;
+        a.opponents.push(b.id);
+        b.opponents.push(a.id);
         const [first, second] = match.result.frames;
         if (first === second) {
           a.draws++;
@@ -284,7 +286,59 @@
         ? row.wins + row.byes
         : 2 * row.wins + row.draws + data.byePoints * row.byes;
     }
-    return rows.sort((a, b) => b.points - a.points || b.diff - a.diff || a.id - b.id);
+    for (const row of rows) {
+      // A bye contributes a virtual opponent with the player's own daily score.
+      row.buchholz = row.opponents.reduce((sum, id) => sum + rows[id].points, 0) + row.byes * row.points;
+    }
+    rows.sort((a, b) => b.points - a.points || b.diff - a.diff || a.id - b.id);
+    const ranked = [];
+    for (let start = 0; start < rows.length;) {
+      let end = start + 1;
+      while (end < rows.length && rows[end].points === rows[start].points && rows[end].diff === rows[start].diff) end++;
+      const group = rows.slice(start, end);
+      const ids = new Set(group.map(row => row.id));
+      const scores = new Map(group.map(row => [row.id, new Map()]));
+      for (const round of rounds) for (const match of round.matches) {
+        const [a, b] = match.players;
+        if (!match.result || !ids.has(a) || !ids.has(b)) continue;
+        const [first, second] = match.result.frames;
+        const win = data.framesPerMatch == null ? 1 : 2;
+        for (const [id, opponent, points] of [
+          [a, b, first === second ? win / 2 : first > second ? win : 0],
+          [b, a, first === second ? win / 2 : second > first ? win : 0]
+        ]) {
+          const previous = scores.get(id).get(opponent) ?? {total:0, count:0};
+          scores.get(id).set(opponent, {total:previous.total + points, count:previous.count + 1});
+        }
+      }
+      const complete = group.every(row => scores.get(row.id).size === group.length - 1);
+      for (const row of group) {
+        row.direct = complete
+          ? [...scores.get(row.id).values()].reduce((sum, score) => sum + score.total / score.count, 0) : 0;
+      }
+      group.sort((a, b) => (Math.abs(b.direct - a.direct) > 1e-9 ? b.direct - a.direct : 0) || b.buchholz - a.buchholz || a.id - b.id);
+      ranked.push(...group);
+      start = end;
+    }
+    let place = 1;
+    ranked.forEach((row, index) => {
+      const previous = ranked[index - 1];
+      if (previous && (row.points !== previous.points || row.diff !== previous.diff ||
+          Math.abs(row.direct - previous.direct) > 1e-9 || row.buchholz !== previous.buchholz)) place = index + 1;
+      row.place = place;
+    });
+    for (let start = 0; start < ranked.length;) {
+      let end = start + 1;
+      while (end < ranked.length && ranked[end].place === ranked[start].place) end++;
+      const seasonPoints = ranked.length - (start + end - 1) / 2;
+      for (let index = start; index < end; index++) ranked[index].seasonPoints = seasonPoints;
+      start = end;
+    }
+    return ranked;
+  }
+
+  function seasonDayRows(data) {
+    return standings(data.rounds, data).map(({name, seasonPoints}) => ({name, points:seasonPoints}));
   }
 
   function unpairedTournament(data) {
@@ -339,7 +393,7 @@
     for (const day of previous?.overallDays ?? []) days.set(day.id, day);
     if (previous?.ended && hasMatchResult(previous) && (!previous.seasonStarted || previous.started >= previous.seasonStarted)) {
       const id = dayKey(previous);
-      const rows = standings(previous.rounds, previous).map(({name, points}) => ({name, points}));
+      const rows = seasonDayRows(previous);
       days.set(id, {id, rows});
     }
     if (incoming) days.delete(dayKey(incoming));
@@ -353,7 +407,7 @@
       .filter(day => hasDayPoints(day) && day.id !== dayKey(data) && (!cutoff || Number(day.id) >= cutoff))
       .map(day => ({rows:day.rows, completed:true}));
     if ((!cutoff || data.started >= cutoff) && hasMatchResult(data)) {
-      rows.push({rows:standings(data.rounds, data), completed:Boolean(data.ended)});
+      rows.push({rows:seasonDayRows(data), completed:Boolean(data.ended)});
     }
     for (const day of rows) {
       const present = new Set();
@@ -1114,24 +1168,25 @@
 
   function renderStandings(data = tournament) {
     const rows = standings(data.rounds, data);
-    let place = 1;
-    const tableRows = rows.map((row, index) => {
-      const previous = rows[index - 1];
-      if (previous && (previous.points !== row.points || previous.diff !== row.diff)) place = index + 1;
-      return `<tr><td>${place}</td><td>${esc(row.name)}</td><td>${formatPoints(row.points)}</td>
-        <td>${row.played + row.byes}</td><td>${row.wins}</td><td>${row.draws}</td><td>${row.diff > 0 ? '+' : ''}${row.diff}</td></tr>`;
+    const seasonAwards = Boolean(data.ended && !data.freeTournament);
+    const counted = hasMatchResult(data);
+    const tableRows = rows.map(row => {
+      return `<tr><td>${row.place}</td><td>${esc(row.name)}</td><td>${formatPoints(seasonAwards ? (counted ? row.seasonPoints : 0) : row.points)}</td>
+        ${seasonAwards ? `<td>${formatPoints(row.points)}</td>` : ''}
+        <td>${row.played + row.byes}</td><td>${row.wins}</td><td>${row.draws}</td><td>${row.diff > 0 ? '+' : ''}${row.diff}</td><td>${formatPoints(row.buchholz)}</td></tr>`;
     });
     const playedBreaks = rows.filter(row => row.breaks.length);
-    return `<div class="card tournamentStandings" style="--table-rows:${rows.length + 1}">
+    return `<div class="card tournamentStandings ${seasonAwards ? 'tournamentFinalAwards' : ''}" style="--table-rows:${rows.length + 1}">
       <div class="tournamentStandingsHeader">
         <h3>${esc(tournamentTitle(data, true))}</h3>
         <button type="button" class="secondary" id="tournamentFullscreenToggle" aria-pressed="false">Vollbild an</button>
       </div>
       ${data.limit === null && data.endAt != null ? `<p class="small tournamentStandingsInfo">Turnierende: ${localTime(data.endAt)}</p>` : ''}
-      <table class="tournamentTable"><thead><tr><th>Pl.</th><th>Spieler</th><th>Pkt.</th><th title="Matches mit Ergebnis plus Freilose">Spiele</th><th>Siege</th><th title="Unentschieden">Remis</th><th>Frame-Δ</th></tr></thead>
+      <table class="tournamentTable"><thead><tr><th>Pl.</th><th>Spieler</th><th>${seasonAwards ? 'Saisonpkt.' : 'Pkt.'}</th>${seasonAwards ? '<th>Matchpkt.</th>' : ''}<th title="Matches mit Ergebnis plus Freilose">Spiele</th><th>Siege</th><th title="Unentschieden">Remis</th><th>Frame-Δ</th><th title="Buchholz">BH</th></tr></thead>
       <tbody>${tableRows.join('')}</tbody></table>
       ${tableExportButtons()}
-      <p class="small tournamentStandingsInfo">${data.framesPerMatch == null ? '1 Punkt je Matchsieg oder Freilos.' : `Sieg: 2 · Unentschieden: 1 · Niederlage: 0 · Freilos: ${formatPoints(data.byePoints)}`} Bei Punktgleichheit zählt die Frame-Differenz.</p>
+      <p class="small tournamentStandingsInfo">${data.framesPerMatch == null ? '1 Punkt je Matchsieg oder Freilos.' : `Sieg: 2 · Unentschieden: 1 · Niederlage: 0 · Freilos: ${formatPoints(data.byePoints)}`} Reihenfolge: Matchpunkte · Frame-Differenz · direkter Vergleich · Buchholz. Bei Freilos zählen für Buchholz die eigenen Tagespunkte.</p>
+      ${!data.freeTournament ? `<p class="small tournamentStandingsInfo">Saisonpunkte: ${rows.length} bis 1 nach Platzierung, bei geteilten Plätzen gemittelt. Ohne Match-Ergebnis keine Saisonpunkte oder Teilnahme. Die Saisontabelle zeigt während des Spieltags eine vorläufige Hochrechnung.</p>` : ''}
       <details class="tournamentStandingsInfo" open><summary>Gespielte Breaks ab 20</summary>
         ${playedBreaks.map(row => `<p class="small tournamentStandingsInfo"><strong>${esc(row.name)}</strong> · ${row.breaks.join(', ')}</p>`).join('')
           || '<p class="small tournamentStandingsInfo">Bisher keine Breaks eingetragen.</p>'}
