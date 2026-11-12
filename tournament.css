@@ -254,10 +254,9 @@ body.snookerFullscreenTournament .tournamentSeasons {display:none}
 }
 
 @media (max-width:600px) {
-  #tournamentMode .tournamentStandings:not(.tournamentOverall) > .tournamentTable {font-size:.75rem}
+  #tournamentMode .tournamentStandings:not(.tournamentOverall) > .tournamentTable {font-size:.875rem}
   #tournamentMode .tournamentStandings > .tournamentTable th {white-space:normal}
 }
-body.snookerFullscreenTournament #tournamentMode > .tournamentFinalAwards {--table-width-limit:2.8vw}
 
 #tournamentMode .tournamentDayTable {
   margin-top:16px;

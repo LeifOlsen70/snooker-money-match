@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#100919">
+<title>Allgemeine Infos &amp; Regeln · Snooker Money Match</title>
+<style>
+* {box-sizing:border-box}
+body {margin:0;background:radial-gradient(ellipse at top,#362048,#090613 65%);color:#f3ecd7;font:17px/1.6 system-ui,sans-serif}
+main {max-width:900px;margin:auto;padding:20px max(16px,env(safe-area-inset-left)) 50px}
+header,section,nav {border:1px solid #a98b49;border-radius:18px;background:#180f24;padding:20px;margin-bottom:18px}
+h1 {font-size:1.8rem;line-height:1.2;margin:0 0 14px}
+h2 {font-size:1.35rem;line-height:1.3;margin-top:0;color:#f4d486}
+h3 {font-size:1.05rem;margin-bottom:6px}
+p {margin:8px 0 16px}
+a {color:#f4d486}
+button {font:inherit;font-weight:700;border:0;border-radius:12px;padding:12px 18px;background:#e3bb65;color:#21152e;cursor:pointer}
+nav a {display:inline-block;padding:5px 12px 5px 0}
+ul,ol {padding-left:23px}
+li {margin-bottom:8px}
+table {width:100%;border-collapse:collapse;margin:14px 0}
+th,td {text-align:left;padding:8px;border-bottom:1px solid #775b87}
+small {color:#cfc1d7}
+</style>
+</head>
+<body>
+<main>
+<header>
+<h1>Allgemeine Infos &amp; Regeln</h1>
+<p>So funktionieren Einzel, Club Liga und Freies Turnier. Stand der App v7.46.</p>
+<button type="button" id="backToApp">← Zurück zur App</button>
+</header>
+<nav aria-label="Inhaltsverzeichnis">
+<a href="#modes">Spielmodi</a><a href="#setup">Turniereinstellungen</a><a href="#pairings">Paarungen &amp; Tische</a><a href="#ranking">Tageswertung</a><a href="#season">Saisonwertung</a><a href="#elo">Elo</a><a href="#single">Einzel &amp; Geldwertung</a><a href="#data">Speichern &amp; Synchronisieren</a>
+</nav>
+
+<section id="modes">
+<h2>Spielmodi</h2>
+<p><strong>Einzel</strong> zählt Frames und Punkte innerhalb des laufenden Frames. Breakprämien, Siegprämien, Abrechnungen und Zahlungen gehören zu diesem Modus.</p>
+<p><strong>Club Liga</strong> verbindet mehrere Turniertage zu einer Saison. Jeder Spieltag hat eine eigene Tageswertung. Die Saison sammelt die Platzierungspunkte und die Teilnahmen. Die Elo-Wertung wird über Saisonwechsel hinweg fortgeführt.</p>
+<p><strong>Freies Turnier</strong> hat einen eigenen Turnierstand. Beim Wechsel über die Startseite werden die Daten der Club Liga und des freien Turniers getrennt verwaltet. Beim Aufruf eines neuen freien Turniers erfolgt die Einrichtung eines neuen Turniers. Ein vorhandener Stand kann über die Speicherfunktionen gesichert oder geladen werden.</p>
+</section>
+
+<section id="setup">
+<h2>Turnier erstellen</h2>
+<table>
+<thead><tr><th>Einstellung</th><th>Auswirkung</th></tr></thead>
+<tbody>
+<tr><td>Datum</td><td>Datum in den Überschriften des Turniertags. Die Spieltage werden innerhalb der Saison fortlaufend nach ihrer Erstellung nummeriert.</td></tr>
+<tr><td>Spieleranzahl</td><td>2 bis 12 Spieler. Entsprechend viele Namen aus der gespeicherten Liste auswählen.</td></tr>
+<tr><td>Feste Rundenzahl</td><td>Legt fest, wie viele Runden maximal erstellt werden können. Die vorhandenen Matches werden über ihre Ergebnisse gewertet.</td></tr>
+<tr><td>Endlos mit Endzeit</td><td>Weitere Runden können bis zur eingestellten Endzeit entstehen. Beim Erreichen der Endzeit kann die letzte Runde zu Ende gespielt oder die Endzeit geändert werden. Bei Ende mit aktuellem Stand zählen nur eingetragene Matchergebnisse.</td></tr>
+<tr><td>Frames pro Match</td><td>Die Summe beider Ergebnisse muss der eingestellten Framezahl entsprechen. Bei 2 Frames sind 2:0, 1:1 und 0:2 gültig. Bei ungerader Framezahl ist ein Remis ausgeschlossen.</td></tr>
+<tr><td>Punkte pro Freilos</td><td>0, 0,5 oder 1 Tagespunkt für ein zugeteiltes Freilos.</td></tr>
+<tr><td>Tische</td><td>1 bis 6 Tische. Ein laufendes Match belegt seinen Tisch bis zur Ergebniseingabe.</td></tr>
+</tbody></table>
+<p>Neue Spielernamen werden in der Auswahlliste gespeichert. Über die Verwaltung am Namen lassen sich Einträge bearbeiten oder löschen. Beim Umbenennen werden die vorhandenen Turnier- und Wertungsdaten entsprechend zugeordnet.</p>
+<p>Ältere geladene Turniere mit „First to“ werden nach ihren gespeicherten Regeln fortgeführt. Dort gewinnt, wer zuerst die eingestellte Framezahl erreicht. Die ursprüngliche Tageswertung beträgt einen Punkt pro Matchsieg oder Freilos.</p>
+</section>
+
+<section id="pairings">
+<h2>Paarungen, freie Tische und Pausen</h2>
+<p>Die erste Runde wird zufällig ausgelost. Danach orientieren sich die Paarungen an der aktuellen Tagesrangliste. Begegnungen ohne Wiederholung haben Vorrang. Bei acht Spielern soll zunächst jeder gegen seine sieben Gegner gespielt haben, bevor ein neuer Durchgang mit Wiederholungen beginnt.</p>
+<p>Die App berücksichtigt bei der Paarung auch, ob die verbleibenden Begegnungen noch zu weiteren Runden zusammengestellt werden können. Bei ungerader Spielerzahl werden Freilose verteilt. Dabei werden möglichst Spieler mit weniger bisherigen Freilosen berücksichtigt, bei gleicher Anzahl eher die niedriger Platzierten.</p>
+<p>Eine neue Runde kann bereits während einer laufenden Runde erstellt werden, wenn die Voraussetzungen erfüllt sind und freie Tische genutzt werden können. Ein bereits startbares Match aus einer vorhandenen Runde hat Vorrang. Die App plant höchstens eine Runde voraus.</p>
+<p>Mit „An Tisch … starten“ wird ein Match gestartet. Spieler mit einem noch offenen früheren Match warten auf dessen Ergebnis. Ein eingetragenes Ergebnis gibt den Tisch frei und kann weitere Paarungen freischalten. Das Starten eines freigegebenen Matches erfolgt über seinen Startbutton.</p>
+<p>„Pausieren“ hält ein wartendes Match zurück. Mit „Pause beenden“ wird es wieder freigegeben, sobald Tisch und Spieler verfügbar sind. Ein noch offenes pausiertes Match blockiert auch spätere Matches derselben Spieler.</p>
+<p>Bei alten Turnierplänen kann eine Restgruppe mit weniger Matches entstehen, um noch offene Begegnungen ohne Wiederholungen abzuschließen. Zusätzliche spielfreie Pausen erhalten dabei keine Freilospunkte.</p>
+<p>Die Spielzeit eines Matches läuft vom Start am Tisch bis zur ersten Speicherung seines Ergebnisses. Ergebnisse lassen sich anschließend korrigieren.</p>
+</section>
+
+<section id="ranking">
+<h2>Tabelle Turniertag und Rangfolge</h2>
+<p>Die Tageswertung vergibt <strong>2 Punkte für einen Sieg, 1 Punkt für ein Remis und 0 Punkte für eine Niederlage</strong>. Zugewiesene Freilose bringen die bei Turnierbeginn gewählten Punkte.</p>
+<p>Die Spalte „Spiele“ zählt Matches mit gespeichertem Ergebnis sowie zugeteilte Freilose. „Siege“ zählt gewonnene Matches. „Remis“ zählt unentschiedene Matches. Die Frame-Differenz ist die Anzahl gewonnener Frames abzüglich der verlorenen Frames.</p>
+<ol>
+<li><strong>Matchpunkte.</strong> Die höhere Tagespunktzahl steht vorne.</li>
+<li><strong>Frame-Differenz.</strong> Bei gleichen Matchpunkten entscheidet die höhere Differenz.</li>
+<li><strong>Direkter Vergleich.</strong> Innerhalb einer danach noch gleichplatzierten Gruppe zählen die gegenseitigen Begegnungen, sofern alle Mitglieder der Gruppe gegeneinander gespielt haben. Für jeden Gegner wird der durchschnittliche Punktegewinn je Begegnung ermittelt. Diese Durchschnittswerte werden addiert. Bei zwei Spielern entscheidet somit ihr gegenseitiges Ergebnis beziehungsweise der Durchschnitt bei mehreren Begegnungen.</li>
+<li><strong>Geteilter Platz.</strong> Bei weiterem Gleichstand oder fehlenden vollständigen Direktbegegnungen bleibt der Platz geteilt. Die nächste Platznummer überspringt die belegten Ränge.</li>
+</ol>
+<p>Beispiel für einen geteilten zweiten Platz mit zwei Spielern. Beide stehen auf Platz 2. Der folgende Spieler steht auf Platz 4. Eine alphabetische oder technische Reihenfolge innerhalb des geteilten Platzes ändert die Wertung nicht.</p>
+<p>Die Spieltagstabelle zeigt auch nach Turnierende die Matchpunkte. Die Breakliste enthält die gespeicherten Breaks ab 20 Punkten. Im Turniermodus werden diese als sportliche Leistungen erfasst.</p>
+</section>
+
+<section id="season">
+<h2>Saisonpunkte, Teilnahmen und einzelne Spieltage</h2>
+<p>Bei N Teilnehmern erhält Platz 1 insgesamt N Saisonpunkte. Jeder weitere Rang bringt einen Punkt weniger. Der letzte allein belegte Platz erhält einen Punkt. Bei acht Teilnehmern lautet die Verteilung 8, 7, 6, 5, 4, 3, 2, 1.</p>
+<p>Geteilte Plätze erhalten den Mittelwert der Punkte für die gemeinsam belegten Ränge. Bei zehn Teilnehmern teilen sich zwei Spieler auf Platz 2 die Punkte für Rang 2 und 3. Jeder erhält (9 + 8) ÷ 2 = <strong>8,5 Saisonpunkte</strong>.</p>
+<p>Die Saisontabelle addiert die Punkte der gespeicherten Spieltage und die vorläufigen Platzierungspunkte des aktuellen Spieltags. Die Einzelübersichten darunter zeigen den jeweiligen Spieltag, den zuletzt erstellten ganz oben. Ein laufender Spieltag ist als „vorläufig“ gekennzeichnet.</p>
+<p>Eine Teilnahme wird erst gebucht, wenn das Turnier beendet ist und mindestens ein echtes Matchergebnis eingetragen wurde. Dann erhält jeder für diesen Turniertag ausgewählte Spieler eine Teilnahme. Ein direkt ohne Ergebnis beendetes Turnier erzeugt weder Saisonpunkte noch eine Teilnahme. Ein Freilos allein erfüllt diese Voraussetzung nicht.</p>
+<p>Die Saisonrangfolge richtet sich nach den addierten Saisonpunkten. Bei gleichen Saisonpunkten wird der Platz geteilt.</p>
+<p>„Neue Saison starten“ ist nach Turnierende verfügbar. Die bisherige Gesamttabelle wird unter dem gewählten Namen im Saisonarchiv abgelegt. Danach beginnt die neue Saison bei null. Die Elo-Werte werden fortgeführt. Archivierte Saisontabellen lassen sich exportieren und nach Bestätigung löschen.</p>
+<p>Ältere Spieltagszusammenfassungen enthalten ihre damals gespeicherten Punkte. Für eine Neuberechnung nach den heutigen Regeln wird die ursprüngliche Turnierdatei mit ihren Begegnungen benötigt. Eine archivierte Saison enthält die gespeicherte Gesamtwertung.</p>
+</section>
+
+<section id="elo">
+<h2>Elo-Wertung</h2>
+<p>Neue Spieler beginnen mit <strong>1000 Elo</strong>. Die Wertung verarbeitet eingetragene Ergebnisse der Club Liga. Sieg zählt als 1, Remis als 0,5 und Niederlage als 0. Freilose erzeugen keine Elo-Änderung.</p>
+<p>Aus den Elo-Zahlen beider Gegner wird die erwartete Gewinnchance berechnet. Der Änderungsfaktor beträgt 32. Bei gleicher Elo bringt ein Sieg etwa +16 und eine Niederlage −16. Ein Remis bei gleicher Elo ergibt keine Änderung. Gegen einen höher bewerteten Gegner bringt ein Sieg einen größeren Zugewinn.</p>
+<p>Die Elo-Anzeige rundet auf ganze Zahlen. Intern wird mit den genauen Werten gerechnet. Die Paarungen richten sich nach der Tagesrangliste und den bereits gespielten Begegnungen.</p>
+<p>Über „Ändern“ kann für einen Spieler ein Wert von 0 bis 9999 gesetzt werden. Spätere Ergebnisse bauen auf diesem Wert auf. „Elo für alle auf 1000 setzen“ beginnt nach Bestätigung eine neue Elo-Berechnung ab diesem Zeitpunkt. Ein Saisonwechsel führt die Elo fort.</p>
+</section>
+
+<section id="single">
+<h2>Einzel, Breakprämien und Abrechnung</h2>
+<p>Beim Einzel werden Spielerzahl, Namen, Frames bis zum Gesamtsieg und die Siegprämie festgelegt. Im Live-Scoreboard wird ein Spieler ausgewählt und seine Punkteingabe bestätigt. Der gewählte Framegewinner erhält einen Frame. Sobald ein Spieler die Zielzahl erreicht, wird das Match archiviert und ein neues Match mit denselben Einstellungen gestartet.</p>
+<table>
+<thead><tr><th>Break</th><th>Prämie</th></tr></thead>
+<tbody>
+<tr><td>20–29</td><td>0,50 €</td></tr><tr><td>30–39</td><td>1,00 €</td></tr>
+<tr><td>40–49</td><td>2,00 €</td></tr><tr><td>50–59</td><td>4,00 €</td></tr>
+<tr><td>60–69</td><td>8,00 €</td></tr><tr><td>70–79</td><td>16,00 €</td></tr>
+<tr><td>Ab 80</td><td>32,00 €</td></tr>
+</tbody></table>
+<p>Die Breakprämie wird dem Spieler gutgeschrieben. Die anderen Spieler tragen sie zu gleichen Anteilen. Auch die eingestellte Siegprämie wird dem Matchsieger gutgeschrieben und gleichmäßig auf die übrigen Spieler verteilt.</p>
+<p>„Aktuelle Abrechnung“ zeigt den Stand des laufenden Matches. Positive Beträge bedeuten Guthaben, negative Beträge einen zu zahlenden Betrag. Die kumulierte Abrechnung sammelt die abgeschlossenen Matches. Eingetragene Zahlungen reduzieren den offenen Betrag zwischen Zahler und Empfänger. Die letzte Zahlung kann rückgängig gemacht werden.</p>
+<p>„Abrechnung als PDF speichern“ enthält den aktuellen Spielstand, die gespeicherten Matches, Breaks ab 20 mit Prämien, Matchabrechnungen, kumulierte Salden und verrechnete Zahlungen. Der Bericht kann mit Spielpartnern geteilt werden.</p>
+</section>
+
+<section id="data">
+<h2>Speichern, Export, Live-Sync und Vollbild</h2>
+<p>Die App speichert Spielstände und die Spielerliste lokal im Browser. Eine JSON-Sicherung enthält die Daten zum späteren Laden und Fortsetzen. CSV und PDF dienen der Weitergabe und Darstellung der jeweiligen Tabellen. Die Club Liga bietet Exporte für Tageswertung, Saisontabelle, einzelne Spieltage, archivierte Saisontabellen und Elo.</p>
+<p>Für die Live-Synchronisierung auf den beteiligten Geräten im Einzelmodus mit demselben Firebase-Konto anmelden. Beide Geräte können Ergebnisse eingeben. Änderungen werden bei bestehender Verbindung automatisch übertragen. Bei gleichzeitiger Eingabe vor einer weiteren Änderung den aktualisierten Stand prüfen.</p>
+<p>Vollbild wird auf jedem Gerät einzeln eingestellt. Im Turnier-Vollbild wechselt horizontales Wischen zwischen Tages- und Saisontabelle. Der Wechsel dieser Tabellen wird auf verbundene Geräte übertragen. Die dortige Vollbildeinstellung bleibt geräteabhängig.</p>
+<p>Außerhalb des Turnier-Vollbilds wechseln die Tabellenbuttons oder horizontales Wischen zwischen Runden, Tageswertung und Saisonwertung. Die Übersicht über einzelne Spieltage und die Verwaltung sind durch Herunterscrollen erreichbar.</p>
+<p>Im Einzelmodus wechselt horizontales Wischen zwischen Live-Scoreboard und Abrechnung. „Nur Score anzeigen“ blendet die Eingabefunktionen auf dem jeweiligen Gerät aus.</p>
+<p>Die Infoseite ist nach vollständigem Laden der aktualisierten App auch offline verfügbar. Der Link „Zurück zur App“ führt zurück zur App.</p>
+</section>
+<small>Snooker Money Match · v7.46</small>
+</main>
+<script>
+document.getElementById('backToApp').onclick = () => {
+  if (window.history.length > 1) window.history.back();
+  else window.location.href = './index.html';
+};
+</script>
+</body>
+</html>

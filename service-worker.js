@@ -1,10 +1,11 @@
-const CACHE_NAME = 'v7-45-swiss-tournament';
+const CACHE_NAME = 'v7-46-swiss-tournament';
 const APP_SHELL = [
   './',
   './index.html',
-  './pdf-export.js?v=7.45',
-  './tournament.js?v=7.45',
-  './tournament.css?v=7.45',
+  './infos.html',
+  './pdf-export.js?v=7.46',
+  './tournament.js?v=7.46',
+  './tournament.css?v=7.46',
   './manifest.webmanifest',
   './icon-192.png',
   './icon-512.png',
@@ -37,17 +38,19 @@ self.addEventListener('fetch', event => {
   // For app navigation: use the newest online copy when possible,
   // otherwise fall back to the locally cached app.
   if (request.mode === 'navigate') {
+    const navigationFile = new URL(request.url).pathname === new URL('./infos.html', self.registration.scope).pathname
+      ? './infos.html' : './index.html';
     event.respondWith(
       fetch(request, {cache: 'no-cache'})
         .then(response => {
           if (response.ok) {
             const copy = response.clone();
-            caches.open(CACHE_NAME).then(cache => cache.put('./index.html', copy));
+            caches.open(CACHE_NAME).then(cache => cache.put(navigationFile, copy));
           }
           return response;
         })
         .catch(async () => {
-          return (await caches.match('./index.html')) ||
+          return (await caches.match(navigationFile)) ||
                  (await caches.match('./')) ||
                  Response.error();
         })
