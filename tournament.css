@@ -291,3 +291,7 @@ body.snookerFullscreenTournament .tournamentSeasons {display:none}
 .tournamentSeasonDialog [role=alert] {color:#ffb3bb}
 .tournamentSeasonDialog .tournamentActions {display:flex;flex-direction:column;gap:10px}
 .tournamentSeasonDialog button.tournamentSeasonWarning {margin:0}
+
+#tournamentMode .tournamentArchiveChoices {grid-template-columns:1fr}
+#tournamentMode .tournamentArchiveChoices button {min-height:48px;text-align:left}
+#tournamentMode .tournamentArchiveHeading {margin-top:22px}

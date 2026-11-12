@@ -7,6 +7,7 @@
   let openMatch = null;
   let drafting = false;
   let eloExpanded = false;
+  let archiveSelection = null;
   let draftFreeTournament = null;
   let view = 'rounds';
   let fullscreen = false;
@@ -392,24 +393,30 @@
       days.set(id, {id, rows, playDate:previous.playDate ?? (Number.isFinite(previous.started) ? localDateValue(previous.started) : undefined), scoring:'placement'});
     }
     if (incoming) days.delete(dayKey(incoming));
-    return [...days.values()].filter(hasDayPoints);
+    const deleted = new Set([...(previous?.deletedDays ?? []), ...(incoming?.deletedDays ?? [])]);
+    return [...days.values()].filter(day => hasDayPoints(day) && !deleted.has(day.id));
   }
 
   function seasonDays(data) {
     const cutoff = data.seasonStarted ?? 0;
+    const deleted = new Set(data.deletedDays ?? []);
     const rows = (data.overallDays ?? [])
-      .filter(day => hasDayPoints(day) && day.id !== dayKey(data) && (!cutoff || Number(day.id) >= cutoff))
+      .filter(day => hasDayPoints(day) && !deleted.has(day.id) && day.id !== dayKey(data) && (!cutoff || Number(day.id) >= cutoff))
       .map(day => ({...day, completed:true}));
-    if ((!cutoff || data.started >= cutoff) && hasMatchResult(data)) {
+    if (!deleted.has(dayKey(data)) && (!cutoff || data.started >= cutoff) && hasMatchResult(data)) {
       rows.push({id:dayKey(data), rows:seasonDayRows(data), completed:Boolean(data.ended),
         playDate:data.playDate ?? (Number.isFinite(data.started) ? localDateValue(data.started) : undefined), scoring:'placement'});
     }
-    return rows.sort((a,b) => Number(a.id) - Number(b.id));
+    return rows.sort((a,b) => Number(a.id) - Number(b.id))
+      .map((day,index) => ({...day, number:day.number ?? index+1}));
   }
 
   function overallRows(data) {
+    return sumDayRows(seasonDays(data));
+  }
+
+  function sumDayRows(rows) {
     const totals = new Map();
-    const rows = seasonDays(data);
     for (const day of rows) {
       const present = new Set();
       for (const {name, points} of day.rows) {
@@ -428,12 +435,11 @@
     });
   }
 
-  function renderSeasonDays(data) {
-    const days = seasonDays(data);
+  function renderSeasonDays(data, days = seasonDays(data)) {
     if (!days.length) return '';
     return `<div class="tournamentDayTables"><h3>Einzelne Spieltage</h3>${days.map((day,index) => {
       const date = tournamentDateLabel({playDate:day.playDate, started:Number(day.id)});
-      const title = `Club Liga Spieltag ${index+1}${date ? ' · ' + date : ''}${day.completed ? '' : ' · vorläufig'}`;
+      const title = `Club Liga Spieltag ${day.number ?? index+1}${date ? ' · ' + date : ''}${day.completed ? '' : ' · vorläufig'}`;
       const rows = [...day.rows].sort((a,b) => b.points - a.points || a.name.localeCompare(b.name,'de'));
       let place = 1;
       const body = rows.map((row,rowIndex) => {
@@ -447,6 +453,42 @@
         ${day.scoring === 'placement' ? '' : '<p class="small">Historisch gespeicherte Punkte. Für eine Neuberechnung die ursprüngliche Turnierdatei laden.</p>'}
       </section>`;
     }).reverse().join('')}</div>`;
+  }
+
+  function dayYear(day) {
+    const date = day.playDate ?? (Number.isFinite(Number(day.id)) ? localDateValue(Number(day.id)) : '');
+    return /^\d{4}-/.test(date) ? date.slice(0,4) : 'Ohne Datum';
+  }
+
+  function carryYearDays(...sources) {
+    const deleted = new Set(sources.flatMap(data => data?.deletedDays ?? []));
+    const days = new Map();
+    for (const data of sources) {
+      if (!data) continue;
+      const archived = (data.seasonArchive ?? []).flatMap(season => season.days ?? []);
+      for (const day of [...(data.yearDays ?? []), ...archived, ...seasonDays(data)]) {
+        if (day.completed !== false && !deleted.has(day.id)) days.set(day.id, {...day, completed:true});
+      }
+    }
+    return [...days.values()].sort((a,b) => Number(a.id) - Number(b.id));
+  }
+
+  function yearGroups(data) {
+    const groups = new Map();
+    function group(year) {
+      if (!groups.has(year)) groups.set(year, {year, days:[], legacy:[]});
+      return groups.get(year);
+    }
+    const days = new Map(carryYearDays(data).map(day => [day.id,day]));
+    for (const day of seasonDays(data)) days.set(day.id,day);
+    for (const day of days.values()) group(dayYear(day)).days.push(day);
+    for (const season of data.seasonArchive ?? []) {
+      if (!season.days) group(dayYear({id:String(season.ended)})).legacy.push(season);
+    }
+    if (!(data.deletedDays ?? []).includes(dayKey(data))) {
+      group(dayYear({playDate:data.playDate,id:String(data.started)}));
+    }
+    return [...groups.values()].sort((a,b) => b.year.localeCompare(a.year,'de'));
   }
 
   function overallTable(rows) {
@@ -581,11 +623,60 @@
   }
 
   function renderDayElo(data) {
+    const groups = yearGroups(data);
+    const selected = groups.find(group => group.year === archiveSelection);
+    const canDelete = selected && (data.ended || dayYear({playDate:data.playDate,id:String(data.started)}) !== selected.year);
+    const legacy = selected?.legacy.map(season => `<details>
+      <summary>${esc(season.name)}</summary>
+      ${overallTable(season.rows)}
+      ${tableExportButtons()}
+      <p class="small">Für dieses ältere Archiv wurde nur die Gesamttabelle gespeichert. Einzelne Spieltage sind in der ursprünglichen Turniersicherung enthalten.</p>
+    </details>`).join('') ?? '';
     return `<div class="card tournamentStandings tournamentDayElo">
       <h3>Spieltage &amp; Elo</h3>
-      ${renderSeasonDays(data) || '<p class="small">Diese Saison hat noch keine Spieltage mit Ergebnis.</p>'}
-      ${renderElo(data)}
+      <div class="tournamentActions tournamentArchiveChoices">
+        <button type="button" data-archive-select="elo" class="${archiveSelection === 'elo' ? 'primary' : 'secondary'}" aria-pressed="${archiveSelection === 'elo'}">Elo-Wertung</button>
+        ${groups.map(group => `<button type="button" data-archive-select="${esc(group.year)}" class="${archiveSelection === group.year ? 'primary' : 'secondary'}" aria-pressed="${archiveSelection === group.year}">${group.year === 'Ohne Datum' ? 'Ohne Datum' : 'Saison ' + group.year}</button>`).join('')}
+      </div>
+      ${archiveSelection === 'elo' ? renderElo(data) : ''}
+      ${selected ? `<h3 class="tournamentArchiveHeading">${selected.year === 'Ohne Datum' ? 'Ohne Datum' : 'Saison ' + esc(selected.year)}</h3>
+        ${renderSeasonDays(data, selected.days.sort((a,b) => Number(a.id)-Number(b.id))) || '<p class="small">Noch keine einzelnen Spieltage gespeichert.</p>'}
+        ${legacy}
+        ${selected.days.length || selected.legacy.length ? `<button type="button" class="tournamentSeasonWarning" id="deleteTournamentYear" ${canDelete ? '' : 'disabled'}>⚠ Gesamtes Jahr ${esc(selected.year)} löschen</button>
+          ${canDelete ? '' : '<p class="small">Zum Löschen dieses Jahres zuerst den laufenden Spieltag beenden.</p>'}` : ''}` : ''}
     </div>`;
+  }
+
+  function deleteTournamentYear(year) {
+    const group = yearGroups(tournament).find(entry => entry.year === year);
+    if (!group || (!tournament.ended && dayYear({playDate:tournament.playDate,id:String(tournament.started)}) === year)) return;
+    if (!confirm(`Das gesamte Jahr ${year} mit allen gespeicherten Spieltagstabellen und Saisonpunkten endgültig löschen? Die Elo-Wertung wird separat fortgeführt.`)) return;
+    tournament.elo = carryElo(tournament);
+    const ids = new Set(group.days.map(day => day.id));
+    if (dayYear({playDate:tournament.playDate,id:String(tournament.started)}) === year) ids.add(dayKey(tournament));
+    tournament.deletedDays = [...new Set([...(tournament.deletedDays ?? []), ...ids])];
+    tournament.yearDays = carryYearDays(tournament).filter(day => dayYear(day) !== year);
+    tournament.overallDays = (tournament.overallDays ?? []).filter(day => !ids.has(day.id));
+    tournament.seasonArchive = (tournament.seasonArchive ?? []).flatMap(season => {
+      if (!season.days) return group.legacy.includes(season) ? [] : [season];
+      const days = season.days.filter(day => !ids.has(day.id));
+      return days.length ? [{...season,days,rows:sumDayRows(days)}] : [];
+    });
+    if (dayYear({playDate:tournament.playDate,id:String(tournament.started)}) === year) {
+      for (const round of tournament.rounds) {
+        round.bye = null;
+        for (const match of round.matches) {
+          match.result = null;
+          match.table = null;
+          delete match.startedAt;
+          delete match.finishedAt;
+          delete match.eloAt;
+          delete match.paused;
+        }
+      }
+    }
+    archiveSelection = null;
+    saveTournament(false);
   }
 
   function startTournamentSeason() {
@@ -604,7 +695,7 @@
       <p>Die aktuelle Saisontabelle wird unter dem Archivnamen gespeichert. Die neue Saison beginnt bei null.</p>
       <p class="tournamentSeasonNotice"><strong>Dieser Saisonwechsel kann nicht rückgängig gemacht werden.</strong>
         Die bisherige Saison kann aus dem Archiv nicht als laufende Saison wiederhergestellt werden.
-        Ihre archivierte Tabelle bleibt zum Ansehen und Exportieren erhalten.</p>
+        Ihre archivierte Tabelle und die Spieltage in der Jahresansicht bleiben zum Ansehen und Exportieren erhalten.</p>
       <label for="seasonArchiveName">Archivname der bisherigen Saison</label>
       <input id="seasonArchiveName" name="archiveName" required maxlength="100" autocomplete="off">
       <p role="alert"></p>
@@ -628,7 +719,9 @@
         return;
       }
       const now = Math.max(Date.now(), (tournament.started ?? 0) + 1, (tournament.seasonStarted ?? 0) + 1);
-      tournament.seasonArchive = [{ended:now,name,rows}, ...(tournament.seasonArchive ?? [])];
+      const days = seasonDays(tournament).map(day => ({...day,completed:true}));
+      tournament.yearDays = carryYearDays(tournament);
+      tournament.seasonArchive = [{ended:now,name,rows,days}, ...(tournament.seasonArchive ?? [])];
       tournament.seasonStarted = now;
       tournament.overallDays = [];
       close();
@@ -643,6 +736,9 @@
     const archive = tournament?.seasonArchive;
     if (!season || !archive?.includes(season)) return;
     if (!confirm(`„${season.name}“ aus dem Saisonarchiv löschen?`)) return;
+    const ids = (season.days ?? []).map(day => day.id);
+    tournament.deletedDays = [...new Set([...(tournament.deletedDays ?? []), ...ids])];
+    tournament.yearDays = (tournament.yearDays ?? []).filter(day => !ids.includes(day.id));
     tournament.seasonArchive = archive.filter(entry => entry !== season);
     saveTournament();
   }
@@ -1106,6 +1202,8 @@
         parkedTournament,
         parkedAt,
         overallDays: freeTournament ? [] : overallDays(previous),
+        yearDays: freeTournament ? undefined : carryYearDays(previous),
+        deletedDays: freeTournament ? undefined : previous?.deletedDays,
         elo: freeTournament ? undefined : carryElo(previous),
         seasonStarted: freeTournament ? undefined : previous?.seasonStarted,
         seasonArchive: freeTournament ? undefined : previous?.seasonArchive,
@@ -1286,12 +1384,20 @@
       || !timestamp(data.ended) || !timestamp(data.endAt)
       || !(data.finishLastRound == null || typeof data.finishLastRound === 'boolean')
       || !(data.filename == null || typeof data.filename === 'string')) return false;
-    if (data.overallDays != null && (!Array.isArray(data.overallDays) ||
-      !data.overallDays.every(day => day && typeof day.id === 'string' && Array.isArray(day.rows) &&
-        day.rows.every(row => row && typeof row.name === 'string' && row.name.trim() &&
-          Number.isFinite(row.points) && row.points >= 0)))) return false;
+    const validDay = day => day && typeof day.id === 'string' && Array.isArray(day.rows) &&
+      (day.playDate == null || (typeof day.playDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(day.playDate))) &&
+      (day.number == null || integer(day.number,1,999999)) &&
+      (day.completed == null || typeof day.completed === 'boolean') &&
+      day.rows.every(row => row && typeof row.name === 'string' && row.name.trim() &&
+        Number.isFinite(row.points) && row.points >= 0 &&
+        (row.place == null || integer(row.place,1,12)));
+    if (data.overallDays != null && (!Array.isArray(data.overallDays) || !data.overallDays.every(validDay))) return false;
+    if (data.yearDays != null && (!Array.isArray(data.yearDays) || !data.yearDays.every(validDay))) return false;
+    if (data.deletedDays != null && (!Array.isArray(data.deletedDays) ||
+      !data.deletedDays.every(id => typeof id === 'string'))) return false;
     if (!timestamp(data.seasonStarted) || (data.seasonArchive != null && (!Array.isArray(data.seasonArchive) ||
       !data.seasonArchive.every(season => season && Number.isFinite(season.ended) && typeof season.name === 'string' &&
+        (season.days == null || (Array.isArray(season.days) && season.days.every(validDay))) &&
         Array.isArray(season.rows) && season.rows.every(row => row && typeof row.name === 'string' &&
           Number.isFinite(row.points) && Number.isInteger(row.place) && Number.isInteger(row.appearances)))))) return false;
     if ((data.freeTournament != null && typeof data.freeTournament !== 'boolean') ||
@@ -1370,6 +1476,8 @@
           for (const season of previous?.seasonArchive ?? []) archive.set(season.ended, season);
           tournament = {...incoming, parkedTournament, parkedAt, seasonStarted,
             elo:carryElo(previous, incoming),
+            yearDays:carryYearDays(previous, incoming),
+            deletedDays:[...new Set([...(previous?.deletedDays ?? []), ...(incoming.deletedDays ?? [])])],
             seasonArchive:[...archive.values()].sort((a,b) => b.ended - a.ended),
             overallDays:overallDays(previous, incoming).filter(day => !seasonStarted || Number(day.id) >= seasonStarted)};
         }
@@ -1440,6 +1548,14 @@
     panel.insertAdjacentHTML('beforeend', view === 'days' ? renderDayElo(data) : view === 'overall' ? renderOverall(data) : renderStandings(data));
     setTournamentFullscreen(fullscreen);
     if ($('tournamentFullscreenToggle')) $('tournamentFullscreenToggle').onclick = () => setTournamentFullscreen(!fullscreen);
+    panel.querySelectorAll('[data-archive-select]').forEach(button => {
+      button.onclick = () => {
+        archiveSelection = button.dataset.archiveSelect;
+        if (archiveSelection === 'elo') eloExpanded = true;
+        renderTournament();
+      };
+    });
+    if ($('deleteTournamentYear')) $('deleteTournamentYear').onclick = () => deleteTournamentYear(archiveSelection);
     const elo = $('tournamentElo');
     if (elo) {
       const rows = eloRows(data);
