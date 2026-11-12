@@ -338,7 +338,7 @@
   }
 
   function seasonDayRows(data) {
-    return standings(data.rounds, data).map(({name, seasonPoints}) => ({name, points:seasonPoints}));
+    return standings(data.rounds, data).map(({name, place, seasonPoints}) => ({name, place, points:seasonPoints}));
   }
 
   function unpairedTournament(data) {
@@ -394,21 +394,27 @@
     if (previous?.ended && hasMatchResult(previous) && (!previous.seasonStarted || previous.started >= previous.seasonStarted)) {
       const id = dayKey(previous);
       const rows = seasonDayRows(previous);
-      days.set(id, {id, rows});
+      days.set(id, {id, rows, playDate:previous.playDate ?? (Number.isFinite(previous.started) ? localDateValue(previous.started) : undefined), scoring:'placement'});
     }
     if (incoming) days.delete(dayKey(incoming));
     return [...days.values()].filter(hasDayPoints);
   }
 
-  function overallRows(data) {
-    const totals = new Map();
+  function seasonDays(data) {
     const cutoff = data.seasonStarted ?? 0;
     const rows = (data.overallDays ?? [])
       .filter(day => hasDayPoints(day) && day.id !== dayKey(data) && (!cutoff || Number(day.id) >= cutoff))
-      .map(day => ({rows:day.rows, completed:true}));
+      .map(day => ({...day, completed:true}));
     if ((!cutoff || data.started >= cutoff) && hasMatchResult(data)) {
-      rows.push({rows:seasonDayRows(data), completed:Boolean(data.ended)});
+      rows.push({id:dayKey(data), rows:seasonDayRows(data), completed:Boolean(data.ended),
+        playDate:data.playDate ?? (Number.isFinite(data.started) ? localDateValue(data.started) : undefined), scoring:'placement'});
     }
+    return rows.sort((a,b) => Number(a.id) - Number(b.id));
+  }
+
+  function overallRows(data) {
+    const totals = new Map();
+    const rows = seasonDays(data);
     for (const day of rows) {
       const present = new Set();
       for (const {name, points} of day.rows) {
@@ -425,6 +431,27 @@
       if (index > 0 && ranked[index - 1].points !== row.points) place = index + 1;
       return {...row, place};
     });
+  }
+
+  function renderSeasonDays(data) {
+    const days = seasonDays(data);
+    if (!days.length) return '';
+    return `<div class="tournamentDayTables"><h3>Einzelne Spieltage</h3>${days.map((day,index) => {
+      const date = tournamentDateLabel({playDate:day.playDate, started:Number(day.id)});
+      const title = `Club Liga Spieltag ${index+1}${date ? ' · ' + date : ''}${day.completed ? '' : ' · vorläufig'}`;
+      const rows = [...day.rows].sort((a,b) => b.points - a.points || a.name.localeCompare(b.name,'de'));
+      let place = 1;
+      const body = rows.map((row,rowIndex) => {
+        if (rowIndex && rows[rowIndex-1].points !== row.points) place = rowIndex+1;
+        return `<tr><td>${esc(row.place ?? place)}</td><td>${esc(row.name)}</td><td>${formatPoints(row.points)}</td></tr>`;
+      }).join('');
+      return `<section class="tournamentDayTable" data-day-table data-export-title="${esc(title)}">
+        <h4>${esc(title)}</h4>
+        <table class="tournamentTable"><thead><tr><th>Pl.</th><th>Spieler</th><th>Saisonpkt.</th></tr></thead><tbody>${body}</tbody></table>
+        ${tableExportButtons()}
+        ${day.scoring === 'placement' ? '' : '<p class="small">Historisch gespeicherte Punkte. Für eine Neuberechnung die ursprüngliche Turnierdatei laden.</p>'}
+      </section>`;
+    }).reverse().join('')}</div>`;
   }
 
   function overallTable(rows) {
@@ -555,6 +582,7 @@
             <button type="button" class="secondary tournamentEnd" data-delete-season="${index}">Saison löschen</button>
           </details>`).join('')}
         </details>` : ''}
+        ${data.freeTournament ? '' : renderSeasonDays(data)}
       </div>
     </div>`;
   }
@@ -1395,15 +1423,16 @@
     });
     panel.querySelectorAll('[data-export-table]').forEach(button => {
       const details = button.closest('details');
-      const section = details ?? button.closest('.tournamentStandings');
+      const daySection = button.closest('[data-day-table]');
+      const section = daySection ?? details ?? button.closest('.tournamentStandings');
       const table = section.querySelector(':scope > .tournamentTable');
       if (!table) { button.disabled = true; return; }
       const date = tournamentDateLabel(data);
-      const title = details ? details.querySelector('summary').textContent.trim()
+      const title = daySection ? daySection.dataset.exportTitle : details ? details.querySelector('summary').textContent.trim()
         : view === 'overall' ? (data.freeTournament ? 'Gesamt' : 'Tabelle Saison')
         : data.freeTournament ? 'Freies Turnier · ' + tournamentTitle(data, true)
         : data.ended ? tournamentTitle(data, true) : 'Tabelle Turniertag';
-      const datedTitle = date && (!details || details.id === 'tournamentElo') && !title.includes(date)
+      const datedTitle = date && !daySection && (!details || details.id === 'tournamentElo') && !title.includes(date)
         ? title + ' · ' + date : title;
       button.onclick = () => exportTournamentTable(datedTitle, table, button.dataset.exportTable)
         .catch(() => alert('Die Tabelle konnte nicht gespeichert werden.'));
