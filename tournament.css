@@ -264,3 +264,30 @@ body.snookerFullscreenTournament .tournamentSeasons {display:none}
   border-top:1px solid #775b87;
 }
 #tournamentMode .tournamentDayTable h4 {margin:0 0 10px}
+
+#tournamentMode .tournamentViews {
+  grid-auto-flow:column;
+  grid-auto-columns:minmax(0,1fr);
+  grid-template-columns:none;
+}
+#tournamentMode .tournamentViews button {min-width:0}
+@media (max-width:600px) {
+  #tournamentMode .tournamentViews {gap:5px}
+  #tournamentMode .tournamentViews button {font-size:12px;padding:9px 4px;overflow-wrap:normal}
+}
+#tournamentMode button.tournamentSeasonWarning,
+.tournamentSeasonDialog button.tournamentSeasonWarning {
+  color:#fff;
+  background:#a52d3c;
+  border:2px solid #ff8995;
+  font-weight:800;
+  min-height:48px;
+  margin-top:16px;
+}
+#tournamentMode button.tournamentSeasonWarning:disabled {opacity:.45}
+.tournamentSeasonDialog {border:3px solid #ff6575}
+.tournamentSeasonDialog h2 {color:#ff9ca7;margin-top:0}
+.tournamentSeasonNotice {border-left:4px solid #ff6575;background:#5c2330;padding:12px}
+.tournamentSeasonDialog [role=alert] {color:#ffb3bb}
+.tournamentSeasonDialog .tournamentActions {display:flex;flex-direction:column;gap:10px}
+.tournamentSeasonDialog button.tournamentSeasonWarning {margin:0}

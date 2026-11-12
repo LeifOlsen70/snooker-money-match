@@ -193,7 +193,8 @@
     if (openMatch !== null && !confirm('Ergebniseingabe ohne Speichern verlassen?')) return;
     openMatch = null;
     view = nextView;
-    if (view !== 'rounds') window.dispatchEvent(new CustomEvent('snooker-tournament-view', {detail:view}));
+    if (view === 'days') setTournamentFullscreen(false);
+    if (view === 'standings' || view === 'overall') window.dispatchEvent(new CustomEvent('snooker-tournament-view', {detail:view}));
     renderTournament();
     if (fullscreen) panel.scrollTop = 0;
     else window.scrollTo(0, 0);
@@ -216,7 +217,7 @@
       if (fullscreen) {
         showTournamentView(view === 'overall' ? 'standings' : 'overall');
       } else {
-        const views = ['rounds', 'standings', 'overall'];
+        const views = tournament.freeTournament ? ['rounds', 'standings', 'overall'] : ['rounds', 'standings', 'overall', 'days'];
         const next = views[views.indexOf(view) + (dx < 0 ? 1 : -1)];
         if (next) showTournamentView(next);
       }
@@ -564,10 +565,7 @@
       </div>
       ${overallTable(rows)}
       ${rows.length ? tableExportButtons() : ''}
-      ${data.freeTournament ? '' : renderElo(data)}
       <div class="tournamentSeasons">
-        ${!data.freeTournament && rows.length ? `<button type="button" class="secondary" id="newTournamentSeason" ${data.ended ? '' : 'disabled'}>Neue Saison starten</button>
-          ${data.ended ? '' : '<p class="small">Für den Saisonwechsel zuerst das laufende Turnier beenden.</p>'}` : ''}
         ${archive.length ? `<details><summary>Saisonarchiv</summary>
           ${archive.map((season, index) => `<details>
             <summary>${esc(season.name)}</summary>
@@ -576,22 +574,69 @@
             <button type="button" class="secondary tournamentEnd" data-delete-season="${index}">Saison löschen</button>
           </details>`).join('')}
         </details>` : ''}
-        ${data.freeTournament ? '' : renderSeasonDays(data)}
+        ${!data.freeTournament && rows.length ? `<button type="button" class="tournamentSeasonWarning" id="newTournamentSeason" ${data.ended ? '' : 'disabled'}>⚠ Neue Saison starten</button>
+          ${data.ended ? '' : '<p class="small">Für den Saisonwechsel zuerst das laufende Turnier beenden.</p>'}` : ''}
       </div>
     </div>`;
   }
 
+  function renderDayElo(data) {
+    return `<div class="card tournamentStandings tournamentDayElo">
+      <h3>Spieltage &amp; Elo</h3>
+      ${renderSeasonDays(data) || '<p class="small">Diese Saison hat noch keine Spieltage mit Ergebnis.</p>'}
+      ${renderElo(data)}
+    </div>`;
+  }
+
   function startTournamentSeason() {
-    if (!tournament?.ended || tournament.freeTournament) return;
+    if (!tournament?.ended || tournament.freeTournament || document.querySelector('dialog[open]')) return;
     const rows = overallRows(tournament);
     if (!rows.length) return;
-    const now = Date.now();
-    const name = prompt('Name der Saison, die archiviert werden soll:', `Saison bis ${new Date(now).toLocaleDateString('de-DE')}`)?.trim().slice(0,100);
-    if (!name || !confirm(`„${name}“ archivieren und die neue Gesamtwertung bei null starten?`)) return;
-    tournament.seasonArchive = [{ended:now,name,rows}, ...(tournament.seasonArchive ?? [])];
-    tournament.seasonStarted = now;
-    tournament.overallDays = [];
-    saveTournament();
+    const snapshot = committed;
+    const dialog = document.createElement('dialog');
+    dialog.className = 'tournamentDialog tournamentSeasonDialog';
+    dialog.setAttribute('role', 'alertdialog');
+    dialog.setAttribute('aria-labelledby', 'seasonWarningTitle');
+    dialog.setAttribute('aria-describedby', 'seasonWarningMessage');
+    dialog.innerHTML = `<form>
+      <h2 id="seasonWarningTitle">⚠ Achtung – neue Saison</h2>
+      <p id="seasonWarningMessage"><strong>Jetzt speichern und neue Saison starten?</strong></p>
+      <p>Die aktuelle Saisontabelle wird unter dem Archivnamen gespeichert. Die neue Saison beginnt bei null.</p>
+      <p class="tournamentSeasonNotice"><strong>Dieser Saisonwechsel kann nicht rückgängig gemacht werden.</strong>
+        Die bisherige Saison kann aus dem Archiv nicht als laufende Saison wiederhergestellt werden.
+        Ihre archivierte Tabelle bleibt zum Ansehen und Exportieren erhalten.</p>
+      <label for="seasonArchiveName">Archivname der bisherigen Saison</label>
+      <input id="seasonArchiveName" name="archiveName" required maxlength="100" autocomplete="off">
+      <p role="alert"></p>
+      <div class="tournamentActions">
+        <button type="button" data-cancel>Abbrechen</button>
+        <button type="submit" class="tournamentSeasonWarning">Jetzt speichern und neue Saison starten</button>
+      </div>
+    </form>`;
+    const input = dialog.querySelector('input');
+    input.value = `Saison bis ${new Date().toLocaleDateString('de-DE')}`;
+    function close() { dialog.close(); dialog.remove(); }
+    dialog.querySelector('[data-cancel]').onclick = close;
+    dialog.oncancel = event => { event.preventDefault(); close(); };
+    dialog.querySelector('form').onsubmit = event => {
+      event.preventDefault();
+      const name = input.value.trim();
+      const error = dialog.querySelector('[role=alert]');
+      if (!name) { error.textContent = 'Bitte einen Archivnamen eingeben.'; input.focus(); return; }
+      if (snapshot !== committed || (remoteTournament && remoteTournament.raw !== snapshot)) {
+        error.textContent = 'Der Turnierstand wurde inzwischen geändert. Bitte abbrechen und den Saisonwechsel erneut öffnen.';
+        return;
+      }
+      const now = Math.max(Date.now(), (tournament.started ?? 0) + 1, (tournament.seasonStarted ?? 0) + 1);
+      tournament.seasonArchive = [{ended:now,name,rows}, ...(tournament.seasonArchive ?? [])];
+      tournament.seasonStarted = now;
+      tournament.overallDays = [];
+      close();
+      saveTournament(false);
+    };
+    document.body.append(dialog);
+    dialog.showModal();
+    input.focus();
   }
 
   function deleteArchivedSeason(season) {
@@ -1392,9 +1437,9 @@
   });
 
   function renderTournamentTable(data) {
-    panel.insertAdjacentHTML('beforeend', view === 'overall' ? renderOverall(data) : renderStandings(data));
+    panel.insertAdjacentHTML('beforeend', view === 'days' ? renderDayElo(data) : view === 'overall' ? renderOverall(data) : renderStandings(data));
     setTournamentFullscreen(fullscreen);
-    $('tournamentFullscreenToggle').onclick = () => setTournamentFullscreen(!fullscreen);
+    if ($('tournamentFullscreenToggle')) $('tournamentFullscreenToggle').onclick = () => setTournamentFullscreen(!fullscreen);
     const elo = $('tournamentElo');
     if (elo) {
       const rows = eloRows(data);
@@ -1469,11 +1514,14 @@
           aria-pressed="${view === 'standings'}">${tournament.freeTournament ? tournamentTitle(tournament, true) : 'Tabelle Turniertag'}</button>
         <button type="button" id="tournamentOverallView" class="${view === 'overall' ? 'primary' : 'secondary'}"
           aria-pressed="${view === 'overall'}">${tournament.freeTournament ? 'Gesamt' : 'Tabelle Saison'}</button>
+        ${tournament.freeTournament ? '' : `<button type="button" id="tournamentDaysView" class="${view === 'days' ? 'primary' : 'secondary'}"
+          aria-pressed="${view === 'days'}">Spieltage &amp; Elo</button>`}
       </nav>`);
     $('tournamentRoundsView').onclick = () => showTournamentView('rounds');
     $('tournamentStandingsView').onclick = () => showTournamentView('standings');
     $('tournamentOverallView').onclick = () => showTournamentView('overall');
-    if (view === 'standings' || view === 'overall') {
+    if ($('tournamentDaysView')) $('tournamentDaysView').onclick = () => showTournamentView('days');
+    if (view === 'standings' || view === 'overall' || view === 'days') {
       renderLiveStatus();
       renderTournamentTable(tournament);
       return;

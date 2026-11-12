@@ -1,4 +1,4 @@
-Snooker Money Match v7.46
+Snooker Money Match v7.47
 Alle Dateien auf GitHub hochladen und die App anschließend neu öffnen.
 Im Turniermodus sichern und laden die beiden Schaltflächen eine JSON-Datei.
 Die Matchzeit startet mit der Tischzuweisung und endet beim Speichern des Ergebnisses.
@@ -7,6 +7,12 @@ Alternativ die Schaltflächen Runden und Zwischenstand verwenden.
 In der Tabelle schaltet „Vollbild an/aus“ die große Anzeige ein und aus.
 Gespielte Breaks ab 20 stehen in der Tabelle und bei den abgeschlossenen Matches.
 Turniere werden lokal gespeichert. Mit Firebase-Anmeldung wird der Turnierstand automatisch über beide Geräte synchronisiert.
+
+Neu in v7.47:
+- Neuer rechter Reiter „Spieltage & Elo“ mit einzelnen Spieltagstabellen und Elo-Verwaltung.
+- Saisonstart unten in der Saisontabelle mit rotem Warnbutton.
+- Ein Popup fragt den Archivnamen und zeigt eine deutliche Warnung. Erst die Bestätigung archiviert die Tabelle und startet die neue Saison.
+- Der Saisonwechsel bildet eine Grenze für Rückgängig/Wiederholen. Eine archivierte Tabelle kann angesehen und exportiert werden.
 
 Neu in v7.46:
 - Tages- und Abschlusstabelle zeigen ausschließlich Matchpunkte sowie Spiele, Siege, Remis und Frame-Differenz.
@@ -134,7 +140,7 @@ Neu in v7.18:
 - Bestehende JSON-Turniersicherungen können weiterhin geladen werden.
 
 Installation: Alle enthaltenen Dateien im bisherigen GitHub-Ordner ersetzen.
-App danach neu öffnen, gegebenenfalls einmal aktualisieren. Unten muss v7.46 stehen.
+App danach neu öffnen, gegebenenfalls einmal aktualisieren. Unten muss v7.47 stehen.
 Vor dem Update das laufende Turnier als JSON sichern.
 Die Speicherung einer Datei wird je nach Gerät über Teilen oder Download ausgeführt.
 

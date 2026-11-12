@@ -28,7 +28,7 @@ small {color:#cfc1d7}
 <main>
 <header>
 <h1>Allgemeine Infos &amp; Regeln</h1>
-<p>So funktionieren Einzel, Club Liga und Freies Turnier. Stand der App v7.46.</p>
+<p>So funktionieren Einzel, Club Liga und Freies Turnier. Stand der App v7.47.</p>
 <button type="button" id="backToApp">← Zurück zur App</button>
 </header>
 <nav aria-label="Inhaltsverzeichnis">
@@ -88,10 +88,10 @@ small {color:#cfc1d7}
 <h2>Saisonpunkte, Teilnahmen und einzelne Spieltage</h2>
 <p>Bei N Teilnehmern erhält Platz 1 insgesamt N Saisonpunkte. Jeder weitere Rang bringt einen Punkt weniger. Der letzte allein belegte Platz erhält einen Punkt. Bei acht Teilnehmern lautet die Verteilung 8, 7, 6, 5, 4, 3, 2, 1.</p>
 <p>Geteilte Plätze erhalten den Mittelwert der Punkte für die gemeinsam belegten Ränge. Bei zehn Teilnehmern teilen sich zwei Spieler auf Platz 2 die Punkte für Rang 2 und 3. Jeder erhält (9 + 8) ÷ 2 = <strong>8,5 Saisonpunkte</strong>.</p>
-<p>Die Saisontabelle addiert die Punkte der gespeicherten Spieltage und die vorläufigen Platzierungspunkte des aktuellen Spieltags. Die Einzelübersichten darunter zeigen den jeweiligen Spieltag, den zuletzt erstellten ganz oben. Ein laufender Spieltag ist als „vorläufig“ gekennzeichnet.</p>
+<p>Die Saisontabelle addiert die Punkte der gespeicherten Spieltage und die vorläufigen Platzierungspunkte des aktuellen Spieltags. Der Reiter „Spieltage &amp; Elo“ ganz rechts zeigt die einzelnen Spieltage, den zuletzt erstellten ganz oben, sowie die Elo-Wertung. Ein laufender Spieltag ist als „vorläufig“ gekennzeichnet.</p>
 <p>Eine Teilnahme wird erst gebucht, wenn das Turnier beendet ist und mindestens ein echtes Matchergebnis eingetragen wurde. Dann erhält jeder für diesen Turniertag ausgewählte Spieler eine Teilnahme. Ein direkt ohne Ergebnis beendetes Turnier erzeugt weder Saisonpunkte noch eine Teilnahme. Ein Freilos allein erfüllt diese Voraussetzung nicht.</p>
 <p>Die Saisonrangfolge richtet sich nach den addierten Saisonpunkten. Bei gleichen Saisonpunkten wird der Platz geteilt.</p>
-<p>„Neue Saison starten“ ist nach Turnierende verfügbar. Die bisherige Gesamttabelle wird unter dem gewählten Namen im Saisonarchiv abgelegt. Danach beginnt die neue Saison bei null. Die Elo-Werte werden fortgeführt. Archivierte Saisontabellen lassen sich exportieren und nach Bestätigung löschen.</p>
+<p>„Neue Saison starten“ steht unten im Reiter „Tabelle Saison“ und ist nach Turnierende verfügbar. Der rote Warnbutton öffnet ein Popup mit Archivname. Erst „Jetzt speichern und neue Saison starten“ archiviert die bisherige Gesamttabelle unter diesem Namen und beginnt die neue Saison bei null. Abbrechen schließt das Popup. Der Saisonwechsel kann nicht rückgängig gemacht werden. Das Saisonarchiv ermöglicht das Ansehen und Exportieren der Tabelle. Eine archivierte Saison kann dort nicht als laufende Saison fortgesetzt werden. Die Elo-Werte werden fortgeführt. Archivierte Saisontabellen lassen sich exportieren und nach Bestätigung löschen.</p>
 <p>Ältere Spieltagszusammenfassungen enthalten ihre damals gespeicherten Punkte. Für eine Neuberechnung nach den heutigen Regeln wird die ursprüngliche Turnierdatei mit ihren Begegnungen benötigt. Eine archivierte Saison enthält die gespeicherte Gesamtwertung.</p>
 </section>
 
@@ -124,11 +124,11 @@ small {color:#cfc1d7}
 <p>Die App speichert Spielstände und die Spielerliste lokal im Browser. Eine JSON-Sicherung enthält die Daten zum späteren Laden und Fortsetzen. CSV und PDF dienen der Weitergabe und Darstellung der jeweiligen Tabellen. Die Club Liga bietet Exporte für Tageswertung, Saisontabelle, einzelne Spieltage, archivierte Saisontabellen und Elo.</p>
 <p>Für die Live-Synchronisierung auf den beteiligten Geräten im Einzelmodus mit demselben Firebase-Konto anmelden. Beide Geräte können Ergebnisse eingeben. Änderungen werden bei bestehender Verbindung automatisch übertragen. Bei gleichzeitiger Eingabe vor einer weiteren Änderung den aktualisierten Stand prüfen.</p>
 <p>Vollbild wird auf jedem Gerät einzeln eingestellt. Im Turnier-Vollbild wechselt horizontales Wischen zwischen Tages- und Saisontabelle. Der Wechsel dieser Tabellen wird auf verbundene Geräte übertragen. Die dortige Vollbildeinstellung bleibt geräteabhängig.</p>
-<p>Außerhalb des Turnier-Vollbilds wechseln die Tabellenbuttons oder horizontales Wischen zwischen Runden, Tageswertung und Saisonwertung. Die Übersicht über einzelne Spieltage und die Verwaltung sind durch Herunterscrollen erreichbar.</p>
+<p>Außerhalb des Turnier-Vollbilds wechseln die Tabellenbuttons oder horizontales Wischen zwischen Runden, Tageswertung und Saisonwertung. In der Club Liga führt der vierte Reiter „Spieltage &amp; Elo“ zu den einzelnen Spieltagstabellen und der Elo-Verwaltung. Er kann auch außerhalb des Vollbilds durch horizontales Wischen erreicht werden.</p>
 <p>Im Einzelmodus wechselt horizontales Wischen zwischen Live-Scoreboard und Abrechnung. „Nur Score anzeigen“ blendet die Eingabefunktionen auf dem jeweiligen Gerät aus.</p>
 <p>Die Infoseite ist nach vollständigem Laden der aktualisierten App auch offline verfügbar. Der Link „Zurück zur App“ führt zurück zur App.</p>
 </section>
-<small>Snooker Money Match · v7.46</small>
+<small>Snooker Money Match · v7.47</small>
 </main>
 <script>
 document.getElementById('backToApp').onclick = () => {
