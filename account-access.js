@@ -8,24 +8,28 @@
     'snookerSwissPlayerNamesV1', 'snookerSwissRosterPendingV1', 'snookerSinglePendingSyncV1'
   ];
   const raw = window.localStorage;
-  const uid = raw.getItem(activeKey);
+  const guestKey = 'snooker-local-mode-v1';
+  const guest = raw.getItem(guestKey) === '1';
+  const uid = guest ? null : raw.getItem(activeKey);
   const prefix = account => 'snooker-account-v1:' + account + ':';
+  const storagePrefix = uid ? prefix(uid) : 'snooker-guest-v1:';
   window.snookerStorage = Object.freeze({
     uid,
-    getItem(key) { return uid ? raw.getItem(prefix(uid) + key) : null; },
+    getItem(key) { return raw.getItem(storagePrefix + key); },
     setItem(key, value) {
-      if (!uid) throw new Error('Bitte zuerst anmelden.');
-      raw.setItem(prefix(uid) + key, value);
+      raw.setItem(storagePrefix + key, value);
     },
-    removeItem(key) { if (uid) raw.removeItem(prefix(uid) + key); }
+    removeItem(key) { raw.removeItem(storagePrefix + key); }
   });
 
   const e = id => document.getElementById(id);
   const dialog = e('accountDialog');
   let actions = null, user = null, ready = false, registering = false, busy = false;
+  let currentMode = null, loadError = '';
   function status(text) { e('accountMessage').textContent = text; }
   function pendingMode() { return window.sessionStorage.getItem(pendingKey); }
   function openMode(mode) {
+    currentMode = mode;
     window.sessionStorage.removeItem(pendingKey);
     if (dialog.open) dialog.close();
     const deliver = () => window.dispatchEvent(new CustomEvent('snooker-account-enter', {detail:mode}));
@@ -48,25 +52,30 @@
     e('accountReset').hidden = value;
     status('');
   }
-  function request(mode) {
-    if (ready && user) { openMode(mode); return; }
+  function request(mode, force = false) {
+    if (!force && (guest || (ready && user))) { openMode(mode); return; }
     window.sessionStorage.setItem(pendingKey, mode);
     setRegister(false);
     if (!dialog.open) dialog.showModal();
-    if (!actions) status('Anmeldung wird geladen. Für die erste Anmeldung ist eine Internetverbindung erforderlich.');
+    if (!actions) status(loadError || 'Anmeldung wird geladen. Du kannst auch ohne Anmeldung fortfahren.');
     else if (user) status('Dein Konto wird verbunden …');
     setBusy(false);
   }
   function finishLogin(account, message) {
     user = account;
     ready = Boolean(account);
-    e('accountEmailLabel').textContent = account?.email || '';
-    e('accountBar').hidden = !account;
+    e('accountEmailLabel').textContent = (account?.email ? 'Angemeldet als ' + account.email : '') || (guest ? 'Ohne Anmeldung · nur auf diesem Gerät' : '');
+    e('accountBar').hidden = !account && !guest;
+    e('accountLogout').hidden = !account;
+    e('accountLogin').hidden = Boolean(account);
+    e('fbSave').disabled = e('fbLoad').disabled = !account;
     if (account) raw.setItem(prefix(account.uid) + 'email', account.email || '');
     if (message) status(message);
     if (ready && pendingMode()) openMode(pendingMode());
   }
   function switchUser(account) {
+    // A remembered Firebase session must never replace a local guest session.
+    if (guest) return false;
     const next = account?.uid || null;
     if (next === uid) return false;
     ready = false;
@@ -109,8 +118,21 @@
     setBusy(true);
     status(registering ? 'Konto wird erstellt …' : 'Anmeldung läuft …');
     try {
-      if (registering) await actions.register(email,password);
-      else await actions.login(email,password);
+      const result = registering ? await actions.register(email,password) : await actions.login(email,password);
+      if (guest && result?.user) {
+        const account = result.user;
+        // Use the same migration path when the old owner logs in from guest mode.
+        if (account.uid === legacyOwner && !raw.getItem(prefix(account.uid) + 'legacy-migrated')) {
+          for (const key of keys) {
+            const value = raw.getItem(key);
+            if (value !== null && raw.getItem(prefix(account.uid) + key) === null) raw.setItem(prefix(account.uid) + key,value);
+          }
+          raw.setItem(prefix(account.uid) + 'legacy-migrated','1');
+        }
+        raw.removeItem(guestKey);
+        raw.setItem(activeKey,account.uid);
+        window.location.reload();
+      }
       e('accountPassword').value = '';
       e('accountRepeat').value = '';
     } catch (error) {
@@ -118,6 +140,13 @@
     } finally { setBusy(false); }
   };
   e('accountRegister').onclick = () => setRegister(!registering);
+  e('accountGuest').onclick = () => {
+    e('accountPassword').value = ''; e('accountRepeat').value = '';
+    if (guest) { openMode(pendingMode() || currentMode || 'single'); return; }
+    raw.setItem(guestKey,'1');
+    window.location.reload();
+  };
+  e('accountLogin').onclick = () => request(currentMode || 'single',true);
   e('accountCancel').onclick = () => {
     window.sessionStorage.removeItem(pendingKey);
     e('accountPassword').value = ''; e('accountRepeat').value = '';
@@ -147,15 +176,19 @@
     catch { e('accountLogout').disabled = false; alert('Abmelden fehlgeschlagen. Bitte erneut versuchen.'); }
   };
   window.addEventListener('storage', event => {
-    if (event.key === activeKey && event.newValue !== uid) window.location.reload();
+    if ((event.key === activeKey && !guest && event.newValue !== uid) || event.key === guestKey) window.location.reload();
   });
   window.snookerAccount = Object.freeze({
-    request, switchUser,
+    request, switchUser, guest,
     bind(next) { actions = next; setBusy(false); status(''); },
     ready: finishLogin,
-    connectionError(message) { status(message); e('fbStatus').textContent = message; },
-    block() { ready=false; document.body.classList.remove('snookerFullscreenScore','snookerFullscreenTournament','compactTournament'); document.body.classList.add('modeHome'); e('singleMode').classList.add('hidden'); e('tournamentMode').classList.add('hidden'); e('modeStart').classList.remove('hidden'); },
+    connectionError(message) { loadError=message; status(message); if (!guest) e('fbStatus').textContent = message; },
+    block() { if (guest) return; ready=false; document.body.classList.remove('snookerFullscreenScore','snookerFullscreenTournament','compactTournament'); document.body.classList.add('modeHome'); e('singleMode').classList.add('hidden'); e('tournamentMode').classList.add('hidden'); e('modeStart').classList.remove('hidden'); },
   });
   // Previously authenticated account data remains available on this device offline.
-  if (!navigator.onLine && uid) finishLogin({uid,email:raw.getItem(prefix(uid)+'email') || ''});
+  if (guest) {
+    finishLogin(null);
+    e('fbStatus').textContent = 'Ohne Anmeldung – nur lokal auf diesem Gerät gespeichert.';
+    if (pendingMode()) openMode(pendingMode());
+  } else if (!navigator.onLine && uid) finishLogin({uid,email:raw.getItem(prefix(uid)+'email') || ''});
 })();

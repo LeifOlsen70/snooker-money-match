@@ -308,3 +308,5 @@ body.snookerFullscreenTournament .accountBar,body.snookerFullscreenScore .accoun
 .accountActions {display:grid;gap:10px}
 .accountDialog #accountSubmit {background:linear-gradient(#f8d789,#ba8b35);color:#1c1024;font-weight:800}
 .accountDialog [role=status] {min-height:24px;color:#ffdd91}
+
+.accountBar [hidden], .accountDialog [hidden] {display:none!important}

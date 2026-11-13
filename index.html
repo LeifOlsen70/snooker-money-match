@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#0f5f37">
-  <meta name="application-version" content="7.50">
+  <meta name="application-version" content="7.51">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="Snooker Match">
@@ -331,15 +331,15 @@ body.snookerFullscreenScore #scorerPage.displayOnly{background:#090613!important
 .appInfoLink {display:inline-block;margin:0 0 14px;padding:10px 16px;border:1px solid #a98b49;border-radius:12px;color:#f3ecd7;background:#382045;text-decoration:none;font-weight:700}
 body.snookerFullscreenTournament .appInfoLink,body.snookerFullscreenScore .appInfoLink {display:none}
 </style>
-  <link rel="stylesheet" href="tournament.css?v=7.50">
+  <link rel="stylesheet" href="tournament.css?v=7.51">
 </head>
 <body class="modeHome">
-<div id="appVersionTag" aria-label="App-Version 7.50">v7.50</div>
+<div id="appVersionTag" aria-label="App-Version 7.51">v7.51</div>
 <div class="app">
   <h1 class="clubBrand" aria-label="Flensburger Snooker Club – Snooker Money Match"><img src="flensburger-snooker-club.png" alt="Flensburger Snooker Club" width="430" height="125"><span class="visuallyHidden">Snooker Money Match</span></h1><div id="offlineStatus" class="hidden" aria-live="polite"></div>
 
   <a class="appInfoLink" href="infos.html">Allgemeine Infos &amp; Regeln</a>
-  <div id="accountBar" class="accountBar" hidden><span>Angemeldet als <strong id="accountEmailLabel"></strong></span><button type="button" id="accountLogout" class="secondary">Abmelden / Konto wechseln</button></div>
+  <div id="accountBar" class="accountBar" hidden><span id="accountEmailLabel"></span><button type="button" id="accountLogin" class="secondary" hidden>Anmelden / Registrieren</button><button type="button" id="accountLogout" class="secondary">Abmelden / Konto wechseln</button></div>
   <section id="modeStart" class="card">
     <h2>Spielmodus wählen</h2>
     <div class="modeChoices">
@@ -459,7 +459,7 @@ body.snookerFullscreenTournament .appInfoLink,body.snookerFullscreenScore .appIn
 <dialog id="accountDialog" class="tournamentDialog accountDialog" aria-labelledby="accountTitle">
 <form id="accountForm">
 <h2 id="accountTitle">Anmelden</h2>
-<p>Einzel, Club Liga und Freies Turnier verwenden den persönlichen Spielstand deines Kontos.</p>
+<p>Mit einem Konto werden deine Geräte synchronisiert. Ohne Anmeldung bleiben deine Daten nur auf diesem Gerät.</p>
 <label for="accountEmail">E-Mail-Adresse</label><input id="accountEmail" type="email" autocomplete="username" required>
 <label for="accountPassword">Passwort</label><input id="accountPassword" type="password" autocomplete="current-password" minlength="6" required>
 <label id="accountRepeatLabel" for="accountRepeat" hidden>Passwort wiederholen<input id="accountRepeat" type="password" autocomplete="new-password" minlength="6"></label>
@@ -468,9 +468,10 @@ body.snookerFullscreenTournament .appInfoLink,body.snookerFullscreenScore .appIn
 <button type="submit" id="accountSubmit" disabled>Anmelden</button>
 <button type="button" id="accountRegister">Neues Konto registrieren</button>
 <button type="button" id="accountReset">Passwort vergessen</button>
+<button type="button" id="accountGuest">Ohne Anmeldung fortfahren</button>
 <button type="button" id="accountCancel">Abbrechen</button>
 </div></form></dialog>
-<script src="account-access.js?v=7.50"></script>
+<script src="account-access.js?v=7.51"></script>
 
 <script>
 const localStorage = window.snookerStorage;
@@ -1187,7 +1188,7 @@ if('serviceWorker' in navigator){
   });
 }
 </script>
-<script type="module" src="firebase-sync.js?v=7.50" onerror="window.snookerAccount.connectionError('Anmeldung konnte nicht geladen werden. Bitte Internetverbindung prüfen und die App erneut öffnen.')"></script><script>
+<script type="module" src="firebase-sync.js?v=7.51" onerror="window.snookerAccount.connectionError('Anmeldung konnte nicht geladen werden. Bitte Internetverbindung prüfen und die App erneut öffnen.')"></script><script>
 // Geräteindividuelle Ansicht: nicht Teil des Matches und niemals Firebase-synchronisiert.
 (function(){
  const page=document.getElementById('scorerPage');
@@ -1205,7 +1206,7 @@ if('serviceWorker' in navigator){
  btn.addEventListener('click',()=>setDisplay(!page.classList.contains('displayOnly')));
 })();
 </script>
-<script src="pdf-export.js?v=7.50"></script>
-<script src="tournament.js?v=7.50"></script>
+<script src="pdf-export.js?v=7.51"></script>
+<script src="tournament.js?v=7.51"></script>
 </body>
 </html>

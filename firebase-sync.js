@@ -219,6 +219,11 @@ window.addEventListener('snooker-roster-change',({detail})=>{
 window.addEventListener('snooker-state-changed',syncNow);
 window.addEventListener('online',()=>{if(pending)flush();flushTournament();flushTable();flushRoster()});
 onAuthStateChanged(auth,u=>{
+  if(window.snookerAccount.guest){
+    msg('Ohne Anmeldung – nur lokal auf diesem Gerät gespeichert.');
+    tournamentConnection('Ohne Anmeldung – Turnier nur auf diesem Gerät gespeichert.');
+    return;
+  }
   window.snookerAccount.block();
   if(window.snookerAccount.switchUser(u))return;
   if(unsubscribe){unsubscribe();unsubscribe=null}
