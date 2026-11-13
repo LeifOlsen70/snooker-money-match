@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#0f5f37">
-  <meta name="application-version" content="7.51">
+  <meta name="application-version" content="7.52">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="Snooker Match">
@@ -330,11 +330,45 @@ body.snookerFullscreenScore #scorerPage.displayOnly{background:#090613!important
 
 .appInfoLink {display:inline-block;margin:0 0 14px;padding:10px 16px;border:1px solid #a98b49;border-radius:12px;color:#f3ecd7;background:#382045;text-decoration:none;font-weight:700}
 body.snookerFullscreenTournament .appInfoLink,body.snookerFullscreenScore .appInfoLink {display:none}
+
+/* v7.52: points fill the scoreboard; entry opens in a local modal. */
+#scorerPage:not(.displayOnly) .scorerGrid {
+  flex:initial!important;
+  min-height:clamp(320px,55dvh,650px);
+  grid-auto-rows:minmax(180px,1fr);
+}
+#scorerPage:not(.displayOnly) .scorerPlayer {padding:16px 8px;gap:8px}
+#scorerPage:not(.displayOnly) .scorerPlayerName {font-size:clamp(24px,5.5vw,44px);line-height:1.15}
+#scorerPage:not(.displayOnly) .scorerPoints {font-size:clamp(80px,20vw,180px)!important}
+#scorerPage:not(.displayOnly) .scorerHB {font-size:clamp(16px,3vw,24px)}
+#scorerPage:not(.displayOnly) .scorerFrameCount {font-size:clamp(15px,2.8vw,22px)}
+#scorerEntryDialog {box-sizing:border-box;width:min(94vw,560px);max-width:94vw;max-height:calc(100dvh - 24px);overflow:auto;padding:0;border:2px solid #d8b367;border-radius:22px;background:#160d23;color:#f8efdc;box-shadow:0 16px 70px #0009}
+#scorerEntryDialog::backdrop {background:#000b}
+#scorerEntryDialog .scorerEntry {margin:0;padding:clamp(12px,3vw,24px);background:linear-gradient(135deg,#30143f,#110a1d);color:#f8efdc;display:flex;flex-direction:column;gap:10px}
+#scorerEntryDialog #scorerEntryBack {font-size:16px;min-height:44px;margin:0;background:#392247;color:#fff0d1;border:1px solid #b99a65}
+#scorerEntryDialog #scorerSelectedName {font-size:clamp(27px,6vw,40px)!important;overflow-wrap:anywhere;line-height:1.15}
+#scorerEntryDialog .scoreEntryHint {margin:0;font-size:16px;color:#e6d7bb}
+#scorerEntryDialog label {display:none}
+#scorerEntryDialog #scorerBreak {box-sizing:border-box;width:100%;max-width:none;margin:0;min-height:70px;height:80px;font-size:clamp(40px,10vw,60px);background:#f7f3ec!important;color:#1b1025;border:2px solid #d8b367;border-radius:12px}
+#scorerEntryDialog .scorerKeypad {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;width:100%;max-width:none;margin:0}
+#scorerEntryDialog .scorerKeypad button {min-height:64px;height:auto;margin:0;padding:8px;font-size:clamp(28px,7vw,40px);background:linear-gradient(#fff,#e5dedb);color:#201429;border:1px solid #d5b66f;border-radius:12px}
+#scorerEntryDialog .scorerKeypad .keyClear {font-size:17px;background:#edc8db}
+#scorerEntryDialog .scorerKeypad .keyDelete {font-size:28px}
+#scorerEntryDialog #scorerAdd {margin:0;min-height:58px;font-size:clamp(18px,4vw,23px);background:linear-gradient(#ffe39b,#bd903c);color:#1a1220}
+@media(max-height:540px) and (orientation:landscape){
+ #scorerEntryDialog {width:min(94vw,760px)}
+ #scorerEntryDialog .scorerEntry {display:grid;grid-template-columns:1fr 1.3fr;gap:8px;padding:12px}
+ #scorerEntryDialog .scorerKeypad {grid-column:2;grid-row:1 / span 5}
+ #scorerEntryDialog .scorerKeypad button {min-height:45px;padding:4px;font-size:28px}
+ #scorerEntryDialog #scorerBreak {height:65px;min-height:60px}
+ #scorerEntryDialog #scorerAdd {font-size:18px;min-height:50px}
+}
+
 </style>
-  <link rel="stylesheet" href="tournament.css?v=7.51">
+  <link rel="stylesheet" href="tournament.css?v=7.52">
 </head>
 <body class="modeHome">
-<div id="appVersionTag" aria-label="App-Version 7.51">v7.51</div>
+<div id="appVersionTag" aria-label="App-Version 7.52">v7.52</div>
 <div class="app">
   <h1 class="clubBrand" aria-label="Flensburger Snooker Club – Snooker Money Match"><img src="flensburger-snooker-club.png" alt="Flensburger Snooker Club" width="430" height="125"><span class="visuallyHidden">Snooker Money Match</span></h1><div id="offlineStatus" class="hidden" aria-live="polite"></div>
 
@@ -381,23 +415,10 @@ body.snookerFullscreenTournament .appInfoLink,body.snookerFullscreenScore .appIn
     <button type="button" id="scoreDisplayToggle" aria-pressed="false">⛶ Nur Score anzeigen</button>
     <div class="scorerHeading" id="scorerFrameTitle">LIVE-SCOREBOARD</div>
     <div class="scorerGrid" id="scorerPlayers"></div>
-    <div class="scorerEntry">
-      <div id="scorerSelectedName" style="font-size:22px;font-weight:800">Spieler wählen</div>
-      <label for="scorerBreak">Break-Punkte eingeben</label>
-      <input id="scorerBreak" type="text" readonly aria-label="Eingegebene Break-Punkte" placeholder="0" style="background:#f8fafc;cursor:default">
-      <div class="scorerKeypad" id="scorerKeypad" aria-label="Ziffernblock">
-        <button type="button" data-digit="1">1</button><button type="button" data-digit="2">2</button><button type="button" data-digit="3">3</button>
-        <button type="button" data-digit="4">4</button><button type="button" data-digit="5">5</button><button type="button" data-digit="6">6</button>
-        <button type="button" data-digit="7">7</button><button type="button" data-digit="8">8</button><button type="button" data-digit="9">9</button>
-        <button type="button" class="keyClear" data-key="clear">LÖSCHEN</button><button type="button" data-digit="0">0</button><button type="button" class="keyDelete" data-key="delete" aria-label="Letzte Ziffer löschen">⌫</button>
-      </div>
-      <button type="button" id="scorerAdd" class="primary">BREAK ÜBERNEHMEN</button>
-      
-    </div>
     <div class="scorerWinner"><strong>Frame-Gewinner</strong><div id="scorerWinnerButtons" class="grid"></div></div>
 
     <div class="scorerHistoryControls"><button type="button" id="scorerUndo" aria-label="Rückgängig" title="Rückgängig">↶</button><button type="button" id="scorerRedo" aria-label="Wiederherstellen" title="Wiederherstellen">↷</button></div>
-    <p class="scorerHelp">Spieler antippen · Punkte eingeben · nach rechts wischen für Abrechnung</p>
+    <p class="scorerHelp">Spielername antippen für Punkteingabe · nach rechts wischen für Abrechnung</p>
   </section>
   <section id="match" class="hidden">
     <div class="topbar">
@@ -456,6 +477,24 @@ body.snookerFullscreenTournament .appInfoLink,body.snookerFullscreenScore .appIn
 <div id="matchActionDialog" class="hidden" role="dialog" aria-modal="true" aria-label="Match verwalten"><div class="dialogPanel"><h2>Match verwalten</h2><button id="dialogNew" class="primary" type="button">Neues Match erstellen</button><button id="dialogLoad" class="secondary" type="button">Gespeichertes Match laden</button><button id="dialogCancel" class="secondary" type="button">Abbrechen</button></div></div>
 <input id="loadFileInput" type="file" accept=".json,application/json" class="hidden">
 
+<dialog id="scorerEntryDialog" aria-labelledby="scorerSelectedName">
+<div class="scorerEntry">
+      <button type="button" id="scorerEntryBack" class="secondary">← Zurück zur Punkteanzeige</button>
+      <div id="scorerSelectedName" style="font-size:22px;font-weight:800">Spieler wählen</div>
+      <p class="scoreEntryHint">Break-Punkte hinzufügen</p>
+      <label for="scorerBreak">Break-Punkte eingeben</label>
+      <input id="scorerBreak" type="text" readonly aria-label="Eingegebene Break-Punkte" placeholder="0" style="background:#f8fafc;cursor:default">
+      <div class="scorerKeypad" id="scorerKeypad" aria-label="Ziffernblock">
+        <button type="button" data-digit="1">1</button><button type="button" data-digit="2">2</button><button type="button" data-digit="3">3</button>
+        <button type="button" data-digit="4">4</button><button type="button" data-digit="5">5</button><button type="button" data-digit="6">6</button>
+        <button type="button" data-digit="7">7</button><button type="button" data-digit="8">8</button><button type="button" data-digit="9">9</button>
+        <button type="button" class="keyClear" data-key="clear">LÖSCHEN</button><button type="button" data-digit="0">0</button><button type="button" class="keyDelete" data-key="delete" aria-label="Letzte Ziffer löschen">⌫</button>
+      </div>
+      <button type="button" id="scorerAdd" class="primary">BREAK ÜBERNEHMEN</button>
+      
+    </div>
+</dialog>
+
 <dialog id="accountDialog" class="tournamentDialog accountDialog" aria-labelledby="accountTitle">
 <form id="accountForm">
 <h2 id="accountTitle">Anmelden</h2>
@@ -471,7 +510,7 @@ body.snookerFullscreenTournament .appInfoLink,body.snookerFullscreenScore .appIn
 <button type="button" id="accountGuest">Ohne Anmeldung fortfahren</button>
 <button type="button" id="accountCancel">Abbrechen</button>
 </div></form></dialog>
-<script src="account-access.js?v=7.51"></script>
+<script src="account-access.js?v=7.52"></script>
 
 <script>
 const localStorage = window.snookerStorage;
@@ -508,11 +547,12 @@ function renderScorer(){
   $('scorerFrameTitle').textContent=`FRAME ${played+1} · LIVE`;
   $('scorerPlayers').innerHTML=state.players.map((p,i)=>`<button type="button" class="scorerPlayer ${i===scorerSelected?'active':''}" data-scorer-player="${i}"><div class="scorerPlayerName">${esc(p.name)}</div><div class="scorerPoints">${state.liveFrameScores[i]}</div><div class="scorerHB">HB: ${Math.max(0,...(p.breaks||[]).map(b=>Number(b.points)||0))}</div><div class="scorerFrameCount"><span class="framesLabel">Gewonnene Frames </span><strong>${p.frames}</strong></div></button>`).join('');
   $('scorerSelectedName').textContent=state.players[scorerSelected].name;
+  $('scorerPlayers').style.setProperty('--score-rows',Math.ceil(state.players.length/2));
 
 
   $('scorerUndo').disabled=!state.history.length&&!lastMatchTransition;
   $('scorerRedo').disabled=!redoStack.length;
-  document.querySelectorAll('[data-scorer-player]').forEach(b=>b.addEventListener('click',()=>{scorerSelected=Number(b.dataset.scorerPlayer);renderScorer();}));
+  document.querySelectorAll('[data-scorer-player]').forEach(b=>b.addEventListener('click',()=>{openScorerEntry(Number(b.dataset.scorerPlayer));}));
 }
 $('matchTab').addEventListener('click',()=>showView('match'));
 $('scorerTab').addEventListener('click',()=>showView('scorer'));
@@ -526,6 +566,7 @@ $('scorerKeypad').addEventListener('click',e=>{
   }
 });
 $('scorerAdd').addEventListener('click',()=>{
+  if(!$('scorerEntryDialog').open || !state) return;
   const input=$('scorerBreak');
   const raw=input.value.trim();const points=Number(raw);
   if(!raw || !Number.isInteger(points) || points<0 || points>147){alert('Bitte ein ganzzahliges Break zwischen 0 und 147 eingeben.');return;}
@@ -539,17 +580,49 @@ $('scorerAdd').addEventListener('click',()=>{
   clearRedo();
   state.history.push({type:'break',playerIndex:i,entry,fromScorer:true});
   input.value='';
+  closeScorerEntry();
   persist();render();renderScorer();
 });
 $('scorerBreak').addEventListener('keydown',e=>{if(e.key==='Enter'){$('scorerAdd').click();$('scorerBreak').blur();}});
 $('scorerUndo').addEventListener('click',undo);
 $('scorerRedo').addEventListener('click',redo);
+function openScorerEntry(index){
+  if(!state || !state.players[index]) return;
+  scorerSelected=index;
+  $('scorerBreak').value='';
+  renderScorer();
+  $('scorerEntryDialog').showModal();
+  $('scorerEntryBack').focus({preventScroll:true});
+}
+function closeScorerEntry(){
+  $('scorerBreak').value='';
+  if($('scorerEntryDialog').open) $('scorerEntryDialog').close();
+}
+$('scorerEntryBack').addEventListener('click',closeScorerEntry);
+$('scorerEntryDialog').addEventListener('cancel',e=>{e.preventDefault();closeScorerEntry();});
+$('scorerEntryDialog').addEventListener('close',()=>{
+  $('scorerBreak').value='';
+  document.querySelector(`[data-scorer-player="${scorerSelected}"]`)?.focus({preventScroll:true});
+});
+$('scorerEntryDialog').addEventListener('click',e=>{if(e.target===$('scorerEntryDialog'))closeScorerEntry();});
+$('scorerEntryDialog').addEventListener('keydown',e=>{
+  if(/^[0-9]$/.test(e.key)){
+    e.preventDefault();
+    $('scorerKeypad').querySelector(`[data-digit="${e.key}"]`).click();
+  } else if(e.key==='Backspace' || e.key==='Delete'){
+    e.preventDefault();
+    $('scorerBreak').value=e.key==='Delete'?'':$('scorerBreak').value.slice(0,-1);
+  } else if(e.key==='Enter' && e.target!==$('scorerEntryBack')){
+    e.preventDefault();$('scorerAdd').click();
+  }
+});
 let touchStart=null;
 document.addEventListener('touchstart',e=>{
-  if($('singleMode').classList.contains('hidden') || !state || !e.touches.length || e.target.closest('input,select,textarea'))return;
+  if($('scorerEntryDialog').open || $('singleMode').classList.contains('hidden') || !state || !e.touches.length || e.target.closest('input,select,textarea'))return;
   touchStart={x:e.touches[0].clientX,y:e.touches[0].clientY};
 },{passive:true});
 document.addEventListener('touchend',e=>{
+  if($('scorerEntryDialog').open){touchStart=null;return;}
   if(!touchStart || !state || !e.changedTouches.length)return;
   const dx=e.changedTouches[0].clientX-touchStart.x;
   const dy=e.changedTouches[0].clientY-touchStart.y;
@@ -625,6 +698,7 @@ function startMatch(){
 }
 
 function resetToSetup(publish=true){
+  closeScorerEntry();
   lastMatchTransition=null;
   clearRedo();
   localStorage.removeItem('snookerMoneyMatchState');
@@ -1123,6 +1197,7 @@ function persist(){
 
 function applySingleState(raw){
   const next = JSON.parse(raw);
+  closeScorerEntry();
   lastMatchTransition=null;
   clearRedo();
   state=next;
@@ -1188,7 +1263,7 @@ if('serviceWorker' in navigator){
   });
 }
 </script>
-<script type="module" src="firebase-sync.js?v=7.51" onerror="window.snookerAccount.connectionError('Anmeldung konnte nicht geladen werden. Bitte Internetverbindung prüfen und die App erneut öffnen.')"></script><script>
+<script type="module" src="firebase-sync.js?v=7.52" onerror="window.snookerAccount.connectionError('Anmeldung konnte nicht geladen werden. Bitte Internetverbindung prüfen und die App erneut öffnen.')"></script><script>
 // Geräteindividuelle Ansicht: nicht Teil des Matches und niemals Firebase-synchronisiert.
 (function(){
  const page=document.getElementById('scorerPage');
@@ -1206,7 +1281,7 @@ if('serviceWorker' in navigator){
  btn.addEventListener('click',()=>setDisplay(!page.classList.contains('displayOnly')));
 })();
 </script>
-<script src="pdf-export.js?v=7.51"></script>
-<script src="tournament.js?v=7.51"></script>
+<script src="pdf-export.js?v=7.52"></script>
+<script src="tournament.js?v=7.52"></script>
 </body>
 </html>

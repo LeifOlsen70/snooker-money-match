@@ -1,4 +1,4 @@
-Snooker Money Match v7.51 – Benutzerkonten einrichten
+Snooker Money Match v7.52 – Benutzerkonten einrichten
 
 1. Firebase-Projekt „snooker-money-match“ öffnen
 https://console.firebase.google.com/project/snooker-money-match/overview
@@ -10,14 +10,14 @@ E-Mail/Passwort aktivieren. Nutzer können über „Neues Konto registrieren“ 
 Die tatsächlich verwendete App-Domain muss freigegeben sein, z. B. leifolsen70.github.io.
 
 4. Firestore Database > Rules
-Die Datei firestore.rules entspricht den zuletzt im Chat angepassten gemeinsamen Regeln einschließlich eurer bisherigen Pool-Zugänge. Falls diese Regeln bereits veröffentlicht sind, müssen sie für Version 7.51 nicht erneut geändert werden.
+Die Datei firestore.rules entspricht den zuletzt im Chat angepassten gemeinsamen Regeln einschließlich eurer bisherigen Pool-Zugänge. Falls diese Regeln bereits veröffentlicht sind, müssen sie für Version 7.52 nicht erneut geändert werden.
 Die Regel für /privateSnooker/{userId} erlaubt jedem Konto ausschließlich sein eigenes Dokument.
 Vor Veröffentlichung die bisherigen Regeln sichern. Falls das Projekt weitere Anwendungen enthält, deren benötigte Regeln erhalten und den Block /privateSnooker/{userId} gezielt ersetzen. Übergreifende Regeln dürfen keine Zugriffe auf fremde privateSnooker-Dokumente erlauben.
 Anschließend veröffentlichen.
 
 5. GitHub-Update
 Alle Webdateien dieser Version aus dem entpackten ZIP hochladen. Die Dateien firestore.rules und diese Anleitung gehören zur Firebase-Einrichtung. Das Hochladen dieser Regeln auf GitHub veröffentlicht sie nicht in Firebase.
-App auf beiden Geräten aktualisieren. Versionsanzeige muss v7.51 sein.
+App auf beiden Geräten aktualisieren. Versionsanzeige muss v7.52 sein.
 
 6. Anmeldung und Datenübernahme
 Die Startseite zeigt Einzel, Club Liga und Freies Turnier. Die erste Auswahl öffnet die Anmeldung mit Registrierung und Passwort-zurücksetzen. „Ohne Anmeldung fortfahren“ öffnet den gewählten Modus lokal. „Abbrechen“ führt zur Startseite zurück.
