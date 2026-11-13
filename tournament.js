@@ -7,7 +7,6 @@
   let tournament = null;
   let openMatch = null;
   let drafting = false;
-  let eloExpanded = false;
   let archiveSelection = null;
   let draftFreeTournament = null;
   let view = 'rounds';
@@ -219,7 +218,7 @@
       if (fullscreen) {
         showTournamentView(view === 'overall' ? 'standings' : 'overall');
       } else {
-        const views = tournament.freeTournament ? ['rounds', 'standings', 'overall'] : ['rounds', 'standings', 'overall', 'days'];
+        const views = ['rounds', 'standings', 'overall', 'days'];
         const next = views[views.indexOf(view) + (dx < 0 ? 1 : -1)];
         if (next) showTournamentView(next);
       }
@@ -572,15 +571,14 @@
 
   function renderElo(data) {
     const rows = eloRows(data);
-    return `<details class="tournamentSeasons" ${eloExpanded ? 'open' : ''} id="tournamentElo">
-      <summary>Elo-Wertung</summary>
+    return `<div class="tournamentSeasons" id="tournamentElo" aria-label="Elo-Wertung">
       <table class="tournamentTable"><thead><tr><th>Pl.</th><th>Spieler</th><th>Elo</th></tr></thead>
         <tbody>${rows.map((row, index) => `<tr><td>${index + 1}</td><td>${esc(row.name)}</td><td><span data-export-value>${Math.round(row.rating)}</span>
           <button type="button" class="secondary" data-edit-elo="${index}" aria-label="Elo von ${esc(row.name)} ändern">Ändern</button></td></tr>`).join('')}</tbody>
       </table>
       ${tableExportButtons()}
       <button type="button" class="secondary tournamentEnd" id="resetTournamentElo">Elo für alle auf 1000 setzen</button>
-    </details>`;
+    </div>`;
   }
 
   function editElo(row) {
@@ -639,12 +637,12 @@
       <p class="small">Für dieses ältere Archiv wurde nur die Gesamttabelle gespeichert. Einzelne Spieltage sind in der ursprünglichen Turniersicherung enthalten.</p>
     </details>`).join('') ?? '';
     return `<div class="card tournamentStandings tournamentDayElo">
-      <h3>Spieltage &amp; Elo</h3>
+      <h3>${data.freeTournament ? 'Spieltage' : 'Spieltage &amp; Elo'}</h3>
       <div class="tournamentActions tournamentArchiveChoices">
-        <button type="button" data-archive-select="elo" class="${archiveSelection === 'elo' ? 'primary' : 'secondary'}" aria-pressed="${archiveSelection === 'elo'}">Elo-Wertung</button>
-        ${groups.map(group => `<button type="button" data-archive-select="${esc(group.year)}" class="${archiveSelection === group.year ? 'primary' : 'secondary'}" aria-pressed="${archiveSelection === group.year}">${group.year === 'Ohne Datum' ? 'Ohne Datum' : 'Saison ' + group.year}</button>`).join('')}
+        ${data.freeTournament ? '' : `<button type="button" data-archive-select="elo" class="${archiveSelection === 'elo' ? 'primary' : 'secondary'}" aria-expanded="${archiveSelection === 'elo'}">Elo-Wertung</button>`}
+        ${groups.map(group => `<button type="button" data-archive-select="${esc(group.year)}" class="${archiveSelection === group.year ? 'primary' : 'secondary'}" aria-expanded="${archiveSelection === group.year}">${group.year === 'Ohne Datum' ? 'Ohne Datum' : 'Saison ' + group.year}</button>`).join('')}
       </div>
-      ${archiveSelection === 'elo' ? renderElo(data) : ''}
+      ${!data.freeTournament && archiveSelection === 'elo' ? renderElo(data) : ''}
       ${selected ? `<h3 class="tournamentArchiveHeading">${selected.year === 'Ohne Datum' ? 'Ohne Datum' : 'Saison ' + esc(selected.year)}</h3>
         ${renderSeasonDays(data, selected.days.sort((a,b) => Number(a.id)-Number(b.id))) || '<p class="small">Noch keine einzelnen Spieltage gespeichert.</p>'}
         ${legacy}
@@ -656,7 +654,7 @@
   function deleteTournamentYear(year) {
     const group = yearGroups(tournament).find(entry => entry.year === year);
     if (!group || (!tournament.ended && dayYear({playDate:tournament.playDate,id:String(tournament.started)}) === year)) return;
-    if (!confirm(`Das gesamte Jahr ${year} mit allen gespeicherten Spieltagstabellen und Saisonpunkten endgültig löschen? Die Elo-Wertung wird separat fortgeführt.`)) return;
+    if (!confirm(`Das gesamte Jahr ${year} mit allen gespeicherten Spieltagstabellen und Saisonpunkten endgültig löschen?${tournament.freeTournament ? '' : ' Die Elo-Wertung wird separat fortgeführt.'}`)) return;
     tournament.elo = carryElo(tournament);
     const ids = new Set(group.days.map(day => day.id));
     if (dayYear({playDate:tournament.playDate,id:String(tournament.started)}) === year) ids.add(dayKey(tournament));
@@ -1473,7 +1471,6 @@
         undoStates = [];
         redoStates = [];
         archiveSelection = null;
-        eloExpanded = false;
         draftFreeTournament = null;
         drafting = false;
         openMatch = null;
@@ -1543,8 +1540,7 @@
     if ($('tournamentFullscreenToggle')) $('tournamentFullscreenToggle').onclick = () => setTournamentFullscreen(!fullscreen);
     panel.querySelectorAll('[data-archive-select]').forEach(button => {
       button.onclick = () => {
-        archiveSelection = button.dataset.archiveSelect;
-        if (archiveSelection === 'elo') eloExpanded = true;
+        archiveSelection = archiveSelection === button.dataset.archiveSelect ? null : button.dataset.archiveSelect;
         renderTournament();
       };
     });
@@ -1552,7 +1548,6 @@
     const elo = $('tournamentElo');
     if (elo) {
       const rows = eloRows(data);
-      elo.ontoggle = () => { eloExpanded = elo.open; };
       $('resetTournamentElo').onclick = resetElo;
       elo.querySelectorAll('[data-edit-elo]').forEach(button => {
         button.onclick = () => editElo(rows[Number(button.dataset.editElo)]);
@@ -1566,11 +1561,12 @@
     panel.querySelectorAll('[data-export-table]').forEach(button => {
       const details = button.closest('details');
       const daySection = button.closest('[data-day-table]');
-      const section = daySection ?? details ?? button.closest('.tournamentStandings');
+      const eloSection = button.closest('#tournamentElo');
+      const section = daySection ?? eloSection ?? details ?? button.closest('.tournamentStandings');
       const table = section.querySelector(':scope > .tournamentTable');
       if (!table) { button.disabled = true; return; }
       const date = tournamentDateLabel(data);
-      const title = daySection ? daySection.dataset.exportTitle : details ? details.querySelector('summary').textContent.trim()
+      const title = daySection ? daySection.dataset.exportTitle : eloSection ? 'Elo-Wertung' : details ? details.querySelector('summary').textContent.trim()
         : view === 'overall' ? (data.freeTournament ? 'Gesamt' : 'Tabelle Saison')
         : data.freeTournament ? 'Freies Turnier · ' + tournamentTitle(data, true)
         : data.ended ? tournamentTitle(data, true) : 'Tabelle Turniertag';
@@ -1623,8 +1619,8 @@
           aria-pressed="${view === 'standings'}">${tournament.freeTournament ? tournamentTitle(tournament, true) : 'Tabelle Turniertag'}</button>
         <button type="button" id="tournamentOverallView" class="${view === 'overall' ? 'primary' : 'secondary'}"
           aria-pressed="${view === 'overall'}">${tournament.freeTournament ? 'Gesamt' : 'Tabelle Saison'}</button>
-        ${tournament.freeTournament ? '' : `<button type="button" id="tournamentDaysView" class="${view === 'days' ? 'primary' : 'secondary'}"
-          aria-pressed="${view === 'days'}">Spieltage &amp; Elo</button>`}
+        <button type="button" id="tournamentDaysView" class="${view === 'days' ? 'primary' : 'secondary'}"
+          aria-pressed="${view === 'days'}">${tournament.freeTournament ? 'Spieltage' : 'Spieltage &amp; Elo'}</button>
       </nav>`);
     $('tournamentRoundsView').onclick = () => showTournamentView('rounds');
     $('tournamentStandingsView').onclick = () => showTournamentView('standings');
