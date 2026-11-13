@@ -924,7 +924,7 @@
     return pairRound(null, rounds);
   }
 
-  function saveTournament(keepHistory = true) {
+  function saveTournament(keepHistory = true, replace = false) {
     const before = committed;
     const next = JSON.stringify(tournament);
     if (next !== committed) {
@@ -934,7 +934,7 @@
       redoStates = []; committed = next;
     }
     localStorage.setItem(key, next);
-    publishTournament(before);
+    publishTournament(before, replace);
     renderTournament();
   }
 
@@ -1461,42 +1461,29 @@
         if (backup?.app !== 'Snooker Swiss Tournament' || backup.version !== 1 || !validBackup(backup.tournament)) {
           throw new Error('Ungültige Turnierdatei');
         }
-        if (tournament && !confirm('Den aktuellen Turnierstand durch die Sicherung ersetzen?')) return;
-        const incoming = backup.tournament;
-        const opposite = tournament && Boolean(tournament.freeTournament) !== Boolean(incoming.freeTournament);
-        const previous = opposite ? tournament.parkedTournament : tournament;
-        const parkedTournament = opposite ? unpairedTournament(tournament)
-          : tournament?.parkedTournament ?? incoming.parkedTournament;
-        const parkedAt = opposite ? Date.now() : tournament?.parkedAt ?? incoming.parkedAt;
-        if (incoming.freeTournament) {
-          tournament = {...incoming, parkedTournament, parkedAt};
-        } else {
-          const seasonStarted = Math.max(previous?.seasonStarted ?? 0, incoming.seasonStarted ?? 0);
-          const archive = new Map((incoming.seasonArchive ?? []).map(season => [season.ended, season]));
-          for (const season of previous?.seasonArchive ?? []) archive.set(season.ended, season);
-          tournament = {...incoming, parkedTournament, parkedAt, seasonStarted,
-            elo:carryElo(previous, incoming),
-            yearDays:carryYearDays(previous, incoming),
-            deletedDays:[...new Set([...(previous?.deletedDays ?? []), ...(incoming.deletedDays ?? [])])],
-            seasonArchive:[...archive.values()].sort((a,b) => b.ended - a.ended),
-            overallDays:overallDays(previous, incoming).filter(day => !seasonStarted || Number(day.id) >= seasonStarted)};
-        }
+        if (tournament && !confirm('Den gesamten gespeicherten Turnierstand auf diesem Gerät durch die Datei ersetzen? Ergebnisse, Saison- und Jahresarchive sowie Elo werden vollständig aus der Datei übernommen. Der bisherige Turnierverlauf kann danach nicht über Zurück wiederhergestellt werden.')) return;
+        tournament = backup.tournament;
+        remoteTournament = null;
+        undoStates = [];
+        redoStates = [];
+        archiveSelection = null;
+        eloExpanded = false;
         draftFreeTournament = null;
         drafting = false;
         openMatch = null;
         view = 'rounds';
-        saveTournament();
-        $('tournamentBackupStatus').textContent = 'Turnier wiederhergestellt.';
+        saveTournament(false, true);
+        $('tournamentBackupStatus').textContent = 'Turnierstand vollständig aus der Datei übernommen.';
       } catch (error) {
         $('tournamentBackupStatus').textContent = 'Turnier konnte nicht wiederhergestellt werden. Bitte eine gültige Turnier-Sicherung auswählen.';
       }
     };
   }
 
-  function publishTournament(before) {
-    if (before === committed) return;
+  function publishTournament(before, replace = false) {
+    if (before === committed && !replace) return;
     remoteTournament = null;
-    window.dispatchEvent(new CustomEvent('snooker-tournament-publish', {detail:{before, after:committed}}));
+    window.dispatchEvent(new CustomEvent('snooker-tournament-publish', {detail:{before, after:committed, replace}}));
   }
 
   window.addEventListener('snooker-tournament-connection', ({detail}) => {

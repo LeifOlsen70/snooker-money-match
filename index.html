@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#0f5f37">
-  <meta name="application-version" content="7.48">
+  <meta name="application-version" content="7.49">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="Snooker Match">
@@ -331,10 +331,10 @@ body.snookerFullscreenScore #scorerPage.displayOnly{background:#090613!important
 .appInfoLink {display:inline-block;margin:0 0 14px;padding:10px 16px;border:1px solid #a98b49;border-radius:12px;color:#f3ecd7;background:#382045;text-decoration:none;font-weight:700}
 body.snookerFullscreenTournament .appInfoLink,body.snookerFullscreenScore .appInfoLink {display:none}
 </style>
-  <link rel="stylesheet" href="tournament.css?v=7.48">
+  <link rel="stylesheet" href="tournament.css?v=7.49">
 </head>
 <body class="modeHome">
-<div id="appVersionTag" aria-label="App-Version 7.48">v7.48</div>
+<div id="appVersionTag" aria-label="App-Version 7.49">v7.49</div>
 <div class="app">
   <h1 class="clubBrand" aria-label="Flensburger Snooker Club – Snooker Money Match"><img src="flensburger-snooker-club.png" alt="Flensburger Snooker Club" width="430" height="125"><span class="visuallyHidden">Snooker Money Match</span></h1><div id="offlineStatus" class="hidden" aria-live="polite"></div>
 
@@ -699,6 +699,8 @@ function loadGameFromFile(event){
         winner:obj.winner ?? null,
         liveFrameScores:Array.isArray(obj.liveFrameScores) && obj.liveFrameScores.length===obj.players.length ? obj.liveFrameScores : obj.players.map(()=>0)
       };
+      lastMatchTransition = null;
+      clearRedo();
       persist();
       $('setup').classList.add('hidden');
       showView('scorer');
@@ -1202,7 +1204,8 @@ const tournamentKey='snookerSwissTournamentV1';
 const tournamentPendingKey='snookerSwissPendingSyncV1';
 let sendingTournament=null;
 function persistTournamentQueue(){
-  const queued=sendingTournament ? {...sendingTournament,after:pendingTournament?.after??sendingTournament.after} : pendingTournament;
+  const queued=pendingTournament?.replace ? pendingTournament
+    : sendingTournament ? {...sendingTournament,after:pendingTournament?.after??sendingTournament.after} : pendingTournament;
   if(queued)localStorage.setItem(tournamentPendingKey,JSON.stringify(queued));
   else localStorage.removeItem(tournamentPendingKey);
 }
@@ -1255,7 +1258,7 @@ async function flushTournament(){
       const state=snap.data();
       const previousRevision=state?.tournamentRevision??0;
       const remote=state?.tournamentSync??null;
-      const raw=batch.seed
+      const raw=batch.replace ? batch.after : batch.seed
         ? remote??batch.after
         : JSON.stringify(mergeTournament(JSON.parse(batch.before),JSON.parse(batch.after),JSON.parse(remote??'null')));
       if(raw===remote)return {raw,revision:previousRevision};
@@ -1266,11 +1269,14 @@ async function flushTournament(){
     tournamentConnection('Turnier live synchronisiert.');
   }catch(err){
     if(err.message==='tournament-conflict'){
-      pendingTournament=null;
-      rejected=true;
-      tournamentConnection('Gleichzeitige Änderung. Bitte letzten Stand prüfen und die Eingabe bei Bedarf wiederholen.');
+      if(!pendingTournament?.replace){
+        pendingTournament=null;
+        rejected=true;
+        tournamentConnection('Gleichzeitige Änderung. Bitte letzten Stand prüfen und die Eingabe bei Bedarf wiederholen.');
+      }
     }else{
-      pendingTournament={...batch,after:pendingTournament?.after??batch.after};
+      pendingTournament=pendingTournament?.replace ? pendingTournament
+        : {...batch,after:pendingTournament?.after??batch.after};
       tournamentConnection('Turnier lokal gespeichert. Live-Sync ausstehend: '+(err.code||err.message));
       return;
     }
@@ -1287,7 +1293,7 @@ async function flushTournament(){
 }
 window.addEventListener('snooker-tournament-publish',({detail})=>{
   if(!permitted())return;
-  pendingTournament=pendingTournament ? {...pendingTournament,after:detail.after} : detail;
+  pendingTournament=detail.replace ? detail : pendingTournament ? {...pendingTournament,after:detail.after} : detail;
   persistTournamentQueue();
   flushTournament();
 });
@@ -1446,7 +1452,7 @@ e('fbLoad').onclick=async()=>{if(!permitted()){msg('Bitte zuerst anmelden.');ret
  btn.addEventListener('click',()=>setDisplay(!page.classList.contains('displayOnly')));
 })();
 </script>
-<script src="pdf-export.js?v=7.48"></script>
-<script src="tournament.js?v=7.48"></script>
+<script src="pdf-export.js?v=7.49"></script>
+<script src="tournament.js?v=7.49"></script>
 </body>
 </html>
