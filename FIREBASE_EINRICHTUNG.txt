@@ -1,0 +1,36 @@
+Snooker Money Match v7.50 – Benutzerkonten einrichten
+
+1. Firebase-Projekt „snooker-money-match“ öffnen
+https://console.firebase.google.com/project/snooker-money-match/overview
+
+2. Authentication > Sign-in method
+E-Mail/Passwort aktivieren. Nutzer können über „Neues Konto registrieren“ in der App ihr Konto selbst erstellen. Ein bestehendes Konto kann direkt angemeldet werden.
+
+3. Authentication > Settings > Authorized domains
+Die tatsächlich verwendete App-Domain muss freigegeben sein, z. B. leifolsen70.github.io.
+
+4. Firestore Database > Rules
+Die Datei firestore.rules enthält die vollständigen Regeln für ein Projekt, das ausschließlich diesen Snooker-Datenbereich verwendet.
+Die Regel für /privateSnooker/{userId} erlaubt jedem Konto ausschließlich sein eigenes Dokument.
+Vor Veröffentlichung die bisherigen Regeln sichern. Falls das Projekt weitere Anwendungen enthält, deren benötigte Regeln erhalten und den Block /privateSnooker/{userId} gezielt ersetzen. Übergreifende Regeln dürfen keine Zugriffe auf fremde privateSnooker-Dokumente erlauben.
+Anschließend veröffentlichen.
+
+5. GitHub-Update
+Alle Webdateien dieser Version aus dem entpackten ZIP hochladen. Die Dateien firestore.rules und diese Anleitung gehören zur Firebase-Einrichtung. Das Hochladen dieser Regeln auf GitHub veröffentlicht sie nicht in Firebase.
+App auf beiden Geräten aktualisieren. Versionsanzeige muss v7.50 sein.
+
+6. Anmeldung und Datenübernahme
+Die Startseite zeigt Einzel, Club Liga und Freies Turnier. Die erste Auswahl öffnet die Anmeldung mit Registrierung und Passwort-zurücksetzen.
+Auf Geräten, die mit demselben Konto angemeldet sind, werden die eigenen Daten synchronisiert.
+Die Anmeldung wird auf dem Gerät gespeichert. „Abmelden / Konto wechseln“ ermöglicht den Kontowechsel.
+Jedes Konto besitzt einen getrennten lokalen Datenbereich. Beim Kontowechsel wird die App neu geladen.
+Beim erstmaligen Anmelden des bisherigen Betreiberkontos werden vorhandene lokale Spielstände und die Spielerliste einmalig diesem Konto zugeordnet. Neue Konten beginnen mit einem eigenen Bereich.
+Ein angemeldetes Konto kann bereits gespeicherte eigene Daten auch offline weiterverwenden. Für die erste Registrierung/Anmeldung ist Internet erforderlich.
+
+7. Funktionsprüfung nach der Firebase-Einrichtung
+Mit Konto A auf zwei Geräten anmelden und einen Teststand eingeben. Beide Geräte müssen denselben Stand sehen.
+Mit einem anderen Konto B anmelden. Dort muss ein eigener Spielstand erscheinen.
+Wieder zu Konto A wechseln. Dessen Spielstand muss wieder vorhanden sein.
+Bei einer JSON-Datei übernimmt das jeweils angemeldete Konto den vollständigen Dateistand nach der vorhandenen Bestätigung.
+
+Die Firebase-Regeln konnten in der Entwicklungsumgebung nicht im angemeldeten Projekt veröffentlicht werden. Die App-Dateien enthalten keine Kennwörter.

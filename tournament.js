@@ -1,5 +1,6 @@
 (() => {
   'use strict';
+  const localStorage = window.snookerStorage;
 
   const key = 'snookerSwissTournamentV1';
   const panel = $('tournamentMode');
@@ -11,7 +12,7 @@
   let draftFreeTournament = null;
   let view = 'rounds';
   let fullscreen = false;
-  let liveStatus = 'Für Live-Sync auf beiden Geräten im Einzelmodus anmelden.';
+  let liveStatus = 'Für Live-Sync auf beiden Geräten mit demselben Konto anmelden.';
   let remoteTournament = null;
   let sharedView = null;
   let undoStates = [], redoStates = [];
@@ -248,10 +249,15 @@
     if (mode === 'tournament') renderTournament();
   }
 
-  $('openSingle').onclick = () => showMode('single');
+  window.addEventListener('snooker-account-enter', ({detail}) => {
+    if (detail === 'single') showMode('single');
+    else if (detail === 'club') openTournamentType(false);
+    else if (detail === 'free') openTournamentType(true);
+  });
+  $('openSingle').onclick = () => window.snookerAccount.request('single');
   $('singleHome').onclick = () => showMode('home');
-  $('openFreeTournament').onclick = () => openTournamentType(true);
-  $('openClubLeague').onclick = () => openTournamentType(false);
+  $('openFreeTournament').onclick = () => window.snookerAccount.request('free');
+  $('openClubLeague').onclick = () => window.snookerAccount.request('club');
 
   // Only confirmed results and assigned byes count toward the standings.
   function standings(rounds = tournament.rounds, data = tournament) {
