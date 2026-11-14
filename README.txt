@@ -1,4 +1,4 @@
-Snooker Money Match v7.58
+Snooker Money Match v7.60
 Alle Dateien auf GitHub hochladen und die App anschließend neu öffnen.
 Im Turniermodus sichern und laden die beiden Schaltflächen eine JSON-Datei.
 Die Matchzeit startet mit der Tischzuweisung und endet beim Speichern des Ergebnisses.
@@ -7,6 +7,14 @@ Alternativ die Schaltflächen Runden und Zwischenstand verwenden.
 In der Tabelle schaltet „Vollbild an/aus“ die große Anzeige ein und aus.
 Gespielte Breaks ab 20 stehen in der Tabelle und bei den abgeschlossenen Matches.
 Turniere werden lokal gespeichert. Mit Firebase-Anmeldung wird der Turnierstand automatisch über beide Geräte synchronisiert.
+
+Neu in v7.60 – Korrektur auf Basis von v7.58:
+- Firebase-Fehler „Nested arrays are not supported“ bei vollständigen Ergebnissen mit Break-Listen behoben.
+- Break-Listen werden nur für die Datenbankübertragung umgewandelt und beim Empfang wiederhergestellt. JSON-Dateien und Spielauswertung behalten ihr bisheriges Format.
+- Manuelle Ergebnisübernahme, importierte Ergebnisstände sowie Rückgängig/Wiederholen geprüft.
+- Lange Tischcodes und Kontentrennung aus v7.58 bleiben erhalten. v7.59 mit kurzen Codes ist nicht enthalten.
+- Firebase-Regeln sind unverändert identisch mit v7.58. Kein erneutes Veröffentlichen erforderlich.
+- Alle beteiligten Geräte auf v7.60 aktualisieren. Bestehende Daten vorsorglich zuvor als JSON sichern.
 
 Neu in v7.58 – Tischcodes ohne E-Mail:
 - Jeder normale E-Mail-/Passwort-Nutzer kann seine eigenen Tischgeräte verbinden.
@@ -17,7 +25,7 @@ Neu in v7.58 – Tischcodes ohne E-Mail:
 - Live-Punkte, Frame-Ergebnisse, automatische Breaks ab 20 und Ergebnisübernahme bleiben erhalten.
 - Bis zu sechs Tischgeräte entsprechend der eingestellten Tischzahl. Ein Gerät kann auch nur zur Anzeige genutzt werden.
 - Tisch verlassen trennt nur dieses Gerät. Alte Tischkonten bleiben in Firebase bestehen, werden aber nicht mehr benötigt.
-- Vor Verwendung die neuen firestore.rules veröffentlichen. Authentication: E-Mail/Passwort und Anonym aktivieren.
+- Die bereits veröffentlichten firestore.rules aus v7.58 bleiben gültig. Authentication: E-Mail/Passwort und Anonym aktivieren.
 - Spark beibehalten: kein zusätzlicher Server, keine Cloud Functions, keine Abrechnung aktivieren.
 - Anleitung: TISCHMONITORE_EINRICHTUNG.txt.
 
@@ -208,7 +216,7 @@ Neu in v7.18:
 - Bestehende JSON-Turniersicherungen können weiterhin geladen werden.
 
 Installation: Alle enthaltenen Dateien im bisherigen GitHub-Ordner ersetzen.
-App danach neu öffnen, gegebenenfalls einmal aktualisieren. Unten muss v7.58 stehen.
+App danach neu öffnen, gegebenenfalls einmal aktualisieren. Unten muss v7.60 stehen.
 Vor dem Update das laufende Turnier als JSON sichern.
 Die Speicherung einer Datei wird je nach Gerät über Teilen oder Download ausgeführt.
 

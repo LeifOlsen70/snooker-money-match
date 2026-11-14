@@ -2,6 +2,14 @@ export function createTableSync({auth,db,doc,getDoc,onSnapshot,runTransaction}){
   const model=window.SnookerTableScore;
   let role=null,user=null,stops=[],cache=new Map(),organizer=null,queue=Promise.resolve(),syncCount=0,session=0;
   const ref=slot=>doc(db,'snookerTableBoards',organizer,'tables',String(slot));
+  // Firestore forbids arrays directly inside arrays. Keep the model/JSON format
+  // unchanged; only manual-result break lists use a map on the wire.
+  function encodeState(state){return {...state,events:state.events.map(event=>event.type==='manual'?{...event,breaks:{player0:event.breaks[0],player1:event.breaks[1]}}:event)}}
+  function decodeBoard(board){
+    if(!board?.state)return board;
+    return {...board,state:{...board.state,events:board.state.events.map(event=>event.type==='manual'&&!Array.isArray(event.breaks)?{...event,breaks:[event.breaks.player0,event.breaks.player1]}:event)}};
+  }
+  function encodeBoard(board){return {...board,state:encodeState(board.state)}}
   const same=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
   const active=()=>user&&auth.currentUser?.uid===user.uid;
   const notify=()=>{if(active())window.dispatchEvent(new CustomEvent('snooker-table-boards',{detail:{role,boards:[...cache.values()]}}))};
@@ -14,7 +22,7 @@ export function createTableSync({auth,db,doc,getDoc,onSnapshot,runTransaction}){
       stops.push(onSnapshot(ref(slot),{includeMetadataChanges:true},snap=>{
         if(token!==session||!active())return;
         if(snap.metadata.fromCache||snap.metadata.hasPendingWrites)return;
-        const board=snap.data();
+        const board=decodeBoard(snap.data());
         if(board?.assignment){try{model.derive(board.state,board.assignment.rules)}catch(err){error(err);return;}}
         if(board){cache.set(slot,{...board,slot});if(!syncCount)notify()}
         else {cache.delete(slot);if(!syncCount)notify()}
@@ -44,7 +52,7 @@ export function createTableSync({auth,db,doc,getDoc,onSnapshot,runTransaction}){
         const selected=live??old??matches.at(-1);
         await runTransaction(db,async tx=>{
           if(token!==session||!active())throw Error('Anmeldung wurde gewechselt.');
-          const existing=(await tx.get(ref(slot))).data();
+          const existing=decodeBoard((await tx.get(ref(slot))).data());
           const key=tournamentKey(snapshot),newTournament=existing?.tournamentKey!==key;
           const joinToken=newTournament?randomToken():existing.joinToken;
           const shared={schema:2,tableNumber:slot,tournamentKey:key,joinToken,joinOpen:slot<=snapshot.tables&&!snapshot.ended};
@@ -52,7 +60,7 @@ export function createTableSync({auth,db,doc,getDoc,onSnapshot,runTransaction}){
           if(newTournament)tx.set(doc(db,'snookerTableInvites',joinToken),{owner:organizer,slot,tournamentKey:key});
           if(!selected){
             const next={...shared,assignment:null,enabled:false,state:model.initial((existing?.state?.revision??0)+1)};
-            if(newTournament||existing?.assignment||existing?.enabled||existing?.joinOpen!==shared.joinOpen)tx.set(ref(slot),next);
+            if(newTournament||existing?.assignment||existing?.enabled||existing?.joinOpen!==shared.joinOpen)tx.set(ref(slot),encodeBoard(next));
             return;
           }
           const {match,r,m}=selected,a=assignment(snapshot,r,m,match),enabled=!snapshot.ended;
@@ -70,24 +78,24 @@ export function createTableSync({auth,db,doc,getDoc,onSnapshot,runTransaction}){
             }
           }
           const next={...shared,assignment:a,enabled,state};
-          if(!same(existing,next))tx.set(ref(slot),next);
+          if(!same(existing,next))tx.set(ref(slot),encodeBoard(next));
         });
       }
     };
-    const result=queue.then(job).catch(error).finally(()=>{if(token===session){syncCount--;if(!syncCount)notify()}});
+    const result=queue.then(job).then(()=>{if(token===session&&active())window.dispatchEvent(new Event('snooker-table-synced'))}).catch(error).finally(()=>{if(token===session){syncCount--;if(!syncCount)notify()}});
     queue=result;return result;
   }
   async function command(slot,id,revision,action){
     if(!active())throw Error('Bitte erneut anmelden.');
     const token=session;
     return await runTransaction(db,async tx=>{
-      const board=(await tx.get(ref(slot))).data();
+      const board=decodeBoard((await tx.get(ref(slot))).data());
       if(token!==session||!active())throw Error('Anmeldung wurde gewechselt.');
       if(!board?.enabled||board.assignment?.id!==id)throw Error('Die Tischzuordnung wurde geändert oder das Turnier beendet.');
       if(board.state.revision!==revision)throw Error('Der Spielstand wurde inzwischen geändert. Bitte prüfen und erneut eingeben.');
       if(action.type==='manual'&&role!=='owner')throw Error('Nur die Turnierleitung darf Ergebnisse direkt korrigieren.');
       const state=model.command(board.state,board.assignment.rules,{...action,at:Date.now()});
-      tx.update(ref(slot),{state});
+      tx.update(ref(slot),{state:encodeState(state)});
       return {...board,state,slot};
     });
   }

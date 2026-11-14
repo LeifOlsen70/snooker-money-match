@@ -1,8 +1,8 @@
-Snooker Money Match v7.58 – Tischcodes ohne E-Mail
+Snooker Money Match v7.60 – Tischcodes ohne E-Mail
 
-1. Bestehenden Spielstand vor dem Update als JSON sichern. Alle Webdateien auf GitHub hochladen und die App aktualisieren, bis v7.58 erscheint.
+1. Bestehenden Spielstand vor dem Update als JSON sichern. Alle Webdateien auf GitHub hochladen und die App aktualisieren, bis v7.60 erscheint.
 2. Firebase > Authentication > Anmeldemethode: E-Mail/Passwort UND Anonym müssen aktiviert sein. Anonym ist in deinem Projekt bereits vorhanden.
-3. Die neuen beiliegenden firestore.rules unter Firestore Database > Regeln veröffentlichen. Die bisherigen Regeln vor dem Ersetzen sichern. Die bekannten Pool-Zugänge bleiben enthalten. Eigene weitere Projektregeln gegebenenfalls erhalten. GitHub-Upload allein veröffentlicht keine Firebase-Regeln.
+3. Die bereits veröffentlichten Firestore-Regeln aus v7.58 bleiben gültig. Keine erneute Veröffentlichung erforderlich.
 4. Spark beibehalten. Keine Abrechnung aktivieren, keine Cloud Functions anlegen. Diese Version benötigt keinen zusätzlichen Server. Das kostenlose Firebase-Kontingent wird weiterhin genutzt; wird es ausgeschöpft, kann die Synchronisation aussetzen.
 5. Als beliebiger Spielleiter mit eigenem E-Mail-/Passwort-Konto anmelden und ein Turnier erstellen bzw. öffnen. Ohne Anmeldung bleibt das Zählwerk lokal.
 6. Reiter Score Monitor > Tischcodes anzeigen. Es erscheint je eingestelltem Tisch ein zufälliger 32-stelliger Code. Die Codes kopieren und nur an die vorgesehenen Tischgeräte weitergeben. Der Besitz des Codes erlaubt Anzeige und Punkteingabe dieses Tisches.
@@ -16,3 +16,5 @@ Snooker Money Match v7.58 – Tischcodes ohne E-Mail
 14. Alle Geräte benötigen Internet. Offline-Punkte werden nicht als erfolgreich gespeichert bestätigt. Der Spielleiter sollte die App geöffnet halten; gespeicherte Tischstände werden beim späteren Öffnen wieder empfangen. Vollbild wird je Gerät separat gewählt.
 
 Technische Prüfung: Automatisierte Modelltests für Punkte/Breaks, Frames, Rückgängig/Wiederholen und Ergebnisübernahme. Simulierte Datenbanktests für getrennte Spielleiter, Tischberechtigungen, Codewechsel, abgelaufene Codes und erhaltene Verbindung bei Neuladen. Kein echter Firebase-Mehrgerätetest und kein Firebase-Regel-Emulatortest in dieser Entwicklungsumgebung. Nach dem Veröffentlichen zuerst ein kurzes Testturnier mit zwei Geräten durchführen.
+
+Korrektur v7.60: Ergebnis-Break-Listen werden Firestore-kompatibel übertragen. Bitte alle beteiligten Geräte auf v7.60 aktualisieren. Bestehende lange Tischcodes können weiterverwendet werden.

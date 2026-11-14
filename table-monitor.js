@@ -149,6 +149,7 @@
     if(tableSlot){const board=boards.find(b=>b.slot===tableSlot);if(board?.assignment?.id&&board.assignment.id!==previousAssignment)landing=false;status(board?.assignment?'Live verbunden.':'Verbunden · Warten auf die Turnierleitung.');}
     reconcile();
   });
+  window.addEventListener('snooker-table-synced',()=>status('Tischstände synchronisiert.'));
   window.addEventListener('snooker-table-error',({detail})=>{status(detail);renderTable()});
   document.addEventListener('click',e=>{if(e.target.closest('.appTabStrip > button'))document.body.classList.remove('monitorOverviewFullscreen')},true);
   window.addEventListener('offline',()=>status('Offline – Eingaben benötigen eine Verbindung. Der angezeigte Stand kann veraltet sein.'));

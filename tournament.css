@@ -311,7 +311,7 @@ body.snookerFullscreenTournament .accountBar,body.snookerFullscreenScore .accoun
 
 .accountBar [hidden], .accountDialog [hidden] {display:none!important}
 
-/* v7.58: four visible tabs; additional entries scroll horizontally. */
+/* v7.60: four visible tabs; additional entries scroll horizontally. */
 .homeInfoChoice {display:flex;align-items:center;justify-content:center;box-sizing:border-box;text-decoration:none;text-align:center;font-size:inherit;font-weight:800;padding:12px;border-radius:16px;min-height:46px;background:linear-gradient(#ffe39b,#bd903c);color:#1a1220}
 .appTabStrip, #tournamentMode .appTabStrip {display:flex!important;flex-wrap:nowrap!important;gap:6px!important;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;scrollbar-width:none;touch-action:pan-x pinch-zoom;overscroll-behavior-x:contain;max-width:100%;box-sizing:border-box}
 .appTabStrip::-webkit-scrollbar {display:none}
@@ -324,7 +324,7 @@ body.appRulesOpen #singleMode > :not(nav):not(#singleHome), body.appRulesOpen #t
 body.appRulesOpen .appTabStrip > button:not([data-rules-tab]) {background:#362045!important;color:#f3ecd7!important}
 .appTabStrip.hidden {display:none!important}
 .modeChoices > button, .modeChoices > .homeInfoChoice {font:inherit;font-weight:800;padding:13px 16px;min-height:46px;border-radius:13px}
-/* v7.58: common page-end actions and navigation directly below history. */
+/* v7.60: common page-end actions and navigation directly below history. */
 #singleHome,#tournamentHome {display:none!important}
 .pageFooter {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:24px auto 12px;width:100%;max-width:680px}
 .pageFooter #accountBar {display:contents}
@@ -345,7 +345,7 @@ body.snookerFullscreenScore .pageFooter,body.snookerFullscreenTournament .pageFo
 .tableAccessDialog [role=status],.tableAccessDialog [role=alert] {color:#ffdd91}
 .tableAccessDialog [hidden] {display:none!important}
 .pageFooter #tableAccountsAdmin {grid-column:1/-1;grid-row:3}
-/* v7.58: tournament table scoring and the director's live overview. */
+/* v7.60: tournament table scoring and the director's live overview. */
 #tableMode[hidden] {display:none!important}
 .monitorOverviewGrid {display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:12px}
 .monitorCard {padding:12px;border:1px solid #bb914b;border-radius:16px;background:linear-gradient(140deg,#301442,#10091c);margin-bottom:12px}

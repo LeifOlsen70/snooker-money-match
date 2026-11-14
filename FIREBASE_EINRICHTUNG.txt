@@ -1,11 +1,11 @@
-Snooker Money Match v7.58 – Firebase einrichten
+Snooker Money Match v7.60 – Firebase einrichten
 
 Projekt: https://console.firebase.google.com/project/snooker-money-match/overview
 
 1. Authentication > Anmeldemethode: E-Mail/Passwort und Anonym aktivieren. Normale Nutzer registrieren sich selbst mit E-Mail und Passwort. Tischgeräte verwenden eine separate anonyme Sitzung.
 2. Authentication > Einstellungen > Autorisierte Domains: tatsächliche GitHub-App-Domain freigeben.
-3. Firestore Database > Regeln: bisherige Regeln sichern und die neue firestore.rules veröffentlichen. Bekannte Pool-Zugänge sind enthalten. Zusätzliche eigene Regeln nicht versehentlich entfernen.
-4. Alle Webdateien auf GitHub aktualisieren, bis die App v7.58 anzeigt. Das Hochladen von firestore.rules auf GitHub veröffentlicht keine Firebase-Regeln.
+3. Die bereits veröffentlichten Firestore-Regeln aus v7.58 bleiben unverändert gültig. Die enthaltene firestore.rules ist bytegleich mit v7.58; keine erneute Veröffentlichung erforderlich.
+4. Alle Webdateien auf GitHub aktualisieren, bis die App v7.60 anzeigt. Das Hochladen von firestore.rules auf GitHub veröffentlicht keine Firebase-Regeln.
 5. Kein Tarifwechsel, keine Abrechnung und keine Cloud Functions erforderlich. Spark beibehalten.
 6. Mit E-Mail-/Passwort-Konto anmelden und Turnier öffnen. Score Monitor > Tischcodes anzeigen. Auf dem Tischgerät Mit Tischcode beitreten > Code einfügen.
 7. Testen: Partie an Tisch 1 starten, am Tischgerät 24 Punkte eingeben, auf dem Spielleitergerät den Live-Score prüfen. Frames abschließen und Ergebnis/Break in der Tabelle prüfen. Neues Testturnier erstellen: alter Code muss ungültig werden.
@@ -17,4 +17,4 @@ Datenzugriff:
 - snookerTableInvites/{code}: nur direkter Abruf eines zufälligen Codes, keine Auflistung. Ein alter Code kann nicht erneut beitreten, sobald die Tischzuordnung erneuert bzw. das Turnier beendet ist.
 - Codes sind Zugangsschlüssel; vertraulich an die Tischgeräte weitergeben. Keine Passwörter im Code.
 
-Die Regeln sind mitgeliefert, wurden hier aber nicht im Projekt veröffentlicht oder mit einem Firebase-Emulator geprüft. Einrichtung und Test vor dem produktiven Turnier durchführen.
+Die unveränderten Regeln sind mitgeliefert; ein Firebase-Emulatortest wurde hier nicht durchgeführt. Einrichtung und Test vor dem produktiven Turnier durchführen.
