@@ -31,7 +31,7 @@
     let state=match.scoreMonitor?.state??model.initial();
     try{model.derive(state,a.rules)}catch{state=model.initial()}
     if(match.result&&!model.derive(state,a.rules).complete)state=model.command(state,a.rules,{type:'manual',frames:match.result.frames,breaks:match.result.breaks,at:match.finishedAt??Date.now()});
-    return {slot:match.table,tableNumber:match.table,assignment:a,state,enabled:!data.ended,_local:match.table>3||window.snookerTableSync?.role!=='owner'};
+    return {slot:match.table,tableNumber:match.table,assignment:a,state,enabled:!data.ended,_local:window.snookerTableSync?.role!=='owner'};
   }
   async function send(board,action){
     if(busy)return;busy=true;
@@ -97,15 +97,17 @@
       const items=all.filter(x=>x.match.table===slot),current=items.find(x=>!x.match.result)??items.at(-1);
       if(current)list.push(forMatch(data,current.r,current.m,current.match));else list.push({slot});
     }
-    container.innerHTML=`<div class="card monitorOverview"><div class="tournamentStandingsHeader"><h3>Score Monitor</h3><button type="button" data-monitor-full>Vollbild ${document.body.classList.contains('monitorOverviewFullscreen')?'aus':'an'}</button></div><p data-monitor-message role="status">${escape(message)}</p><p class="small">${window.snookerTableSync?.role==='owner'?'Live-Verbindung zu Tisch 1–3.':'Lokales Zählwerk. Für die Verbindung zu Tischgeräten mit dem Betreiberkonto anmelden.'}</p><div class="monitorOverviewGrid">${list.map(board=>card(board,true)).join('')}</div></div>`;
+    container.innerHTML=`<div class="card monitorOverview"><div class="tournamentStandingsHeader"><h3>Score Monitor</h3><button type="button" data-monitor-full>Vollbild ${document.body.classList.contains('monitorOverviewFullscreen')?'aus':'an'}</button></div><button type="button" data-table-codes>Tischcodes anzeigen</button><p data-monitor-message role="status">${escape(message)}</p><p class="small">${window.snookerTableSync?.role==='owner'?'Live-Verbindung zu den Tischen dieses Turniers.':'Lokales Zählwerk. Für die Verbindung zu Tischgeräten mit deinem Spielleiterkonto anmelden.'}</p><div class="monitorOverviewGrid">${list.map(board=>card(board,true)).join('')}</div></div>`;
     bind(container,list);
+    container.querySelector('[data-table-codes]').onclick=()=>window.snookerTableCodes();
     container.querySelector('[data-monitor-full]').onclick=()=>{const on=document.body.classList.toggle('monitorOverviewFullscreen');container.querySelector('[data-monitor-full]').textContent=on?'Vollbild aus':'Vollbild an'};
   }
   function renderTable(){
     if(!tableSlot)return;
     const board=boards.find(b=>b.slot===tableSlot);
-    tablePage.innerHTML=`<div class="monitorTableHeader"><h2>Tisch ${tableSlot}</h2><button type="button" data-table-full>Vollbild ${document.body.classList.contains('tableMonitorFullscreen')?'aus':'an'}</button></div><p data-monitor-message role="status">${escape(message||(navigator.onLine?'Tischverbindung wird hergestellt …':'Offline – für den Tischbetrieb bitte Internet verbinden.'))}</p>${landing?'<button type="button" class="primary" data-table-return>Zur Partie</button>':card(board??{slot:tableSlot})}`;
+    tablePage.innerHTML=`<div class="monitorTableHeader"><h2>Tisch ${tableSlot}</h2><button type="button" data-table-leave>Tisch verlassen</button><button type="button" data-table-full>Vollbild ${document.body.classList.contains('tableMonitorFullscreen')?'aus':'an'}</button></div><p data-monitor-message role="status">${escape(message||(navigator.onLine?'Tischverbindung wird hergestellt …':'Offline – für den Tischbetrieb bitte Internet verbinden.'))}</p>${landing?'<button type="button" class="primary" data-table-return>Zur Partie</button>':card(board??{slot:tableSlot})}`;
     if(board?.assignment)bind(tablePage,[board]);
+    tablePage.querySelector('[data-table-leave]').onclick=()=>{if(confirm('Tischverbindung auf diesem Gerät beenden?'))window.snookerTableBackend.leave()};
     tablePage.querySelector('[data-table-full]').onclick=()=>{document.body.classList.toggle('tableMonitorFullscreen');renderTable()};
     tablePage.querySelector('[data-table-return]')?.addEventListener('click',()=>{landing=false;renderTable()});
   }

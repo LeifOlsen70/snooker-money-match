@@ -1,11 +1,11 @@
-import {initializeApp,deleteApp} from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js';
-import {getAuth,signInWithEmailAndPassword,createUserWithEmailAndPassword,sendPasswordResetEmail,setPersistence,browserLocalPersistence,inMemoryPersistence,signOut,onAuthStateChanged} from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-auth.js';
+import {initializeApp} from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js';
+import {getAuth,signInAnonymously,signInWithEmailAndPassword,createUserWithEmailAndPassword,sendPasswordResetEmail,setPersistence,browserLocalPersistence,inMemoryPersistence,signOut,onAuthStateChanged} from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-auth.js';
 import {getFirestore,doc,getDoc,setDoc,onSnapshot,runTransaction} from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore.js';
-import {createTableSync} from './table-sync.js?v=7.57';
+import {createTableSync} from './table-sync.js?v=7.58';
 const config={apiKey:'AIzaSyBgmv1v5APpPReJ4olWCusUhhGGevcvRcE',authDomain:'snooker-money-match.firebaseapp.com',projectId:'snooker-money-match',storageBucket:'snooker-money-match.firebasestorage.app',messagingSenderId:'423302158497',appId:'1:423302158497:web:706c1fec068959b7bbb8e0'};
 const localStorage = window.snookerStorage;
 const app=initializeApp(config),auth=getAuth(app),db=getFirestore(app),e=id=>document.getElementById(id),msg=t=>e('fbStatus').textContent=t;
-const permitted=()=>Boolean(auth.currentUser && localStorage.uid && auth.currentUser.uid===localStorage.uid);
+const permitted=()=>Boolean(!window.localStorage.getItem('snooker-table-code-device-v2') && auth.currentUser && !auth.currentUser.isAnonymous && localStorage.uid && auth.currentUser.uid===localStorage.uid);
 await setPersistence(auth,browserLocalPersistence);
 window.snookerAccount.bind({
   login:(name,password)=>signInWithEmailAndPassword(auth,window.snookerTableAccess.resolveName(name),password),
@@ -13,48 +13,39 @@ window.snookerAccount.bind({
   reset:email=>sendPasswordResetEmail(auth,email),
   logout:()=>signOut(auth)
 });
-const tableAdministrator='SRx2kZD2jzdM3Q6RVVOjioAuHuw1';
-const tableSync=createTableSync({auth,db,doc,getDoc,onSnapshot,runTransaction,owner:tableAdministrator});
+const tableSync=createTableSync({auth,db,doc,getDoc,onSnapshot,runTransaction});
+const deviceKey='snooker-table-code-device-v2';
+function deviceSetup(){try{return JSON.parse(window.localStorage.getItem(deviceKey))}catch{return null}}
+const deviceApp=initializeApp(config,'table-code-device-v2'),deviceAuth=getAuth(deviceApp),deviceDb=getFirestore(deviceApp);
+await setPersistence(deviceAuth,browserLocalPersistence);
+const deviceSync=createTableSync({auth:deviceAuth,db:deviceDb,doc,getDoc,onSnapshot,runTransaction});
 window.snookerTableSync=tableSync;
-function requireTableAdministrator(){
-  if(!permitted()||auth.currentUser.uid!==tableAdministrator||window.snookerAccount.guest)throw Error('Administratoranmeldung erforderlich.');
-}
 window.snookerTableBackend={
-  async list(){
-    requireTableAdministrator();
-    return (await getDoc(cloudDoc())).data()?.tableAccessAccounts??{};
+  async join(code){
+    const token=code.trim().toLowerCase().replace(/[\s-]/g,'');
+    if(!/^[a-f0-9]{32}$/.test(token))throw Error('Bitte den vollständigen Tischcode eingeben.');
+    if(!deviceAuth.currentUser)await signInAnonymously(deviceAuth);
+    const invite=(await getDoc(doc(deviceDb,'snookerTableInvites',token))).data();
+    if(!invite)throw Error('Tischcode nicht gefunden.');
+    try{await setDoc(doc(deviceDb,'snookerTableBoards',invite.owner,'tables',String(invite.slot),'members',deviceAuth.currentUser.uid),{token})}
+    catch(err){if(err.code==='permission-denied')throw Error('Dieser Tischcode ist abgelaufen oder das Turnier beendet. Bitte den aktuellen Code verwenden.');throw err}
+    window.localStorage.setItem(deviceKey,JSON.stringify({owner:invite.owner,slot:invite.slot,token}));
+    window.location.reload();
   },
-  async provision(slot,email,password,existing){
-    requireTableAdministrator();
-    if(![1,2,3].includes(slot))throw Error('Ungültiger Tisch.');
-    // A separate in-memory Auth instance keeps the administrator signed in.
-    const temporaryApp=initializeApp(config,'table-setup-'+crypto.randomUUID());
-    const temporaryAuth=getAuth(temporaryApp);
-    try{
-      await setPersistence(temporaryAuth,inMemoryPersistence);
-      const result=existing?await signInWithEmailAndPassword(temporaryAuth,email,password):await createUserWithEmailAndPassword(temporaryAuth,email,password);
-      if(result.user.uid===tableAdministrator)throw Error('Dein Administratorkonto darf nicht als Tischkonto eingerichtet werden.');
-      const entry={uid:result.user.uid,email:result.user.email,table:slot};
-      requireTableAdministrator();
-      await runTransaction(db,async transaction=>{
-        const ref=doc(db,'privateSnooker',tableAdministrator);
-        const accounts=(await transaction.get(ref)).data()?.tableAccessAccounts??{};
-        if(Object.entries(accounts).some(([key,value])=>Number(key)!==slot&&value.uid===entry.uid))throw Error('Dieses Konto ist bereits einem anderen Tisch zugeordnet.');
-        transaction.set(ref,{tableAccessAccounts:{...accounts,[slot]:entry}},{merge:true});
-      });
-      await tableSync.start(auth.currentUser);
-      return entry;
-    }finally{
-      try{await signOut(temporaryAuth)}finally{await deleteApp(temporaryApp)}
-    }
-  },
-  async reset(slot){
-    requireTableAdministrator();
-    const entry=(await this.list())[slot];
-    if(!entry?.email)throw Error('Tischkonto ist noch nicht eingerichtet.');
-    await sendPasswordResetEmail(auth,entry.email);
+  async leave(){window.localStorage.removeItem(deviceKey);await signOut(deviceAuth);window.location.reload()},
+  async codes(){
+    if(!permitted()||auth.currentUser.isAnonymous||window.snookerAccount.guest)throw Error('Bitte als Spielleiter mit E-Mail und Passwort anmelden.');
+    const data=window.snookerTournamentBridge.current;if(!data)throw Error('Zuerst ein Turnier erstellen oder laden.');
+    return await tableSync.codes(data);
   }
 };
+onAuthStateChanged(deviceAuth,async account=>{
+  const setup=deviceSetup();if(!setup)return;
+  window.snookerTableSync=deviceSync;
+  window.snookerMonitors.activateTable(setup.slot);
+  if(!account){window.dispatchEvent(new CustomEvent('snooker-table-error',{detail:'Tischanmeldung fehlt. Bitte mit dem aktuellen Tischcode erneut beitreten.'}));return}
+  await deviceSync.start(account,setup.slot,setup.owner);
+});
 window.dispatchEvent(new Event('snooker-table-backend-ready'));
 let unsubscribe=null, initialized=false, writeTimer=null, writing=false, pending=false;
 let lastCloudRaw=null;
@@ -264,6 +255,7 @@ window.addEventListener('snooker-state-changed',syncNow);
 window.addEventListener('online',()=>{if(pending)flush();flushTournament();flushTable();flushRoster()});
 onAuthStateChanged(auth,u=>{
   tableSync.stop();
+  if(deviceSetup())return;
   window.snookerMonitors.deactivate();
   if(window.snookerAccount.guest){
     msg('Ohne Anmeldung – nur lokal auf diesem Gerät gespeichert.');
@@ -279,13 +271,6 @@ onAuthStateChanged(auth,u=>{
   tournamentConnection(permitted()?'Turnier-Synchronisierung wird verbunden …':'Bitte mit deinem Konto anmelden.');
   if(!u){msg('Nicht angemeldet');return}
   if(!permitted())return;
-  const tableIdentity=window.snookerTableAccess.identityFor(u.email);
-  if(tableIdentity){
-    window.snookerMonitors.activateTable(tableIdentity.table);
-    window.snookerAccount.ready(u);
-    tableSync.start(u,tableIdentity.table);
-    return;
-  }
   try{pendingTournament=JSON.parse(localStorage.getItem(tournamentPendingKey));}catch{pendingTournament=null;}
   try{rosterQueue=JSON.parse(localStorage.getItem(rosterQueueKey))??[];}catch{rosterQueue=[];}
   msg('⏳ Verbinde Live-Synchronisierung …');
@@ -327,7 +312,7 @@ onAuthStateChanged(auth,u=>{
         window.dispatchEvent(new CustomEvent('snooker-single-received',{detail:raw}));
       }
     }
-    if(firstSnapshot){window.snookerAccount.ready(u);if(u.uid===tableAdministrator)tableSync.start(u);}
+    if(firstSnapshot){window.snookerAccount.ready(u);tableSync.start(u);}
   },err=>{
     if(!permitted())return;
     const reason=err.code||err.message;

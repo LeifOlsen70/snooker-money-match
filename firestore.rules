@@ -1,17 +1,33 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /privateSnooker/{userId} {
-      allow read, write: if request.auth != null
-        && request.auth.uid == userId;
+    function signedIn() { return request.auth != null; }
+    function normalAccount() {
+      return signedIn() && request.auth.token.firebase.sign_in_provider != 'anonymous';
     }
-    // Independent table documents: table devices can only edit their own score.
+    match /privateSnooker/{userId} {
+      allow read, write: if signedIn() && request.auth.uid == userId;
+    }
+    // Unpredictable 128-bit invitation codes. Direct lookup only; no listing.
+    match /snookerTableInvites/{token} {
+      allow get: if signedIn();
+      allow list: if false;
+      allow create, update: if normalAccount()
+        && request.resource.data.owner == request.auth.uid
+        && token.matches('^[a-f0-9]{32}$')
+        && request.resource.data.keys().hasOnly(['owner','slot','tournamentKey'])
+        && request.resource.data.slot is int
+        && request.resource.data.slot >= 1 && request.resource.data.slot <= 6
+        && (!exists(/databases/$(database)/documents/snookerTableInvites/$(token))
+          || resource.data.owner == request.auth.uid);
+      allow delete: if normalAccount() && resource.data.owner == request.auth.uid;
+    }
     match /snookerTableBoards/{organizer}/tables/{slot} {
-      function isOwner() {
-        return request.auth != null && request.auth.uid == organizer;
-      }
-      function isAssignedTable() {
-        return request.auth != null && resource.data.tableUid == request.auth.uid;
+      function isOwner() { return normalAccount() && request.auth.uid == organizer; }
+      function isMember() {
+        return signedIn()
+          && exists(/databases/$(database)/documents/snookerTableBoards/$(organizer)/tables/$(slot)/members/$(request.auth.uid))
+          && get(/databases/$(database)/documents/snookerTableBoards/$(organizer)/tables/$(slot)/members/$(request.auth.uid)).data.token == resource.data.joinToken;
       }
       function validScoreState() {
         let state = request.resource.data.state;
@@ -21,24 +37,40 @@ service cloud.firestore {
           && state.cursor is int && state.cursor >= 0 && state.cursor <= state.events.size()
           && state.revision is int && state.revision == resource.data.state.revision + 1;
       }
-      allow read: if isOwner() || isAssignedTable();
+      allow get: if isOwner() || isMember();
+      allow list: if isOwner();
       allow create, delete: if isOwner();
-      allow update: if isOwner() || (
-        isAssignedTable() && resource.data.enabled == true
+      allow update: if isOwner() || (isMember()
+        && resource.data.enabled == true && resource.data.joinOpen == true
         && resource.data.assignment != null
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['state'])
-        && validScoreState()
-      );
+        && validScoreState());
+      match /members/{member} {
+        function validJoin() {
+          let token = request.resource.data.token;
+          let board = get(/databases/$(database)/documents/snookerTableBoards/$(organizer)/tables/$(slot)).data;
+          let invite = get(/databases/$(database)/documents/snookerTableInvites/$(token)).data;
+          return token is string && token.matches('^[a-f0-9]{32}$')
+            && request.resource.data.keys().hasOnly(['token'])
+            && board.joinOpen == true && board.joinToken == token
+            && invite.owner == organizer && string(invite.slot) == slot
+            && invite.tournamentKey == board.tournamentKey;
+        }
+        allow get: if signedIn() && (request.auth.uid == member || request.auth.uid == organizer);
+        allow list: if normalAccount() && request.auth.uid == organizer;
+        allow create, update: if signedIn() && request.auth.uid == member && validJoin();
+        allow delete: if signedIn() && (request.auth.uid == member || request.auth.uid == organizer);
+      }
     }
-    // Existing operator access to other app data. Private Snooker stays scoped.
+    // Existing operator access, keeping private Snooker accounts separated.
     match /{collection}/{document=**} {
-      allow read, write: if request.auth != null
+      allow read, write: if signedIn()
         && request.auth.uid == 'SRx2kZD2jzdM3Q6RVVOjioAuHuw1'
         && collection != 'privateSnooker';
     }
-    // Existing Pool group access remains unchanged.
+    // Existing Pool group access.
     match /privatePool/SRx2kZD2jzdM3Q6RVVOjioAuHuw1 {
-      allow read, write: if request.auth != null
+      allow read, write: if signedIn()
         && request.auth.uid == 'FZZLq71H5lVXNNDnfRS6URdaODs2';
     }
   }

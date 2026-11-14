@@ -1,29 +1,16 @@
-export function createTableSync({auth,db,doc,getDoc,onSnapshot,runTransaction,owner}){
+export function createTableSync({auth,db,doc,getDoc,onSnapshot,runTransaction}){
   const model=window.SnookerTableScore;
-  let role=null,user=null,stops=[],cache=new Map(),accounts={},queue=Promise.resolve(),syncCount=0,session=0;
-  const ref=slot=>doc(db,'snookerTableBoards',owner,'tables',String(slot));
+  let role=null,user=null,stops=[],cache=new Map(),organizer=null,queue=Promise.resolve(),syncCount=0,session=0;
+  const ref=slot=>doc(db,'snookerTableBoards',organizer,'tables',String(slot));
   const same=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
   const active=()=>user&&auth.currentUser?.uid===user.uid;
   const notify=()=>{if(active())window.dispatchEvent(new CustomEvent('snooker-table-boards',{detail:{role,boards:[...cache.values()]}}))};
-  const error=err=>window.dispatchEvent(new CustomEvent('snooker-table-error',{detail:err.code==='permission-denied'?'Tischzugriff gesperrt. Bitte die Firebase-Regeln aus Version 7.57 veröffentlichen und die Tischzuordnung prüfen.':err.message||String(err)}));
-  function stop(){session++;for(const fn of stops)fn();stops=[];cache.clear();role=null;user=null;accounts={};syncCount=0;queue=Promise.resolve()}
-  async function start(account,table){
-    stop();user=account;role=table?'table':'owner';const token=session;
-    if(!table){
-      try{accounts=(await getDoc(doc(db,'privateSnooker',owner))).data()?.tableAccessAccounts??{}}catch(err){error(err)}
-    }
+  const error=err=>{if(err.code==='permission-denied'&&role==='table'){cache.clear();notify()}window.dispatchEvent(new CustomEvent('snooker-table-error',{detail:err.code==='permission-denied'?'Tischzugriff gesperrt. Bitte den aktuellen Tischcode verwenden und die Firebase-Regeln aus Version 7.58 prüfen.':err.message||String(err)}));};
+  function stop(){session++;for(const fn of stops)fn();stops=[];cache.clear();role=null;user=null;syncCount=0;queue=Promise.resolve()}
+  async function start(account,table,tableOwner){
+    stop();user=account;organizer=tableOwner??account.uid;role=table?'table':'owner';const token=session;
     if(token!==session||!active())return;
-    if(!table){
-      try{for(const slot of [1,2,3])await runTransaction(db,async tx=>{
-        const existing=(await tx.get(ref(slot))).data();
-        if(token!==session||!active())throw Error('Anmeldung wurde gewechselt.');
-        const tableUid=accounts[slot]?.uid??null;
-        if(!existing)tx.set(ref(slot),{schema:1,tableUid,tableNumber:slot,assignment:null,enabled:false,state:model.initial()});
-        else if(existing.tableUid!==tableUid)tx.set(ref(slot),{...existing,tableUid});
-      })}catch(err){error(err)}
-    }
-    if(token!==session||!active())return;
-    for(const slot of table?[table]:[1,2,3]){
+    for(const slot of table?[table]:[1,2,3,4,5,6]){
       stops.push(onSnapshot(ref(slot),{includeMetadataChanges:true},snap=>{
         if(token!==session||!active())return;
         if(snap.metadata.fromCache||snap.metadata.hasPendingWrites)return;
@@ -35,6 +22,8 @@ export function createTableSync({auth,db,doc,getDoc,onSnapshot,runTransaction,ow
     }
     if(!table)window.dispatchEvent(new Event('snooker-table-owner-ready'));
   }
+  function randomToken(){const bytes=new Uint8Array(16);crypto.getRandomValues(bytes);return Array.from(bytes,b=>b.toString(16).padStart(2,'0')).join('')}
+  function tournamentKey(data){return (data.freeTournament?'free:':'club:')+String(data.started)}
   function assignment(data,round,index,match){
     return {id:[data.freeTournament?'free':'club',data.started,round,index,match.startedAt].join(':'),tournament:String(data.started),round,index,names:match.players.map(id=>data.players[id]),players:[...match.players],rules:data.framesPerMatch!=null?{framesPerMatch:data.framesPerMatch}:{target:data.target}};
   }
@@ -47,7 +36,7 @@ export function createTableSync({auth,db,doc,getDoc,onSnapshot,runTransaction,ow
     syncCount++;
     const job=async()=>{
       if(token!==session||!active())return;
-      for(const slot of [1,2,3]){
+      for(const slot of [1,2,3,4,5,6]){
         const matches=snapshot.rounds.flatMap((round,r)=>round.matches.map((match,m)=>({match,r,m}))).filter(({match})=>match.table===slot&&match.startedAt);
         const live=matches.find(({match})=>!match.result);
         const cached=cache.get(slot);
@@ -56,11 +45,14 @@ export function createTableSync({auth,db,doc,getDoc,onSnapshot,runTransaction,ow
         await runTransaction(db,async tx=>{
           if(token!==session||!active())throw Error('Anmeldung wurde gewechselt.');
           const existing=(await tx.get(ref(slot))).data();
+          const key=tournamentKey(snapshot),newTournament=existing?.tournamentKey!==key;
+          const joinToken=newTournament?randomToken():existing.joinToken;
+          const shared={schema:2,tableNumber:slot,tournamentKey:key,joinToken,joinOpen:slot<=snapshot.tables&&!snapshot.ended};
           if(token!==session||!active())throw Error('Anmeldung wurde gewechselt.');
+          if(newTournament)tx.set(doc(db,'snookerTableInvites',joinToken),{owner:organizer,slot,tournamentKey:key});
           if(!selected){
-            if(existing?.assignment&&existing.assignment.tournament!==String(snapshot.started)||existing?.enabled){
-              tx.set(ref(slot),{schema:1,tableUid:accounts[slot]?.uid??null,tableNumber:slot,assignment:null,enabled:false,state:model.initial((existing?.state?.revision??0)+1)});
-            }else if(!existing)tx.set(ref(slot),{schema:1,tableUid:accounts[slot]?.uid??null,tableNumber:slot,assignment:null,enabled:false,state:model.initial()});
+            const next={...shared,assignment:null,enabled:false,state:model.initial((existing?.state?.revision??0)+1)};
+            if(newTournament||existing?.assignment||existing?.enabled||existing?.joinOpen!==shared.joinOpen)tx.set(ref(slot),next);
             return;
           }
           const {match,r,m}=selected,a=assignment(snapshot,r,m,match),enabled=!snapshot.ended;
@@ -77,7 +69,7 @@ export function createTableSync({auth,db,doc,getDoc,onSnapshot,runTransaction,ow
               state={...(match.scoreMonitor?.state??model.initial()),revision:state.revision+1};model.derive(state,a.rules);
             }
           }
-          const next={schema:1,tableUid:accounts[slot]?.uid??null,tableNumber:slot,assignment:a,enabled,state};
+          const next={...shared,assignment:a,enabled,state};
           if(!same(existing,next))tx.set(ref(slot),next);
         });
       }
@@ -99,5 +91,6 @@ export function createTableSync({auth,db,doc,getDoc,onSnapshot,runTransaction,ow
       return {...board,state,slot};
     });
   }
-  return Object.freeze({start,stop,sync,command,assignment,get role(){return role},get boards(){return [...cache.values()]}});
+  async function codes(data){await sync(data);if(role!=='owner'||!active())throw Error('Bitte als Spielleiter anmelden.');const key=tournamentKey(data);const values=await Promise.all(Array.from({length:data.tables},(_,i)=>getDoc(ref(i+1))));return values.map(s=>s.data()).filter(b=>b?.joinOpen&&b.tournamentKey===key).map(b=>({slot:b.tableNumber,code:b.joinToken}));}
+  return Object.freeze({start,stop,sync,command,assignment,codes,get owner(){return organizer},get role(){return role},get boards(){return [...cache.values()]}});
 }

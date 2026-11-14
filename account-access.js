@@ -44,7 +44,7 @@
   function setRegister(value) {
     registering = value;
     e('accountEmail').type=value?'email':'text';
-    e('accountEmailCaption').textContent=value?'E-Mail-Adresse':'E-Mail-Adresse oder Tischname';
+    e('accountEmailCaption').textContent='E-Mail-Adresse';
     e('tableDeviceSetup').hidden=value;
     e('accountTitle').textContent = value ? 'Konto erstellen' : 'Anmelden';
     e('accountSubmit').textContent = value ? 'Registrieren' : 'Anmelden';
@@ -163,7 +163,7 @@
     if (busy || !actions) return;
     const email = e('accountEmail').value.trim();
     if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
-      status('Für normale Konten bitte die E-Mail-Adresse eingeben. Bei einem Tischkonto kann die Turnierleitung über die Tischverwaltung eine Wiederherstellungs-E-Mail anfordern.'); return;
+      status('Bitte die E-Mail-Adresse deines Kontos eingeben. Tischgeräte verwenden den aktuellen Tischcode und benötigen kein Passwort.'); return;
     }
     setBusy(true);
     try {
