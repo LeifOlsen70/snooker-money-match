@@ -1,13 +1,14 @@
-const CACHE_NAME = 'v7-53-swiss-tournament';
+const CACHE_NAME = 'v7-54-swiss-tournament';
 const APP_SHELL = [
   './',
   './index.html',
   './infos.html',
-  './account-access.js?v=7.53',
-  './firebase-sync.js?v=7.53',
-  './pdf-export.js?v=7.53',
-  './tournament.js?v=7.53',
-  './tournament.css?v=7.53',
+  './app-navigation.js?v=7.54',
+  './account-access.js?v=7.54',
+  './firebase-sync.js?v=7.54',
+  './pdf-export.js?v=7.54',
+  './tournament.js?v=7.54',
+  './tournament.css?v=7.54',
   './manifest.webmanifest',
   './icon-192.png',
   './icon-512.png',

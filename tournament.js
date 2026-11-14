@@ -203,7 +203,7 @@
 
   let touchStart = null;
   panel.addEventListener('touchstart', event => {
-    touchStart = event.touches.length === 1 && !event.target.closest('input, select, textarea')
+    touchStart = event.touches.length === 1 && !event.target.closest('input, select, textarea, .appTabStrip')
       ? event.touches[0] : null;
   }, {passive: true});
   panel.addEventListener('touchcancel', () => { touchStart = null; }, {passive: true});
