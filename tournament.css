@@ -311,7 +311,7 @@ body.snookerFullscreenTournament .accountBar,body.snookerFullscreenScore .accoun
 
 .accountBar [hidden], .accountDialog [hidden] {display:none!important}
 
-/* v7.55: four visible tabs; additional entries scroll horizontally. */
+/* v7.57: four visible tabs; additional entries scroll horizontally. */
 .homeInfoChoice {display:flex;align-items:center;justify-content:center;box-sizing:border-box;text-decoration:none;text-align:center;font-size:inherit;font-weight:800;padding:12px;border-radius:16px;min-height:46px;background:linear-gradient(#ffe39b,#bd903c);color:#1a1220}
 .appTabStrip, #tournamentMode .appTabStrip {display:flex!important;flex-wrap:nowrap!important;gap:6px!important;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;scrollbar-width:none;touch-action:pan-x pinch-zoom;overscroll-behavior-x:contain;max-width:100%;box-sizing:border-box}
 .appTabStrip::-webkit-scrollbar {display:none}
@@ -324,7 +324,7 @@ body.appRulesOpen #singleMode > :not(nav):not(#singleHome), body.appRulesOpen #t
 body.appRulesOpen .appTabStrip > button:not([data-rules-tab]) {background:#362045!important;color:#f3ecd7!important}
 .appTabStrip.hidden {display:none!important}
 .modeChoices > button, .modeChoices > .homeInfoChoice {font:inherit;font-weight:800;padding:13px 16px;min-height:46px;border-radius:13px}
-/* v7.55: common page-end actions and navigation directly below history. */
+/* v7.57: common page-end actions and navigation directly below history. */
 #singleHome,#tournamentHome {display:none!important}
 .pageFooter {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:24px auto 12px;width:100%;max-width:680px}
 .pageFooter #accountBar {display:contents}
@@ -338,3 +338,53 @@ body.appRulesOpen .appTabStrip > button:not([data-rules-tab]) {background:#36204
 .modeHome .pageFooter #accountLogin,.modeHome .pageFooter #accountLogout {grid-column:1}
 body.snookerFullscreenScore .pageFooter,body.snookerFullscreenTournament .pageFooter {display:none!important}
 .appTabStrip,#tournamentMode .appTabStrip {touch-action:pan-y pinch-zoom;scroll-snap-type:none}
+.tableAccessDialog {box-sizing:border-box;width:min(94vw,620px);max-height:90dvh;overflow:auto}
+.tableAccessDialog input,.tableAccessDialog select,.tableAccessDialog textarea {box-sizing:border-box;width:100%;font:inherit;margin:6px 0 12px}
+.tableAccessDialog textarea {padding:12px;border:1px solid #b99a65;border-radius:10px;background:#21132c;color:#f5ecd6;overflow-wrap:anywhere}
+.tableAccessDialog label {display:block;margin-top:10px}
+.tableAccessDialog [role=status],.tableAccessDialog [role=alert] {color:#ffdd91}
+.tableAccessDialog [hidden] {display:none!important}
+.pageFooter #tableAccountsAdmin {grid-column:1/-1;grid-row:3}
+/* v7.57: tournament table scoring and the director's live overview. */
+#tableMode[hidden] {display:none!important}
+.monitorOverviewGrid {display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:12px}
+.monitorCard {padding:12px;border:1px solid #bb914b;border-radius:16px;background:linear-gradient(140deg,#301442,#10091c);margin-bottom:12px}
+.monitorCard h3 {margin:0 0 10px}
+.monitorPlayers {display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.monitorPlayers button {display:flex;flex-direction:column;align-items:center;justify-content:space-evenly;gap:12px;min-width:0;min-height:290px;padding:12px 5px;background:linear-gradient(145deg,#43165e,#10091c);color:#fff2d4;border:2px solid #c9a25d;border-radius:16px;cursor:pointer}
+.monitorName {font-size:clamp(24px,5vw,42px);font-weight:800;overflow-wrap:anywhere;max-width:100%}
+.monitorPoints {font-size:clamp(70px,17vw,150px);line-height:1;color:white;font-variant-numeric:tabular-nums}
+.monitorCompact .monitorPlayers button {min-height:200px}
+.monitorCompact .monitorName {font-size:clamp(20px,3vw,32px)}
+.monitorCompact .monitorPoints {font-size:clamp(55px,10vw,100px)}
+.monitorActions {display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:10px 0}
+.monitorActions button,.monitorTableHeader button {background:#392247;color:#f6e9d1;border:1px solid #b99255;min-height:44px}
+.monitorTableHeader {display:flex;justify-content:space-between;align-items:center;gap:10px;margin:12px 0}
+.monitorCard button:disabled {opacity:.65;cursor:default}
+[data-monitor-message] {color:#ffdd91;overflow-wrap:anywhere}
+.monitorInputDialog {width:min(94vw,560px);max-height:94dvh;overflow:auto;box-sizing:border-box}
+.monitorInputDialog h2 {text-align:center;margin:12px 0;font-size:clamp(25px,6vw,40px)}
+.monitorInputDialog > button {width:100%;margin:0;min-height:44px}
+.monitorInputDialog > p {margin:8px 0;text-align:center}
+#tableInputValue {box-sizing:border-box;width:100%;height:76px;text-align:center;background:#f7f3ec;color:#211327;font-size:48px;margin:0 0 10px}
+.monitorKeypad {display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px}
+.monitorKeypad button {min-height:60px;background:linear-gradient(#fff,#e5dedb);color:#211327;border:1px solid #cba25b;font-size:30px}
+.monitorKeypad button[data-key=clear] {font-size:17px;background:#edc8db}
+.monitorWinners {display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+.monitorWinners button {background:#382045;color:#f8e7bf;border:1px solid #bc955c;min-height:44px;font-size:14px}
+#tableInputStatus {color:#ffdd91}
+body.tableDeviceMode #modeStart,body.tableDeviceMode #singleMode,body.tableDeviceMode #tournamentMode {display:none!important}
+body.tableMonitorFullscreen {overflow:hidden!important}
+body.tableMonitorFullscreen #tableMode {position:fixed;inset:0;z-index:200;overflow:auto;background:#100919;padding:calc(8px + env(safe-area-inset-top)) 10px 10px;box-sizing:border-box}
+body.tableMonitorFullscreen #tableMode .monitorPlayers button {min-height:65dvh}
+body.tableMonitorFullscreen .pageFooter {display:none!important}
+body.monitorOverviewFullscreen {overflow:hidden!important}
+body.monitorOverviewFullscreen #tournamentMonitors {position:fixed;inset:0;z-index:200;overflow:auto;background:#100919;padding:calc(8px + env(safe-area-inset-top)) 10px 10px;box-sizing:border-box}
+body.monitorOverviewFullscreen .pageFooter {display:none!important}
+@media (orientation:landscape) and (max-height:520px){
+ body.tableMonitorFullscreen #tableMode .monitorPlayers button {min-height:55dvh;gap:4px}
+ body.tableMonitorFullscreen #tableMode .monitorName {font-size:28px}
+ body.tableMonitorFullscreen #tableMode .monitorPoints {font-size:70px}
+ .monitorInputDialog {max-height:95dvh}
+ .monitorKeypad button {min-height:42px}
+}

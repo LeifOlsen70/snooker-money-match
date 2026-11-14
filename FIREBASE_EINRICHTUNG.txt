@@ -1,4 +1,4 @@
-Snooker Money Match v7.55 – Benutzerkonten einrichten
+Snooker Money Match v7.57 – Benutzerkonten einrichten
 
 1. Firebase-Projekt „snooker-money-match“ öffnen
 https://console.firebase.google.com/project/snooker-money-match/overview
@@ -10,14 +10,14 @@ E-Mail/Passwort aktivieren. Nutzer können über „Neues Konto registrieren“ 
 Die tatsächlich verwendete App-Domain muss freigegeben sein, z. B. leifolsen70.github.io.
 
 4. Firestore Database > Rules
-Die Datei firestore.rules entspricht den zuletzt im Chat angepassten gemeinsamen Regeln einschließlich eurer bisherigen Pool-Zugänge. Falls diese Regeln bereits veröffentlicht sind, müssen sie für Version 7.55 nicht erneut geändert werden.
+Die Datei firestore.rules entspricht den zuletzt im Chat angepassten gemeinsamen Regeln einschließlich eurer bisherigen Pool-Zugänge. Für Version 7.57 müssen die neuen Regeln erneut veröffentlicht werden: Der neue Bereich snookerTableBoards erlaubt jedem Tischkonto ausschließlich den zugewiesenen Tischstand.
 Die Regel für /privateSnooker/{userId} erlaubt jedem Konto ausschließlich sein eigenes Dokument.
 Vor Veröffentlichung die bisherigen Regeln sichern. Falls das Projekt weitere Anwendungen enthält, deren benötigte Regeln erhalten und den Block /privateSnooker/{userId} gezielt ersetzen. Übergreifende Regeln dürfen keine Zugriffe auf fremde privateSnooker-Dokumente erlauben.
 Anschließend veröffentlichen.
 
 5. GitHub-Update
 Alle Webdateien dieser Version aus dem entpackten ZIP hochladen. Die Dateien firestore.rules und diese Anleitung gehören zur Firebase-Einrichtung. Das Hochladen dieser Regeln auf GitHub veröffentlicht sie nicht in Firebase.
-App auf beiden Geräten aktualisieren. Versionsanzeige muss v7.55 sein.
+App auf beiden Geräten aktualisieren. Versionsanzeige muss v7.57 sein.
 
 6. Anmeldung und Datenübernahme
 Die Startseite zeigt Einzel, Club Liga und Freies Turnier. Die erste Auswahl öffnet die Anmeldung mit Registrierung und Passwort-zurücksetzen. „Ohne Anmeldung fortfahren“ öffnet den gewählten Modus lokal. „Abbrechen“ führt zur Startseite zurück.
@@ -37,3 +37,16 @@ Die Firebase-Regeln konnten in der Entwicklungsumgebung nicht im angemeldeten Pr
 
 Ohne Anmeldung
 Gastdaten sind auf dem Gerät getrennt von Kontodaten gespeichert. Alle Spielfunktionen und das Laden/Speichern von Dateien bleiben nutzbar. Für einen gezielten Umzug zwischen Gast- und Kontobereich eine JSON-Datei speichern, im gewünschten Konto anmelden und dort die Datei laden. Dieser Import ersetzt wie bisher den dortigen Dateistand nach Bestätigung.
+
+
+Version 7.57 – Tischanmeldung und Live-Monitore
+Die neue beiliegende firestore.rules in Firebase veröffentlichen. Spark beibehalten, keine Abrechnung aktivieren und keine Cloud Functions anlegen.
+1. Alle Webdateien auf GitHub aktualisieren, insbesondere table-access.js, account-access.js und firebase-sync.js.
+2. Mit deinem bisherigen Betreiberkonto anmelden. Auf der Startseite bzw. am Seitenende „Tischzugänge verwalten“ öffnen.
+3. Tisch wählen. Für jeden Tisch eine eigene erreichbare E-Mail-Adresse oder Weiterleitung verwenden. Ein Tischkonto und dein Betreiberkonto dürfen nicht dieselbe Adresse verwenden.
+4. Für ein neues Tischkonto „Neues Konto anlegen“ und ein Passwort wählen. Existiert das Konto bereits, „Vorhandenes Konto verbinden“ mit dessen Passwort wählen. Nach einem Verbindungsfehler bei der Anlage kann das Auth-Konto bereits existieren; dann ebenfalls die Aktion „Vorhandenes Konto verbinden“ verwenden.
+5. Nach erfolgreicher Einrichtung den Code kopieren. Er enthält kein Passwort und gewährt allein keinen Zugang.
+6. Am Tischgerät auf einen Spielmodus, dann „Tischgerät einmalig einrichten“ tippen. Code einfügen und speichern. Anschließend Tischname (z. B. Tisch 1) und das zugehörige Passwort eingeben.
+7. Wenn das Tischpasswort vergessen wurde, in deiner Tischverwaltung „Passwort-Wiederherstellung senden“ verwenden und im hinterlegten Postfach das neue Passwort setzen.
+Normale Nutzer registrieren sich wie bisher selbst mit E-Mail und Passwort. Gastmodus bleibt verfügbar.
+Nach Veröffentlichung der neuen Regeln mit dem Betreiberkonto anmelden und das Turnier öffnen. Die Tischgeräte erhalten gestartete Paarungen automatisch. Es werden keine zusätzlichen Match-Einladungscodes benötigt. Der Einrichtungscode dient ausschließlich der Anmeldung des Tischgeräts. Details in TISCHMONITORE_EINRICHTUNG.txt.

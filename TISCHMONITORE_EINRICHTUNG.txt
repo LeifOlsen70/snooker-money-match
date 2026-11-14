@@ -1,0 +1,21 @@
+Snooker Money Match v7.57 – Tischmonitore
+
+1. Vor dem Update den bestehenden Turnierstand als JSON sichern.
+2. Alle Webdateien dieses ZIP auf GitHub hochladen. App aktualisieren, bis v7.57 angezeigt wird.
+3. In Firebase > Firestore Database > Regeln die bisherigen Regeln sichern, dann die beiliegende firestore.rules veröffentlichen. Die bisher bekannten Pool-Zugänge sind enthalten. Weitere eigene Projektregeln gegebenenfalls erhalten. GitHub-Upload veröffentlicht keine Firebase-Regeln.
+4. Spark-Tarif beibehalten. Keine Abrechnung aktivieren, keine Cloud Functions anlegen. Diese Version benötigt keinen zusätzlichen kostenpflichtigen Server. Firebase-Nutzung verbraucht weiterhin das vorhandene kostenlose Kontingent; bei ausgeschöpftem Spark-Kontingent kann die Synchronisation aussetzen.
+5. Zuerst mit Leifs bisherigem Betreiberkonto anmelden und das Turnier öffnen. Die App bereitet die drei Tischbereiche vor.
+6. Falls noch nicht aus v7.56 eingerichtet: „Tischzugänge verwalten“ am Seitenende öffnen. Für jeden Tisch ein Konto mit eigener erreichbarer Wiederherstellungs-E-Mail anlegen oder verbinden. Einrichtungscode am jeweiligen Tischgerät über „Tischgerät einmalig einrichten“ hinterlegen. Danach Tischname und Passwort verwenden. Vorhandene v7.56-Tischkonten und Codes bleiben verwendbar.
+7. Am Betreibergerät das Match mit „An Tisch 1/2/3 starten“ zuweisen. Am angemeldeten Tischgerät erscheint die zugehörige Partie automatisch. Solange keine Partie zugewiesen ist, erscheint eine Warteanzeige.
+8. Namen antippen, Punkte eingeben und „Punkte übernehmen“. Nur eine einzelne Eingabe ab 20 wird als Break erfasst. Kleinere Werte zählen zum Score; beispielsweise 12 + 8 ergeben keinen gespeicherten Break.
+9. Im Popup „Frame-Sieger: Name“ wählen und bestätigen. Noch eingegebene Punkte können dabei gemeinsam übernommen werden. Bei fester Framezahl kann ein Unentschieden entstehen. Nach dem letzten Frame übernimmt die Turnierleitung automatisch Frames und Breaks. Elo wird nur dort verarbeitet, wo sie bislang vorgesehen ist.
+10. „Zurück“ und „Vor“ korrigieren auch Frame-Abschlüsse. Wird der letzte Frame rückgängig gemacht, wird das übernommene Ergebnis wieder entfernt, solange keine Folgepartie am Tisch gestartet wurde. Nach Neuzuweisung oder Turnierende ist die frühere Partie dort gesperrt. Manuelle Ergebniskorrektur durch die Turnierleitung bleibt über den bisherigen Ergebnisdialog möglich.
+11. Reiter „Score Monitor“ direkt nach „Runden“: Übersicht aller Tische auf dem Betreibergerät. Tischgeräte zeigen ausschließlich ihren eigenen Tisch. Vollbild wird je Gerät gesteuert. Die Startseite am Tischgerät führt zur eigenen Tisch-Startansicht; „Zur Partie“ öffnet die aktuelle Partie wieder.
+12. Gemeinsamer Tischbetrieb benötigt Internet. Offline-Eingaben werden nicht als erfolgreich gespeichert angezeigt und nicht später unkontrolliert nachgesendet. Die Turnierleitung sollte die App geöffnet lassen; bei späterem Öffnen werden gespeicherte Tischstände wieder empfangen.
+
+Normale Nutzer registrieren sich weiterhin selbst mit E-Mail und Passwort. Nur Leifs bestehendes Betreiberkonto verwaltet die drei gemeinsamen Tischzugänge. Andere Konten sowie Gäste verwenden ihre eigenen Turnierdaten und lokale Zählwerke.
+Tische 4–6 können in der Turnierübersicht lokal geführt werden; gemeinsame Tischkonten sind in dieser Version für Tisch 1–3 vorgesehen.
+
+JSON-Sicherungen enthalten den Turnierstand einschließlich gespeicherter Zählwerk-Ereignisse. Laden ersetzt wie bisher die vorhandenen Turnierdaten nach Bestätigung. Tischpasswörter werden nicht in die Turnierdatei exportiert.
+
+Prüfung dieser Version: Punkte-/Break-Logik, Frame-Ende, Rückgängig/Wiederholen, Ergebnisübernahme und getrennte Tischtransaktionen automatisiert geprüft. Ein echter Firebase-Mehrgerätetest und die visuelle Prüfung konnten in der Entwicklungsumgebung nicht abgeschlossen werden. Nach Veröffentlichung bitte zunächst ein kurzes Testturnier mit zwei Geräten durchführen.

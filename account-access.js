@@ -43,6 +43,9 @@
   }
   function setRegister(value) {
     registering = value;
+    e('accountEmail').type=value?'email':'text';
+    e('accountEmailCaption').textContent=value?'E-Mail-Adresse':'E-Mail-Adresse oder Tischname';
+    e('tableDeviceSetup').hidden=value;
     e('accountTitle').textContent = value ? 'Konto erstellen' : 'Anmelden';
     e('accountSubmit').textContent = value ? 'Registrieren' : 'Anmelden';
     e('accountRegister').textContent = value ? 'Ich habe bereits ein Konto' : 'Neues Konto registrieren';
@@ -64,7 +67,7 @@
   function finishLogin(account, message) {
     user = account;
     ready = Boolean(account);
-    e('accountEmailLabel').textContent = (account?.email ? 'Angemeldet als ' + account.email : '') || (guest ? 'Ohne Anmeldung · nur auf diesem Gerät' : '');
+    e('accountEmailLabel').textContent = (account?.email ? 'Angemeldet als ' + (window.snookerTableAccess?.labelFor(account.email) || account.email) : '') || (guest ? 'Ohne Anmeldung · nur auf diesem Gerät' : '');
     e('accountBar').hidden = !account && !guest;
     e('accountLogout').hidden = !account;
     e('accountLogin').hidden = Boolean(account);
@@ -136,7 +139,7 @@
       e('accountPassword').value = '';
       e('accountRepeat').value = '';
     } catch (error) {
-      status(errors[error.code] || 'Anmeldung fehlgeschlagen. Bitte erneut versuchen.');
+      status(errors[error.code] || error.userMessage || 'Anmeldung fehlgeschlagen. Bitte erneut versuchen.');
     } finally { setBusy(false); }
   };
   e('accountRegister').onclick = () => setRegister(!registering);
@@ -159,8 +162,8 @@
   e('accountReset').onclick = async () => {
     if (busy || !actions) return;
     const email = e('accountEmail').value.trim();
-    if (!email || !e('accountEmail').checkValidity()) {
-      status('Bitte zuerst deine E-Mail-Adresse eingeben.'); return;
+    if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+      status('Für normale Konten bitte die E-Mail-Adresse eingeben. Bei einem Tischkonto kann die Turnierleitung über die Tischverwaltung eine Wiederherstellungs-E-Mail anfordern.'); return;
     }
     setBusy(true);
     try {

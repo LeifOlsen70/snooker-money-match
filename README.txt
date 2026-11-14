@@ -1,4 +1,4 @@
-Snooker Money Match v7.55
+Snooker Money Match v7.57
 Alle Dateien auf GitHub hochladen und die App anschließend neu öffnen.
 Im Turniermodus sichern und laden die beiden Schaltflächen eine JSON-Datei.
 Die Matchzeit startet mit der Tischzuweisung und endet beim Speichern des Ergebnisses.
@@ -7,6 +7,20 @@ Alternativ die Schaltflächen Runden und Zwischenstand verwenden.
 In der Tabelle schaltet „Vollbild an/aus“ die große Anzeige ein und aus.
 Gespielte Breaks ab 20 stehen in der Tabelle und bei den abgeschlossenen Matches.
 Turniere werden lokal gespeichert. Mit Firebase-Anmeldung wird der Turnierstand automatisch über beide Geräte synchronisiert.
+
+Neu in v7.57 – Tisch-Zählwerke:
+- Neuer Reiter „Score Monitor“ direkt nach „Runden“, auch im freien Turnier.
+- Tisch 1–3 mit eigenen Zugängen: Neue gestartete Paarungen öffnen automatisch am zugeordneten Tischgerät.
+- Namen antippen: großes Punkte-Popup mit Frame-Siegern, Abbrechen und Vollbildanzeige.
+- Jede einzelne Eingabe ab 20 wird als Break gespeichert; kleinere Eingaben erhöhen ausschließlich den Score.
+- Frame-Ergebnis und Breaks werden automatisch in das Turnier übernommen, einschließlich der vorhandenen Elo-Verarbeitung bei Club Liga.
+- Rückgängig/Wiederholen bis zur nächsten Tischzuweisung bzw. dem Turnierende. Gleichzeitige veraltete Eingaben werden abgewiesen.
+- Betreiber sieht die Live-Zählwerke aller Tische, Tischkonto nur den eigenen Tisch.
+- Gemeinsamer Tischbetrieb benötigt Internet und die neuen beiliegenden Firestore-Regeln. Diese müssen in Firebase veröffentlicht werden.
+- Keine Cloud Functions, kein zusätzlicher Server und keine Tarifänderung. Spark beibehalten.
+- Ohne Betreiberkonto stehen lokale Zählwerke im eigenen Turnier zur Verfügung.
+- Normale Registrierung weiterhin mit E-Mail/Passwort. Tischanmeldung nach einmaliger Einrichtung mit Tischname/Passwort.
+- Ausführliche Einrichtung: TISCHMONITORE_EINRICHTUNG.txt.
 
 Neu in v7.55:
 - Anmelde-/Kontobutton und Startseite gemeinsam am Seitenende, gleich groß. Auf der Startseite bleibt der violette Anmeldebutton zentriert und so breit wie die Auswahlbuttons.
@@ -195,7 +209,7 @@ Neu in v7.18:
 - Bestehende JSON-Turniersicherungen können weiterhin geladen werden.
 
 Installation: Alle enthaltenen Dateien im bisherigen GitHub-Ordner ersetzen.
-App danach neu öffnen, gegebenenfalls einmal aktualisieren. Unten muss v7.55 stehen.
+App danach neu öffnen, gegebenenfalls einmal aktualisieren. Unten muss v7.57 stehen.
 Vor dem Update das laufende Turnier als JSON sichern.
 Die Speicherung einer Datei wird je nach Gerät über Teilen oder Download ausgeführt.
 

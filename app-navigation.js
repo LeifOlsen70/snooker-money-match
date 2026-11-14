@@ -14,6 +14,7 @@
   const home=document.createElement('button');
   home.type='button';home.className='secondary';home.id='pageFooterHome';home.textContent='← Startseite';
   home.onclick=()=>{
+    if(document.body.classList.contains('tableDeviceMode')){window.snookerMonitors.tableHome();return;}
     const source=document.getElementById(isVisible(document.getElementById('singleMode'))?'singleHome':'tournamentHome');
     source?.click();
   };
@@ -56,7 +57,7 @@
     queued=false;
     const single = document.getElementById('singleMode');
     const tournament = document.getElementById('tournamentMode');
-    home.hidden=!isVisible(single)&&!isVisible(tournament);
+    home.hidden=!isVisible(single)&&!isVisible(tournament)&&!body.classList.contains('tableDeviceMode');
     if (opened && ((owner==='single' && !isVisible(single)) || (owner==='tournament' && !isVisible(tournament)))) {
       opened=false;owner=null;body.classList.remove('appRulesOpen');panel.hidden=true;
     }

@@ -5,11 +5,38 @@ service cloud.firestore {
       allow read, write: if request.auth != null
         && request.auth.uid == userId;
     }
+    // Independent table documents: table devices can only edit their own score.
+    match /snookerTableBoards/{organizer}/tables/{slot} {
+      function isOwner() {
+        return request.auth != null && request.auth.uid == organizer;
+      }
+      function isAssignedTable() {
+        return request.auth != null && resource.data.tableUid == request.auth.uid;
+      }
+      function validScoreState() {
+        let state = request.resource.data.state;
+        return state.keys().hasAll(['events','cursor','revision'])
+          && state.keys().hasOnly(['events','cursor','revision'])
+          && state.events is list && state.events.size() <= 2000
+          && state.cursor is int && state.cursor >= 0 && state.cursor <= state.events.size()
+          && state.revision is int && state.revision == resource.data.state.revision + 1;
+      }
+      allow read: if isOwner() || isAssignedTable();
+      allow create, delete: if isOwner();
+      allow update: if isOwner() || (
+        isAssignedTable() && resource.data.enabled == true
+        && resource.data.assignment != null
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['state'])
+        && validScoreState()
+      );
+    }
+    // Existing operator access to other app data. Private Snooker stays scoped.
     match /{collection}/{document=**} {
       allow read, write: if request.auth != null
         && request.auth.uid == 'SRx2kZD2jzdM3Q6RVVOjioAuHuw1'
         && collection != 'privateSnooker';
     }
+    // Existing Pool group access remains unchanged.
     match /privatePool/SRx2kZD2jzdM3Q6RVVOjioAuHuw1 {
       allow read, write: if request.auth != null
         && request.auth.uid == 'FZZLq71H5lVXNNDnfRS6URdaODs2';

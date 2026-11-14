@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#0f5f37">
-  <meta name="application-version" content="7.55">
+  <meta name="application-version" content="7.57">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="Snooker Match">
@@ -331,7 +331,7 @@ body.snookerFullscreenScore #scorerPage.displayOnly{background:#090613!important
 .appInfoLink {display:inline-block;margin:0 0 14px;padding:10px 16px;border:1px solid #a98b49;border-radius:12px;color:#f3ecd7;background:#382045;text-decoration:none;font-weight:700}
 body.snookerFullscreenTournament .appInfoLink,body.snookerFullscreenScore .appInfoLink {display:none}
 
-/* v7.55: points fill the scoreboard; entry opens in a local modal. */
+/* v7.57: points fill the scoreboard; entry opens in a local modal. */
 #scorerPage:not(.displayOnly) .scorerGrid {
   flex:initial!important;
   min-height:clamp(320px,55dvh,650px);
@@ -365,10 +365,10 @@ body.snookerFullscreenTournament .appInfoLink,body.snookerFullscreenScore .appIn
 }
 
 </style>
-  <link rel="stylesheet" href="tournament.css?v=7.55">
+  <link rel="stylesheet" href="tournament.css?v=7.57">
 </head>
 <body class="modeHome">
-<div id="appVersionTag" aria-label="App-Version 7.55">v7.55</div>
+<div id="appVersionTag" aria-label="App-Version 7.57">v7.57</div>
 <div class="app">
   <h1 class="clubBrand" aria-label="Flensburger Snooker Club – Snooker Money Match"><img src="flensburger-snooker-club.png" alt="Flensburger Snooker Club" width="430" height="125"><span class="visuallyHidden">Snooker Money Match</span></h1><div id="offlineStatus" class="hidden" aria-live="polite"></div>
 
@@ -499,18 +499,21 @@ body.snookerFullscreenTournament .appInfoLink,body.snookerFullscreenScore .appIn
 <form id="accountForm">
 <h2 id="accountTitle">Anmelden</h2>
 <p>Mit einem Konto werden deine Geräte synchronisiert. Ohne Anmeldung bleiben deine Daten nur auf diesem Gerät.</p>
-<label for="accountEmail">E-Mail-Adresse</label><input id="accountEmail" type="email" autocomplete="username" required>
+<label for="accountEmail" id="accountEmailCaption">E-Mail-Adresse oder Tischname</label><input id="accountEmail" type="text" autocomplete="username" required>
 <label for="accountPassword">Passwort</label><input id="accountPassword" type="password" autocomplete="current-password" minlength="6" required>
 <label id="accountRepeatLabel" for="accountRepeat" hidden>Passwort wiederholen<input id="accountRepeat" type="password" autocomplete="new-password" minlength="6"></label>
 <p id="accountMessage" role="status" aria-live="polite"></p>
 <div class="accountActions">
 <button type="submit" id="accountSubmit" disabled>Anmelden</button>
+<button type="button" id="tableDeviceSetup">Tischgerät einmalig einrichten</button>
 <button type="button" id="accountRegister">Neues Konto registrieren</button>
 <button type="button" id="accountReset">Passwort vergessen</button>
 <button type="button" id="accountGuest">Ohne Anmeldung fortfahren</button>
 <button type="button" id="accountCancel">Abbrechen</button>
 </div></form></dialog>
-<script src="account-access.js?v=7.55"></script>
+<script src="table-score.js?v=7.57"></script>
+<script src="table-access.js?v=7.57"></script>
+<script src="account-access.js?v=7.57"></script>
 
 <script>
 const localStorage = window.snookerStorage;
@@ -1246,7 +1249,7 @@ if('serviceWorker' in navigator){
   });
 }
 </script>
-<script type="module" src="firebase-sync.js?v=7.55" onerror="window.snookerAccount.connectionError('Anmeldung konnte nicht geladen werden. Bitte Internetverbindung prüfen und die App erneut öffnen.')"></script><script>
+<script type="module" src="firebase-sync.js?v=7.57" onerror="window.snookerAccount.connectionError('Anmeldung konnte nicht geladen werden. Bitte Internetverbindung prüfen und die App erneut öffnen.')"></script><script>
 // Geräteindividuelle Ansicht: nicht Teil des Matches und niemals Firebase-synchronisiert.
 (function(){
  const page=document.getElementById('scorerPage');
@@ -1264,8 +1267,9 @@ if('serviceWorker' in navigator){
  btn.addEventListener('click',()=>setDisplay(!page.classList.contains('displayOnly')));
 })();
 </script>
-<script src="pdf-export.js?v=7.55"></script>
-<script src="tournament.js?v=7.55"></script>
-<script src="app-navigation.js?v=7.55"></script>
+<script src="pdf-export.js?v=7.57"></script>
+<script src="tournament.js?v=7.57"></script>
+<script src="table-monitor.js?v=7.57"></script>
+<script src="app-navigation.js?v=7.57"></script>
 </body>
 </html>
