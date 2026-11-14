@@ -1,7 +1,7 @@
 import {initializeApp} from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js';
 import {getAuth,signInAnonymously,signInWithEmailAndPassword,createUserWithEmailAndPassword,sendPasswordResetEmail,setPersistence,browserLocalPersistence,inMemoryPersistence,signOut,onAuthStateChanged} from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-auth.js';
 import {getFirestore,doc,getDoc,setDoc,onSnapshot,runTransaction} from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore.js';
-import {createTableSync} from './table-sync.js?v=7.61';
+import {createTableSync} from './table-sync.js?v=7.62';
 const config={apiKey:'AIzaSyBgmv1v5APpPReJ4olWCusUhhGGevcvRcE',authDomain:'snooker-money-match.firebaseapp.com',projectId:'snooker-money-match',storageBucket:'snooker-money-match.firebasestorage.app',messagingSenderId:'423302158497',appId:'1:423302158497:web:706c1fec068959b7bbb8e0'};
 const localStorage = window.snookerStorage;
 const app=initializeApp(config),auth=getAuth(app),db=getFirestore(app),e=id=>document.getElementById(id),msg=t=>e('fbStatus').textContent=t;
@@ -33,6 +33,20 @@ window.snookerTableBackend={
     window.location.reload();
   },
   async leave(){window.localStorage.removeItem(deviceKey);await signOut(deviceAuth);window.location.reload()},
+  async availableCodes(){
+    if(!permitted()||window.snookerAccount.guest)throw Error('Zur sicheren Anzeige der Tischcodes als Spielleiter anmelden. Sonst den erhaltenen Code eingeben.');
+    // Load the organizer's active tournament from the cloud even when the user
+    // has not opened the Club Liga panel on this device.
+    const snap=await getDoc(doc(db,'privateSnooker',auth.currentUser.uid));
+    const raw=snap.data()?.tournamentSync??snap.data()?.tournamentState;
+    let data;
+    try{data=raw?JSON.parse(raw):null}catch{data=null}
+    if(!data||data.ended||!data.started||!Number.isInteger(data.tables)||data.tables<1)
+      return [];
+    const key=(data.freeTournament?'free:':'club:')+String(data.started);
+    const docs=await Promise.all(Array.from({length:Math.min(data.tables,6)},(_,i)=>getDoc(doc(db,'snookerTableBoards',auth.currentUser.uid,'tables',String(i+1)))));
+    return docs.map(s=>s.data()).filter(b=>b?.joinOpen&&b.tournamentKey===key&&/^[a-f0-9]{32}$/.test(b.joinToken??'')).map(b=>({slot:b.tableNumber,code:b.joinToken}));
+  },
   async codes(){
     if(!permitted()||auth.currentUser.isAnonymous||window.snookerAccount.guest)throw Error('Bitte als Spielleiter mit E-Mail und Passwort anmelden.');
     const data=window.snookerTournamentBridge.current;if(!data)throw Error('Zuerst ein Turnier erstellen oder laden.');

@@ -3,12 +3,36 @@
   const e=id=>document.getElementById(id);
   window.snookerTableAccess=Object.freeze({resolveName(name){return name.trim()},labelFor(){return null}});
   const device=document.createElement('dialog');device.className='tournamentDialog tableAccessDialog';
-  device.innerHTML='<form><h2>Tisch beitreten</h2><p>Aktuellen Tischcode von der Turnierleitung eingeben. Keine E-Mail und kein Passwort nötig. Der Code gewährt Zugriff auf diesen Tisch – bitte nur an die vorgesehenen Tischgeräte weitergeben.</p><label>Tischcode<textarea required rows="3" autocomplete="off" autocapitalize="off" spellcheck="false"></textarea></label><p role="alert"></p><div class="tournamentActions"><button class="primary">Tisch verbinden</button><button type="button" data-close>Zurück</button></div></form>';
+  device.innerHTML='<form><h2>Tisch beitreten</h2><p>Verfügbare Tische des laufenden Turniers auswählen, wenn du als Spielleiter angemeldet bist. Auf anderen Geräten weiterhin den Tischcode eingeben.</p><div data-available-tables aria-live="polite"></div><label>Tischcode<textarea required rows="3" autocomplete="off" autocapitalize="off" spellcheck="false"></textarea></label><p role="alert"></p><div class="tournamentActions"><button class="primary">Tisch verbinden</button><button type="button" data-close>Zurück</button></div></form>';
   document.body.append(device);
   e('tableDeviceSetup').textContent='Mit Tischcode beitreten';
   const joinButton=document.createElement('button');joinButton.type='button';joinButton.textContent='Mit Tischcode beitreten';joinButton.className='secondary';document.getElementById('accountBar').append(joinButton);
   joinButton.onclick=()=>e('tableDeviceSetup').click();
-  e('tableDeviceSetup').onclick=()=>{device.querySelector('[role=alert]').textContent='';device.showModal()};
+  e('tableDeviceSetup').onclick=async()=>{
+    const status=device.querySelector('[role=alert]'), list=device.querySelector('[data-available-tables]');
+    status.textContent='';list.replaceChildren();device.showModal();
+    if(!window.snookerTableBackend){status.textContent='Verbindung wird geladen. Code kann bereits manuell eingegeben werden.';return;}
+    // Invitation tokens are secret credentials: Firestore rules intentionally allow
+    // the owner to list them, not anonymous devices or other participants.
+    const hint=document.createElement('p');hint.textContent='Verfügbare Tischcodes werden geprüft …';list.append(hint);
+    try{
+      const codes=await window.snookerTableBackend.availableCodes();
+      if(!device.open)return;
+      list.replaceChildren();
+      if(!codes.length){hint.textContent='Derzeit keine aktiven Tische vorhanden.';list.append(hint);return;}
+      const heading=document.createElement('p');heading.textContent='Verfügbare Tische – zum Auswählen antippen:';list.append(heading);
+      for(const {slot,code} of codes){
+        const button=document.createElement('button');button.type='button';button.className='secondary';
+        button.textContent='Tisch '+slot+' auswählen';button.style.margin='4px';
+        button.onclick=()=>{device.querySelector('textarea').value=code;status.textContent='Tisch '+slot+' ausgewählt. Jetzt „Tisch verbinden“ wählen.'};
+        list.append(button);
+      }
+    }catch(err){
+      if(!device.open)return;
+      list.replaceChildren();
+      const info=document.createElement('p');info.textContent=err.message||'Keine Tischliste verfügbar. Bitte Tischcode manuell eingeben.';list.append(info);
+    }
+  };
   device.querySelector('[data-close]').onclick=()=>device.close();
   device.querySelector('form').onsubmit=async event=>{
     event.preventDefault();const controls=device.querySelectorAll('button,textarea');controls.forEach(b=>b.disabled=true);
