@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#0f5f37">
-  <meta name="application-version" content="7.54">
+  <meta name="application-version" content="7.55">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="Snooker Match">
@@ -331,7 +331,7 @@ body.snookerFullscreenScore #scorerPage.displayOnly{background:#090613!important
 .appInfoLink {display:inline-block;margin:0 0 14px;padding:10px 16px;border:1px solid #a98b49;border-radius:12px;color:#f3ecd7;background:#382045;text-decoration:none;font-weight:700}
 body.snookerFullscreenTournament .appInfoLink,body.snookerFullscreenScore .appInfoLink {display:none}
 
-/* v7.54: points fill the scoreboard; entry opens in a local modal. */
+/* v7.55: points fill the scoreboard; entry opens in a local modal. */
 #scorerPage:not(.displayOnly) .scorerGrid {
   flex:initial!important;
   min-height:clamp(320px,55dvh,650px);
@@ -365,10 +365,10 @@ body.snookerFullscreenTournament .appInfoLink,body.snookerFullscreenScore .appIn
 }
 
 </style>
-  <link rel="stylesheet" href="tournament.css?v=7.54">
+  <link rel="stylesheet" href="tournament.css?v=7.55">
 </head>
 <body class="modeHome">
-<div id="appVersionTag" aria-label="App-Version 7.54">v7.54</div>
+<div id="appVersionTag" aria-label="App-Version 7.55">v7.55</div>
 <div class="app">
   <h1 class="clubBrand" aria-label="Flensburger Snooker Club – Snooker Money Match"><img src="flensburger-snooker-club.png" alt="Flensburger Snooker Club" width="430" height="125"><span class="visuallyHidden">Snooker Money Match</span></h1><div id="offlineStatus" class="hidden" aria-live="polite"></div>
 
@@ -510,7 +510,7 @@ body.snookerFullscreenTournament .appInfoLink,body.snookerFullscreenScore .appIn
 <button type="button" id="accountGuest">Ohne Anmeldung fortfahren</button>
 <button type="button" id="accountCancel">Abbrechen</button>
 </div></form></dialog>
-<script src="account-access.js?v=7.54"></script>
+<script src="account-access.js?v=7.55"></script>
 
 <script>
 const localStorage = window.snookerStorage;
@@ -616,23 +616,6 @@ $('scorerEntryDialog').addEventListener('keydown',e=>{
     e.preventDefault();$('scorerAdd').click();
   }
 });
-let touchStart=null;
-document.addEventListener('touchstart',e=>{
-  if($('scorerEntryDialog').open || $('singleMode').classList.contains('hidden') || !state || !e.touches.length || e.target.closest('input,select,textarea,.appTabStrip'))return;
-  touchStart={x:e.touches[0].clientX,y:e.touches[0].clientY};
-},{passive:true});
-document.addEventListener('touchend',e=>{
-  if($('scorerEntryDialog').open){touchStart=null;return;}
-  if(!touchStart || !state || !e.changedTouches.length)return;
-  const dx=e.changedTouches[0].clientX-touchStart.x;
-  const dy=e.changedTouches[0].clientY-touchStart.y;
-  touchStart=null;
-  if(Math.abs(dx)>75 && Math.abs(dx)>Math.abs(dy)*1.6){
-    if(dx<0 && activeView==='match')showView('scorer');
-    else if(dx>0 && activeView==='scorer')showView('match');
-  }
-},{passive:true});
-
 function renderNames(){
   const old = [...document.querySelectorAll('.name')].map(x=>x.value);
   $('names').innerHTML = '';
@@ -1263,7 +1246,7 @@ if('serviceWorker' in navigator){
   });
 }
 </script>
-<script type="module" src="firebase-sync.js?v=7.54" onerror="window.snookerAccount.connectionError('Anmeldung konnte nicht geladen werden. Bitte Internetverbindung prüfen und die App erneut öffnen.')"></script><script>
+<script type="module" src="firebase-sync.js?v=7.55" onerror="window.snookerAccount.connectionError('Anmeldung konnte nicht geladen werden. Bitte Internetverbindung prüfen und die App erneut öffnen.')"></script><script>
 // Geräteindividuelle Ansicht: nicht Teil des Matches und niemals Firebase-synchronisiert.
 (function(){
  const page=document.getElementById('scorerPage');
@@ -1281,8 +1264,8 @@ if('serviceWorker' in navigator){
  btn.addEventListener('click',()=>setDisplay(!page.classList.contains('displayOnly')));
 })();
 </script>
-<script src="pdf-export.js?v=7.54"></script>
-<script src="tournament.js?v=7.54"></script>
-<script src="app-navigation.js?v=7.54"></script>
+<script src="pdf-export.js?v=7.55"></script>
+<script src="tournament.js?v=7.55"></script>
+<script src="app-navigation.js?v=7.55"></script>
 </body>
 </html>

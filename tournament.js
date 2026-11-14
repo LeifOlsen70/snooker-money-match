@@ -189,6 +189,7 @@
     }
   }
 
+  window.addEventListener('snooker-table-swipe',()=>{if(fullscreen)showTournamentView(view === 'overall' ? 'standings' : 'overall');});
   function showTournamentView(nextView) {
     if (view === nextView || !tournament || drafting) return;
     if (openMatch !== null && !confirm('Ergebniseingabe ohne Speichern verlassen?')) return;
@@ -201,29 +202,6 @@
     else window.scrollTo(0, 0);
   }
 
-  let touchStart = null;
-  panel.addEventListener('touchstart', event => {
-    touchStart = event.touches.length === 1 && !event.target.closest('input, select, textarea, .appTabStrip')
-      ? event.touches[0] : null;
-  }, {passive: true});
-  panel.addEventListener('touchcancel', () => { touchStart = null; }, {passive: true});
-  panel.addEventListener('touchend', event => {
-    const start = touchStart;
-    touchStart = null;
-    if (!start || event.touches.length || !event.changedTouches.length) return;
-    const end = event.changedTouches[0];
-    const dx = end.clientX - start.clientX;
-    const dy = end.clientY - start.clientY;
-    if (Math.abs(dx) > 75 && Math.abs(dx) > Math.abs(dy) * 1.6) {
-      if (fullscreen) {
-        showTournamentView(view === 'overall' ? 'standings' : 'overall');
-      } else {
-        const views = ['rounds', 'standings', 'overall', 'days'];
-        const next = views[views.indexOf(view) + (dx < 0 ? 1 : -1)];
-        if (next) showTournamentView(next);
-      }
-    }
-  }, {passive: true});
 
   try {
     const saved = JSON.parse(localStorage.getItem(key));
