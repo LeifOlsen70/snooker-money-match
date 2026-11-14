@@ -1,0 +1,11 @@
+Snooker Money Match v7.63 — Einmalige Tischcode-Zuordnung
+
+WICHTIG: Die Datei firestore.rules muss vor dem Test vollständig in Firebase Console > Firestore Database > Regeln veröffentlicht werden. Nur die neue ZIP-Datei auf GitHub hochzuladen reicht nicht.
+
+- Erstes Gerät reserviert seinen Tischcode in einer Firestore-Transaktion exklusiv für seine anonyme Gerätekennung.
+- Zweites Gerät mit gleichem Code wird abgewiesen, auch bei gleichzeitigen Anmeldeversuchen.
+- Dasselbe Gerät darf nach Neuladen wieder verbinden, solange die anonyme Firebase-Anmeldung im Browser erhalten bleibt.
+- Turnierleiterkonto kann die Tischstände wie bisher sehen und erhält die Ergebnisse in seinem privaten Cloud-Turnier. Andere Spielleiterkonten erhalten keine automatische Übertragung.
+- Bei Browserdaten-Löschung, Gerätewechsel oder verlorenem Login muss die Turnierleitung einen neuen Tischcode vergeben; hierfür ist eine entsprechende Reset-/Neuzuordnungsfunktion noch NICHT implementiert. Ein neues Turnier erzeugt neue Codes.
+- Sicherheitsgrenze: Dies sperrt Fremdgeräte am Tisch, bindet jedoch das Spielleiterkonto nicht an ein einzelnes physisches Gerät. Alle mit demselben Spielleiterkonto angemeldeten Geräte können dessen Daten sehen.
+- Bestehende Tischverbindungen aus v7.62 müssen gegebenenfalls mit ihrem ursprünglichen Code erneut beitreten, um ihn zu reservieren.

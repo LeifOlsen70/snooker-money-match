@@ -1,7 +1,7 @@
 import {initializeApp} from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js';
 import {getAuth,signInAnonymously,signInWithEmailAndPassword,createUserWithEmailAndPassword,sendPasswordResetEmail,setPersistence,browserLocalPersistence,inMemoryPersistence,signOut,onAuthStateChanged} from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-auth.js';
 import {getFirestore,doc,getDoc,setDoc,onSnapshot,runTransaction} from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore.js';
-import {createTableSync} from './table-sync.js?v=7.62';
+import {createTableSync} from './table-sync.js?v=7.63';
 const config={apiKey:'AIzaSyBgmv1v5APpPReJ4olWCusUhhGGevcvRcE',authDomain:'snooker-money-match.firebaseapp.com',projectId:'snooker-money-match',storageBucket:'snooker-money-match.firebasestorage.app',messagingSenderId:'423302158497',appId:'1:423302158497:web:706c1fec068959b7bbb8e0'};
 const localStorage = window.snookerStorage;
 const app=initializeApp(config),auth=getAuth(app),db=getFirestore(app),e=id=>document.getElementById(id),msg=t=>e('fbStatus').textContent=t;
@@ -25,10 +25,28 @@ window.snookerTableBackend={
     const token=code.trim().toLowerCase().replace(/[\s-]/g,'');
     if(!/^[a-f0-9]{32}$/.test(token))throw Error('Bitte den vollständigen Tischcode eingeben.');
     if(!deviceAuth.currentUser)await signInAnonymously(deviceAuth);
-    const invite=(await getDoc(doc(deviceDb,'snookerTableInvites',token))).data();
+    const inviteRef=doc(deviceDb,'snookerTableInvites',token);
+    const invite=(await getDoc(inviteRef)).data();
     if(!invite)throw Error('Tischcode nicht gefunden.');
-    try{await setDoc(doc(deviceDb,'snookerTableBoards',invite.owner,'tables',String(invite.slot),'members',deviceAuth.currentUser.uid),{token})}
-    catch(err){if(err.code==='permission-denied')throw Error('Dieser Tischcode ist abgelaufen oder das Turnier beendet. Bitte den aktuellen Code verwenden.');throw err}
+    const uid=deviceAuth.currentUser.uid;
+    const memberRef=doc(deviceDb,'snookerTableBoards',invite.owner,'tables',String(invite.slot),'members',uid);
+    try{
+      // A single Firestore transaction atomically reserves the invitation for
+      // this anonymous device identity. Concurrent attempts cannot both win.
+      await runTransaction(deviceDb,async tx=>{
+        const invitation=await tx.get(inviteRef);
+        const current=invitation.data();
+        if(!current||current.owner!==invite.owner||current.slot!==invite.slot)
+          throw Error('Dieser Tischcode ist abgelaufen oder das Turnier beendet.');
+        if(current.claimedBy&&current.claimedBy!==uid)
+          throw Error('Dieser Tischcode ist bereits mit einem anderen Gerät verbunden. Bitte die Turnierleitung kontaktieren.');
+        if(!current.claimedBy)tx.update(inviteRef,{claimedBy:uid});
+        tx.set(memberRef,{token});
+      });
+    }catch(err){
+      if(err.code==='permission-denied')throw Error('Tischzugriff abgelehnt. Bitte die neuen Firebase-Regeln für Version 7.63 veröffentlichen.');
+      throw err;
+    }
     window.localStorage.setItem(deviceKey,JSON.stringify({owner:invite.owner,slot:invite.slot,token}));
     window.location.reload();
   },

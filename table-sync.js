@@ -13,7 +13,7 @@ export function createTableSync({auth,db,doc,getDoc,onSnapshot,runTransaction}){
   const same=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
   const active=()=>user&&auth.currentUser?.uid===user.uid;
   const notify=()=>{if(active())window.dispatchEvent(new CustomEvent('snooker-table-boards',{detail:{role,boards:[...cache.values()]}}))};
-  const error=err=>{if(err.code==='permission-denied'&&role==='table'){cache.clear();notify()}window.dispatchEvent(new CustomEvent('snooker-table-error',{detail:err.code==='permission-denied'?'Tischzugriff gesperrt. Bitte den aktuellen Tischcode verwenden und die Firebase-Regeln aus Version 7.58 prüfen.':err.message||String(err)}));};
+  const error=err=>{if(err.code==='permission-denied'&&role==='table'){cache.clear();notify()}window.dispatchEvent(new CustomEvent('snooker-table-error',{detail:err.code==='permission-denied'?'Tischzugriff gesperrt. Bitte den aktuellen Tischcode verwenden und die Firebase-Regeln aus Version 7.63 prüfen.':err.message||String(err)}));};
   function stop(){session++;for(const fn of stops)fn();stops=[];cache.clear();role=null;user=null;syncCount=0;queue=Promise.resolve()}
   async function start(account,table,tableOwner){
     stop();user=account;organizer=tableOwner??account.uid;role=table?'table':'owner';const token=session;

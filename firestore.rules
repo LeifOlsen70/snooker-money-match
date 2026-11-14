@@ -8,18 +8,30 @@ service cloud.firestore {
     match /privateSnooker/{userId} {
       allow read, write: if signedIn() && request.auth.uid == userId;
     }
-    // Unpredictable 128-bit invitation codes. Direct lookup only; no listing.
+    // Single-use 128-bit invitations. Claim is bound atomically to one
+    // anonymous Firebase Auth UID; only the same device can reconnect.
     match /snookerTableInvites/{token} {
+      function validToken() { return token.matches('^[a-f0-9]{32}$'); }
+      function boardPath(owner,slot) {
+        return /databases/$(database)/documents/snookerTableBoards/$(owner)/tables/$(string(slot));
+      }
       allow get: if signedIn();
       allow list: if false;
-      allow create, update: if normalAccount()
+      allow create: if normalAccount()
         && request.resource.data.owner == request.auth.uid
-        && token.matches('^[a-f0-9]{32}$')
+        && validToken()
         && request.resource.data.keys().hasOnly(['owner','slot','tournamentKey'])
         && request.resource.data.slot is int
-        && request.resource.data.slot >= 1 && request.resource.data.slot <= 6
-        && (!exists(/databases/$(database)/documents/snookerTableInvites/$(token))
-          || resource.data.owner == request.auth.uid);
+        && request.resource.data.slot >= 1 && request.resource.data.slot <= 6;
+      allow update: if signedIn() && validToken()
+        && !('claimedBy' in resource.data)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['claimedBy'])
+        && request.resource.data.claimedBy == request.auth.uid
+        && exists(boardPath(resource.data.owner,resource.data.slot))
+        && get(boardPath(resource.data.owner,resource.data.slot)).data.joinToken == token
+        && get(boardPath(resource.data.owner,resource.data.slot)).data.joinOpen == true
+        && get(boardPath(resource.data.owner,resource.data.slot)).data.enabled == true
+        && get(boardPath(resource.data.owner,resource.data.slot)).data.tournamentKey == resource.data.tournamentKey;
       allow delete: if normalAccount() && resource.data.owner == request.auth.uid;
     }
     match /snookerTableBoards/{organizer}/tables/{slot} {
@@ -27,7 +39,9 @@ service cloud.firestore {
       function isMember() {
         return signedIn()
           && exists(/databases/$(database)/documents/snookerTableBoards/$(organizer)/tables/$(slot)/members/$(request.auth.uid))
-          && get(/databases/$(database)/documents/snookerTableBoards/$(organizer)/tables/$(slot)/members/$(request.auth.uid)).data.token == resource.data.joinToken;
+          && get(/databases/$(database)/documents/snookerTableBoards/$(organizer)/tables/$(slot)/members/$(request.auth.uid)).data.token == resource.data.joinToken
+          && exists(/databases/$(database)/documents/snookerTableInvites/$(resource.data.joinToken))
+          && get(/databases/$(database)/documents/snookerTableInvites/$(resource.data.joinToken)).data.claimedBy == request.auth.uid;
       }
       function validScoreState() {
         let state = request.resource.data.state;
@@ -54,7 +68,8 @@ service cloud.firestore {
             && request.resource.data.keys().hasOnly(['token'])
             && board.joinOpen == true && board.joinToken == token
             && invite.owner == organizer && string(invite.slot) == slot
-            && invite.tournamentKey == board.tournamentKey;
+            && invite.tournamentKey == board.tournamentKey
+            && getAfter(/databases/$(database)/documents/snookerTableInvites/$(token)).data.claimedBy == request.auth.uid;
         }
         allow get: if signedIn() && (request.auth.uid == member || request.auth.uid == organizer);
         allow list: if normalAccount() && request.auth.uid == organizer;
@@ -66,7 +81,9 @@ service cloud.firestore {
     match /{collection}/{document=**} {
       allow read, write: if signedIn()
         && request.auth.uid == 'SRx2kZD2jzdM3Q6RVVOjioAuHuw1'
-        && collection != 'privateSnooker';
+        && collection != 'privateSnooker'
+        && collection != 'snookerTableInvites'
+        && collection != 'snookerTableBoards';
     }
     // Existing Pool group access.
     match /privatePool/SRx2kZD2jzdM3Q6RVVOjioAuHuw1 {
