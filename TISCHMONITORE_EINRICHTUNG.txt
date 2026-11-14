@@ -1,6 +1,6 @@
-Snooker Money Match v7.60 – Tischcodes ohne E-Mail
+Snooker Money Match v7.61 – Tischcodes ohne E-Mail
 
-1. Bestehenden Spielstand vor dem Update als JSON sichern. Alle Webdateien auf GitHub hochladen und die App aktualisieren, bis v7.60 erscheint.
+1. Bestehenden Spielstand vor dem Update als JSON sichern. Alle Webdateien auf GitHub hochladen und die App aktualisieren, bis v7.61 erscheint.
 2. Firebase > Authentication > Anmeldemethode: E-Mail/Passwort UND Anonym müssen aktiviert sein. Anonym ist in deinem Projekt bereits vorhanden.
 3. Die bereits veröffentlichten Firestore-Regeln aus v7.58 bleiben gültig. Keine erneute Veröffentlichung erforderlich.
 4. Spark beibehalten. Keine Abrechnung aktivieren, keine Cloud Functions anlegen. Diese Version benötigt keinen zusätzlichen Server. Das kostenlose Firebase-Kontingent wird weiterhin genutzt; wird es ausgeschöpft, kann die Synchronisation aussetzen.
@@ -17,4 +17,4 @@ Snooker Money Match v7.60 – Tischcodes ohne E-Mail
 
 Technische Prüfung: Automatisierte Modelltests für Punkte/Breaks, Frames, Rückgängig/Wiederholen und Ergebnisübernahme. Simulierte Datenbanktests für getrennte Spielleiter, Tischberechtigungen, Codewechsel, abgelaufene Codes und erhaltene Verbindung bei Neuladen. Kein echter Firebase-Mehrgerätetest und kein Firebase-Regel-Emulatortest in dieser Entwicklungsumgebung. Nach dem Veröffentlichen zuerst ein kurzes Testturnier mit zwei Geräten durchführen.
 
-Korrektur v7.60: Ergebnis-Break-Listen werden Firestore-kompatibel übertragen. Bitte alle beteiligten Geräte auf v7.60 aktualisieren. Bestehende lange Tischcodes können weiterverwendet werden.
+Korrektur v7.61: Ergebnis-Break-Listen werden Firestore-kompatibel übertragen. Bitte alle beteiligten Geräte auf v7.61 aktualisieren. Bestehende lange Tischcodes können weiterverwendet werden.

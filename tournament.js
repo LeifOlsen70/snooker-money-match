@@ -237,6 +237,28 @@
   $('openFreeTournament').onclick = () => window.snookerAccount.request('free');
   $('openClubLeague').onclick = () => window.snookerAccount.request('club');
 
+  // A monitor's running event log is authoritative for live frames and breaks.
+  // A match.result remains reserved for a completed match, so standings and
+  // pairings are never awarded points for merely starting a frame.
+  function liveMatchSummary(match, data = tournament) {
+    if (match.result) return {frames:match.result.frames, breaks:match.result.breaks, complete:true};
+    const state=match.scoreMonitor?.state;
+    if (!state) return null;
+    try {
+      return window.SnookerTableScore.derive(state,
+        data.framesPerMatch != null ? {framesPerMatch:data.framesPerMatch} : {target:data.target});
+    } catch { return null; }
+  }
+  function playerBreaks(data, id) {
+    const result=[];
+    for (const round of data.rounds) for (const match of round.matches) {
+      const index=match.players.indexOf(id);
+      if (index<0) continue;
+      const summary=liveMatchSummary(match,data);
+      if (summary) result.push(...(summary.breaks?.[index]??[]));
+    }
+    return result.filter(value => Number.isInteger(value) && value>=20 && value<=155);
+  }
   // Only confirmed results and assigned byes count toward the standings.
   function standings(rounds = tournament.rounds, data = tournament) {
     const rows = data.players.map((name, id) => ({
@@ -318,7 +340,8 @@
   }
 
   function seasonDayRows(data) {
-    return standings(data.rounds, data).map(({name, place, seasonPoints}) => ({name, place, points:seasonPoints}));
+    return standings(data.rounds, data).map(({name, id, place, seasonPoints}) =>
+      ({name, place, points:seasonPoints, highestBreak:Math.max(0,...playerBreaks(data,id))}));
   }
 
   function unpairedTournament(data) {
@@ -403,11 +426,12 @@
     const totals = new Map();
     for (const day of rows) {
       const present = new Set();
-      for (const {name, points} of day.rows) {
+      for (const {name, points, highestBreak} of day.rows) {
         const id = name.trim().toLocaleLowerCase('de');
         const previous = totals.get(id);
         totals.set(id, {name, points: (previous?.points ?? 0) + points,
-          appearances: (previous?.appearances ?? 0) + Number(day.completed && !present.has(id))});
+          appearances: (previous?.appearances ?? 0) + Number(day.completed && !present.has(id)),
+          highestBreak: Math.max(previous?.highestBreak ?? 0, highestBreak ?? 0)});
         present.add(id);
       }
     }
@@ -477,9 +501,9 @@
 
   function overallTable(rows) {
     if (!rows.length) return '<p class="small">Diese Saison hat noch keine Spieltage.</p>';
-    const tableRows = rows.map(({place, name, points, appearances}) =>
-      `<tr><td>${place}</td><td>${esc(name)}</td><td>${formatPoints(points)}</td><td>${appearances}</td></tr>`);
-    return `<table class="tournamentTable"><thead><tr><th>Pl.</th><th>Spieler</th><th>Pkt.</th><th>Teilnahmen</th></tr></thead>
+    const tableRows = rows.map(({place, name, points, appearances, highestBreak}) =>
+      `<tr><td>${place}</td><td>${esc(name)}</td><td>${formatPoints(points)}</td><td>${appearances}</td><td>${highestBreak || '–'}</td></tr>`);
+    return `<table class="tournamentTable"><thead><tr><th>Pl.</th><th>Spieler</th><th>Pkt.</th><th>Teilnahmen</th><th title="Höchstes Break der Saison (ab 20)">HB Saison</th></tr></thead>
       <tbody>${tableRows.join('')}</tbody></table>`;
   }
 
@@ -1216,11 +1240,12 @@
     else if (match.paused) status = 'Pausiert';
     else if (blocked) status = 'Wartet auf ein Ergebnis';
     const waiting = !match.result && !match.table && !tournament.ended;
+    const live=liveMatchSummary(match);
     return `<article class="tournamentMatch">
       <h4>${names.join(' – ')}</h4>
-      <p class="tournamentStatus">${status}${match.result ? ` · ${match.result.frames.join(':')}` : ''}</p>
+      <p class="tournamentStatus">${status}${match.result ? ` · ${match.result.frames.join(':')}` : live && match.table ? ` · Frames ${live.frames.join(':')}` : ''}</p>
       ${renderMatchTime(match, index)}
-      ${match.result ? match.result.breaks.map((breaks, i) =>
+      ${live ? live.breaks.map((breaks, i) =>
         breaks.length ? `<p class="small"><strong>${names[i]}</strong> · Breaks: ${breaks.join(', ')}</p>` : ''
       ).join('') : ''}
       ${!tournament.ended && openMatch === null ? `<div class="tournamentActions">
@@ -1327,6 +1352,8 @@
       return `<tr><td>${row.place}</td><td>${esc(row.name)}</td><td>${formatPoints(row.points)}</td>
         <td>${row.played + row.byes}</td><td>${row.wins}</td><td>${row.draws}</td><td>${row.diff > 0 ? '+' : ''}${row.diff}</td></tr>`;
     });
+    // Also display breaks from live matches that have not finished yet.
+    for(const row of rows) row.breaks=playerBreaks(data,row.id);
     const playedBreaks = rows.filter(row => row.breaks.length);
     return `<div class="card tournamentStandings" style="--table-rows:${rows.length + 1}">
       <div class="tournamentStandingsHeader">
@@ -1388,7 +1415,8 @@
       (day.completed == null || typeof day.completed === 'boolean') &&
       day.rows.every(row => row && typeof row.name === 'string' && row.name.trim() &&
         Number.isFinite(row.points) && row.points >= 0 &&
-        (row.place == null || integer(row.place,1,12)));
+        (row.place == null || integer(row.place,1,12)) &&
+        (row.highestBreak == null || integer(row.highestBreak,0,155)));
     if (data.overallDays != null && (!Array.isArray(data.overallDays) || !data.overallDays.every(validDay))) return false;
     if (data.yearDays != null && (!Array.isArray(data.yearDays) || !data.yearDays.every(validDay))) return false;
     if (data.deletedDays != null && (!Array.isArray(data.deletedDays) ||
@@ -1397,7 +1425,8 @@
       !data.seasonArchive.every(season => season && Number.isFinite(season.ended) && typeof season.name === 'string' &&
         (season.days == null || (Array.isArray(season.days) && season.days.every(validDay))) &&
         Array.isArray(season.rows) && season.rows.every(row => row && typeof row.name === 'string' &&
-          Number.isFinite(row.points) && Number.isInteger(row.place) && Number.isInteger(row.appearances)))))) return false;
+          Number.isFinite(row.points) && Number.isInteger(row.place) && Number.isInteger(row.appearances) &&
+          (row.highestBreak == null || integer(row.highestBreak,0,155))))))) return false;
     if ((data.freeTournament != null && typeof data.freeTournament !== 'boolean') ||
       !timestamp(data.parkedAt) || (data.parkedTournament != null &&
         (!allowParked || Boolean(data.freeTournament) === Boolean(data.parkedTournament.freeTournament) ||

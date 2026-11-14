@@ -1,4 +1,4 @@
-Snooker Money Match v7.60
+Snooker Money Match v7.61
 Alle Dateien auf GitHub hochladen und die App anschließend neu öffnen.
 Im Turniermodus sichern und laden die beiden Schaltflächen eine JSON-Datei.
 Die Matchzeit startet mit der Tischzuweisung und endet beim Speichern des Ergebnisses.
@@ -8,13 +8,21 @@ In der Tabelle schaltet „Vollbild an/aus“ die große Anzeige ein und aus.
 Gespielte Breaks ab 20 stehen in der Tabelle und bei den abgeschlossenen Matches.
 Turniere werden lokal gespeichert. Mit Firebase-Anmeldung wird der Turnierstand automatisch über beide Geräte synchronisiert.
 
+Neu in v7.61 – Live-Übernahme und höchstes Saisonbreak:
+- Laufende Frame-Zwischenstände erscheinen im Reiter Runden, ohne das Match vorzeitig zu beenden.
+- Breaks ab 20 aus dem Score Monitor erscheinen auch vor Matchabschluss in Tabelle Turniertag.
+- Tabelle Saison enthält je Teilnehmer HB Saison (nur den höchsten Wert über alle Spieltage der Saison).
+- Höchstes Break wird beim Abschließen eines Spieltags in der Saisonhistorie gespeichert und beim Saisonwechsel archiviert.
+- Alte Spieltage ohne gespeicherte Breakdaten können rückwirkend nicht rekonstruiert werden.
+- Vor Installation bitte Turnier-JSON sichern; GitHub-Dateien auf allen Geräten aktualisieren.
+
 Neu in v7.60 – Korrektur auf Basis von v7.58:
 - Firebase-Fehler „Nested arrays are not supported“ bei vollständigen Ergebnissen mit Break-Listen behoben.
 - Break-Listen werden nur für die Datenbankübertragung umgewandelt und beim Empfang wiederhergestellt. JSON-Dateien und Spielauswertung behalten ihr bisheriges Format.
 - Manuelle Ergebnisübernahme, importierte Ergebnisstände sowie Rückgängig/Wiederholen geprüft.
 - Lange Tischcodes und Kontentrennung aus v7.58 bleiben erhalten. v7.59 mit kurzen Codes ist nicht enthalten.
 - Firebase-Regeln sind unverändert identisch mit v7.58. Kein erneutes Veröffentlichen erforderlich.
-- Alle beteiligten Geräte auf v7.60 aktualisieren. Bestehende Daten vorsorglich zuvor als JSON sichern.
+- Alle beteiligten Geräte auf v7.61 aktualisieren. Bestehende Daten vorsorglich zuvor als JSON sichern.
 
 Neu in v7.58 – Tischcodes ohne E-Mail:
 - Jeder normale E-Mail-/Passwort-Nutzer kann seine eigenen Tischgeräte verbinden.
@@ -216,7 +224,7 @@ Neu in v7.18:
 - Bestehende JSON-Turniersicherungen können weiterhin geladen werden.
 
 Installation: Alle enthaltenen Dateien im bisherigen GitHub-Ordner ersetzen.
-App danach neu öffnen, gegebenenfalls einmal aktualisieren. Unten muss v7.60 stehen.
+App danach neu öffnen, gegebenenfalls einmal aktualisieren. Unten muss v7.61 stehen.
 Vor dem Update das laufende Turnier als JSON sichern.
 Die Speicherung einer Datei wird je nach Gerät über Teilen oder Download ausgeführt.
 

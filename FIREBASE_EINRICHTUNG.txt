@@ -1,11 +1,11 @@
-Snooker Money Match v7.60 – Firebase einrichten
+Snooker Money Match v7.61 – Firebase einrichten
 
 Projekt: https://console.firebase.google.com/project/snooker-money-match/overview
 
 1. Authentication > Anmeldemethode: E-Mail/Passwort und Anonym aktivieren. Normale Nutzer registrieren sich selbst mit E-Mail und Passwort. Tischgeräte verwenden eine separate anonyme Sitzung.
 2. Authentication > Einstellungen > Autorisierte Domains: tatsächliche GitHub-App-Domain freigeben.
 3. Die bereits veröffentlichten Firestore-Regeln aus v7.58 bleiben unverändert gültig. Die enthaltene firestore.rules ist bytegleich mit v7.58; keine erneute Veröffentlichung erforderlich.
-4. Alle Webdateien auf GitHub aktualisieren, bis die App v7.60 anzeigt. Das Hochladen von firestore.rules auf GitHub veröffentlicht keine Firebase-Regeln.
+4. Alle Webdateien auf GitHub aktualisieren, bis die App v7.61 anzeigt. Das Hochladen von firestore.rules auf GitHub veröffentlicht keine Firebase-Regeln.
 5. Kein Tarifwechsel, keine Abrechnung und keine Cloud Functions erforderlich. Spark beibehalten.
 6. Mit E-Mail-/Passwort-Konto anmelden und Turnier öffnen. Score Monitor > Tischcodes anzeigen. Auf dem Tischgerät Mit Tischcode beitreten > Code einfügen.
 7. Testen: Partie an Tisch 1 starten, am Tischgerät 24 Punkte eingeben, auf dem Spielleitergerät den Live-Score prüfen. Frames abschließen und Ergebnis/Break in der Tabelle prüfen. Neues Testturnier erstellen: alter Code muss ungültig werden.
