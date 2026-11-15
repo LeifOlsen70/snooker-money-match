@@ -1506,6 +1506,68 @@
     };
   }
 
+  function askClubFileBeforeNewTournament() {
+    if (!tournament || tournament.freeTournament || !tournament.ended || document.querySelector('dialog[open]')) return;
+    const dialog = document.createElement('dialog');
+    dialog.className = 'tournamentDialog';
+    dialog.innerHTML = `<div>
+      <h2>Neuen Club-Liga-Spieltag anlegen</h2>
+      <p>Bitte möglichst die <strong>aktuellste Liga-Datei</strong> verwenden, damit alle Saisonergebnisse übernommen werden.</p>
+      <div class="tournamentActions">
+        <button type="button" class="primary" data-upload>Aktuelle Liga-Datei laden</button>
+        <button type="button" class="secondary" data-continue>Ohne Datei fortfahren</button>
+        <button type="button" class="secondary" data-cancel>Abbrechen</button>
+      </div>
+      <input type="file" accept=".json,application/json" class="hidden" data-file>
+      <p class="tournamentStatus" role="alert" data-error></p>
+    </div>`;
+    document.body.append(dialog);
+    const fileInput = dialog.querySelector('[data-file]');
+    const errorOutput = dialog.querySelector('[data-error]');
+    const close = () => { dialog.close(); dialog.remove(); };
+    const begin = () => {
+      close();
+      draftFreeTournament = null;
+      drafting = true;
+      renderTournament();
+    };
+    dialog.querySelector('[data-cancel]').onclick = close;
+    dialog.oncancel = event => { event.preventDefault(); close(); };
+    dialog.querySelector('[data-continue]').onclick = begin;
+    dialog.querySelector('[data-upload]').onclick = () => fileInput.click();
+    fileInput.onchange = async () => {
+      const file = fileInput.files?.[0];
+      fileInput.value = '';
+      if (!file) return;
+      try {
+        const backup = JSON.parse(await file.text());
+        if (backup?.app !== 'Snooker Swiss Tournament' || backup.version !== 1 ||
+            !validBackup(backup.tournament) || backup.tournament.freeTournament) {
+          throw new Error('invalid-club-backup');
+        }
+        if (!confirm('Diese Liga-Datei als Grundlage für den neuen Spieltag übernehmen? Der bislang gespeicherte Liga-Stand auf diesem Gerät wird ersetzt.')) return;
+        tournament = backup.tournament;
+        remoteTournament = null;
+        undoStates = [];
+        redoStates = [];
+        archiveSelection = null;
+        openMatch = null;
+        view = 'rounds';
+        // Reuse the existing verified restore path before starting setup.
+        // Clearing the open dialog must happen before rendering the setup screen.
+        close();
+        draftFreeTournament = null;
+        drafting = false;
+        saveTournament(false, true);
+        drafting = true;
+        renderTournament();
+      } catch (error) {
+        errorOutput.textContent = 'Die Datei konnte nicht geladen werden. Bitte eine gültige Club-Liga-Sicherung (.json) auswählen.';
+      }
+    };
+    dialog.showModal();
+  }
+
   function publishTournament(before, replace = false) {
     if (before === committed && !replace) return;
     remoteTournament = null;
@@ -1744,9 +1806,14 @@
       saveTournament();
     };
     if ($('newTournament')) $('newTournament').onclick = () => {
-      draftFreeTournament = null;
-      drafting = true;
-      renderTournament();
+      // Free tournament remains unchanged. The Club Liga asks for the latest season backup.
+      if (tournament.freeTournament) {
+        draftFreeTournament = null;
+        drafting = true;
+        renderTournament();
+      } else {
+        askClubFileBeforeNewTournament();
+      }
     };
   }
 
