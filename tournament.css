@@ -351,12 +351,15 @@ body.snookerFullscreenScore .pageFooter,body.snookerFullscreenTournament .pageFo
 .monitorCard {padding:12px;border:1px solid #bb914b;border-radius:16px;background:linear-gradient(140deg,#301442,#10091c);margin-bottom:12px}
 .monitorCard h3 {margin:0 0 10px}
 .monitorPlayers {display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.monitorPlayers button {display:flex;flex-direction:column;align-items:center;justify-content:space-evenly;gap:12px;min-width:0;min-height:290px;padding:12px 5px;background:linear-gradient(145deg,#43165e,#10091c);color:#fff2d4;border:2px solid #c9a25d;border-radius:16px;cursor:pointer}
+.monitorPlayerColumn {display:flex;flex-direction:column;gap:8px;min-width:0}
+.monitorPlayers .monitorScoreButton {display:flex;flex-direction:column;align-items:center;justify-content:space-evenly;gap:12px;min-width:0;min-height:290px;padding:12px 5px;background:linear-gradient(145deg,#43165e,#10091c);color:#fff2d4;border:2px solid #c9a25d;border-radius:16px;cursor:pointer}
 .monitorName {font-size:clamp(24px,5vw,42px);font-weight:800;overflow-wrap:anywhere;max-width:100%}
 .monitorPoints {font-size:clamp(70px,17vw,150px);line-height:1;color:white;font-variant-numeric:tabular-nums}
-.monitorCompact .monitorPlayers button {min-height:200px}
+.monitorCompact .monitorPlayers .monitorScoreButton {min-height:200px}
 .monitorCompact .monitorName {font-size:clamp(20px,3vw,32px)}
 .monitorCompact .monitorPoints {font-size:clamp(55px,10vw,100px)}
+ .monitorPlayers .monitorFrameWinner {display:block;box-sizing:border-box;width:100%;min-height:46px;padding:9px 8px;background:linear-gradient(145deg,#5a416b,#483356);color:#f6e9f8;border:1px solid #c5a575;border-radius:10px;font-size:clamp(13px,2vw,17px);font-weight:650;line-height:1.2;overflow-wrap:anywhere;cursor:pointer;touch-action:manipulation}
+.monitorPlayers .monitorFrameWinner:focus-visible {outline:3px solid #efc67d;outline-offset:2px}
 .monitorActions {display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:10px 0}
 .monitorActions button,.monitorTableHeader button {background:#392247;color:#f6e9d1;border:1px solid #b99255;min-height:44px}
 .monitorTableHeader {display:flex;justify-content:space-between;align-items:center;gap:10px;margin:12px 0}
@@ -370,19 +373,17 @@ body.snookerFullscreenScore .pageFooter,body.snookerFullscreenTournament .pageFo
 .monitorKeypad {display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px}
 .monitorKeypad button {min-height:60px;background:linear-gradient(#fff,#e5dedb);color:#211327;border:1px solid #cba25b;font-size:30px}
 .monitorKeypad button[data-key=clear] {font-size:17px;background:#edc8db}
-.monitorWinners {display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
-.monitorWinners button {background:#382045;color:#f8e7bf;border:1px solid #bc955c;min-height:44px;font-size:14px}
 #tableInputStatus {color:#ffdd91}
 body.tableDeviceMode #modeStart,body.tableDeviceMode #singleMode,body.tableDeviceMode #tournamentMode {display:none!important}
 body.tableMonitorFullscreen {overflow:hidden!important}
 body.tableMonitorFullscreen #tableMode {position:fixed;inset:0;z-index:200;overflow:auto;background:#100919;padding:calc(8px + env(safe-area-inset-top)) 10px 10px;box-sizing:border-box}
-body.tableMonitorFullscreen #tableMode .monitorPlayers button {min-height:65dvh}
+body.tableMonitorFullscreen #tableMode .monitorPlayers .monitorScoreButton {min-height:65dvh}
 body.tableMonitorFullscreen .pageFooter {display:none!important}
 body.monitorOverviewFullscreen {overflow:hidden!important}
 body.monitorOverviewFullscreen #tournamentMonitors {position:fixed;inset:0;z-index:200;overflow:auto;background:#100919;padding:calc(8px + env(safe-area-inset-top)) 10px 10px;box-sizing:border-box}
 body.monitorOverviewFullscreen .pageFooter {display:none!important}
 @media (orientation:landscape) and (max-height:520px){
- body.tableMonitorFullscreen #tableMode .monitorPlayers button {min-height:55dvh;gap:4px}
+ body.tableMonitorFullscreen #tableMode .monitorPlayers .monitorScoreButton {min-height:55dvh;gap:4px}
  body.tableMonitorFullscreen #tableMode .monitorName {font-size:28px}
  body.tableMonitorFullscreen #tableMode .monitorPoints {font-size:70px}
  .monitorInputDialog {max-height:95dvh}

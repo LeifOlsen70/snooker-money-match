@@ -6,10 +6,10 @@
   let tableSlot=null,boards=[],message='',popupBoard=null,popupPlayer=0,busy=false,landing=false;
   const tablePage=document.createElement('section');tablePage.id='tableMode';tablePage.hidden=true;app.append(tablePage);
   const popup=document.createElement('dialog');popup.id='tableScoreDialog';popup.className='tournamentDialog monitorInputDialog';
-  popup.innerHTML=`<button type="button" data-close class="secondary">← Zurück zur Punkteanzeige</button><h2 id="tableInputName"></h2><p>Break-Punkte hinzufügen</p><input id="tableInputValue" readonly placeholder="0" aria-label="Punkte"><div class="monitorKeypad">${[1,2,3,4,5,6,7,8,9,'clear',0,'delete'].map(value=>`<button type="button" data-key="${value}">${value==='clear'?'Löschen':value==='delete'?'⌫':value}</button>`).join('')}</div><button type="button" id="tableInputSubmit" class="primary">Punkte übernehmen</button><div class="monitorWinners"></div><p role="alert" id="tableInputStatus"></p>`;
+  popup.innerHTML=`<button type="button" data-close class="secondary">← Zurück zur Punkteanzeige</button><h2 id="tableInputName"></h2><p>Break-Punkte hinzufügen</p><input id="tableInputValue" readonly placeholder="0" aria-label="Punkte"><div class="monitorKeypad">${[1,2,3,4,5,6,7,8,9,'clear',0,'delete'].map(value=>`<button type="button" data-key="${value}">${value==='clear'?'Löschen':value==='delete'?'⌫':value}</button>`).join('')}</div><button type="button" id="tableInputSubmit" class="primary">Punkte übernehmen</button><p role="alert" id="tableInputStatus"></p>`;
   document.body.append(popup);
   const input=()=>document.getElementById('tableInputValue');
-  function closePopup(){popup.close();input().value='';popupBoard=null}
+  function closePopup(){if(popup.open)popup.close();input().value='';popupBoard=null}
   popup.querySelector('[data-close]').onclick=closePopup;
   popup.oncancel=e=>{e.preventDefault();closePopup()};
   popup.addEventListener('click',e=>{if(e.target===popup)closePopup()});
@@ -52,11 +52,14 @@
     finally{busy=false;popup.querySelectorAll('button').forEach(el=>el.disabled=false)}
   }
   function winner(board,player){
-    let pendingPoints;
-    if(input().value){const value=Number(input().value);if(!Number.isInteger(value)||value<1||value>147){document.getElementById('tableInputStatus').textContent='Bitte 1 bis 147 Punkte eingeben oder das Feld löschen.';return;}pendingPoints={player:popupPlayer,value};}
-    const note=pendingPoints?` Dabei ${pendingPoints.value} Punkte für ${board.assignment.names[pendingPoints.player]} übernehmen.`:'';
-    if(!confirm(`Frame-Sieg für ${board.assignment.names[player]} bestätigen?${note}`))return;
-    send(board,{type:'frame',player,...(pendingPoints?{pendingPoints}:{})});
+    if(busy||!board.enabled)return;
+    const value=model.derive(board.state,board.assignment.rules);
+    if(value.complete)return;
+    if(!board._local&&!boards.some(b=>b.assignment?.id===board.assignment.id)){
+      status('Der Tisch wird noch verbunden. Bitte kurz warten.');return;
+    }
+    if(!confirm(`Frame-Sieg für ${board.assignment.names[player]} bestätigen?`))return;
+    send(board,{type:'frame',player});
   }
   function openPopup(board,player){
     if(!board.enabled)return;
@@ -67,8 +70,6 @@
     const summary=model.derive(board.state,board.assignment.rules);
     const disabled=summary.complete;
     document.getElementById('tableInputSubmit').disabled=disabled;
-    popup.querySelector('.monitorWinners').innerHTML=board.assignment.names.map((name,i)=>`<button type="button" data-winner="${i}" ${disabled?'disabled':''}>Frame-Sieger: ${escape(name)}</button>`).join('');
-    popup.querySelectorAll('[data-winner]').forEach(b=>b.onclick=()=>winner(board,Number(b.dataset.winner)));
     popup.showModal();popup.querySelector('[data-close]').focus({preventScroll:true});
   }
   document.getElementById('tableInputSubmit').onclick=()=>{
@@ -81,13 +82,14 @@
     if(!board?.assignment)return `<article class="monitorCard"><h3>Tisch ${board?.slot??''}</h3><p>Warten auf eine gestartete Partie.</p></article>`;
     const value=model.derive(board.state,board.assignment.rules);
     return `<article class="monitorCard ${compact?'monitorCompact':''}"><h3>Tisch ${board.tableNumber} · ${value.complete?'Partie beendet':'Frame '+(value.frames[0]+value.frames[1]+1)}</h3>
-    <div class="monitorPlayers">${board.assignment.names.map((name,i)=>`<button type="button" data-monitor-player="${i}" data-monitor-slot="${board.slot}" ${board.enabled?'':'disabled'}><span class="monitorName">${escape(name)}</span><strong class="monitorPoints">${value.scores[i]}</strong><span>Frames <b>${value.frames[i]}</b></span><span>HB: ${Math.max(0,...value.breaks[i])}</span></button>`).join('')}</div>
+    <div class="monitorPlayers">${board.assignment.names.map((name,i)=>`<div class="monitorPlayerColumn"><button type="button" class="monitorScoreButton" data-monitor-player="${i}" data-monitor-slot="${board.slot}" ${board.enabled&&!value.complete?'':'disabled'}><span class="monitorName">${escape(name)}</span><strong class="monitorPoints">${value.scores[i]}</strong><span>Frames <b>${value.frames[i]}</b></span><span>HB: ${Math.max(0,...value.breaks[i])}</span></button><button type="button" class="monitorFrameWinner" data-monitor-winner="${i}" data-monitor-slot="${board.slot}" ${board.enabled&&!value.complete?'':'disabled'}>Frame-Sieger: ${escape(name)}</button></div>`).join('')}</div>
     <p class="small">${board.assignment.rules.framesPerMatch!=null?board.assignment.rules.framesPerMatch+' Frames insgesamt':'Bis '+board.assignment.rules.target+' Gewinnframes'}${value.complete?' · Ergebnis '+value.frames.join(':'):''}</p>
     <div class="monitorActions"><button type="button" data-monitor-undo="${board.slot}" ${board.state.cursor&&board.enabled?'':'disabled'}>↶ Zurück</button><button type="button" data-monitor-redo="${board.slot}" ${board.state.cursor<board.state.events.length&&board.enabled?'':'disabled'}>Vor ↷</button></div>
     <details><summary>Breaks ab 20</summary>${value.breaks.map((list,i)=>`<p>${escape(board.assignment.names[i])}: ${list.join(', ')||'–'}</p>`).join('')}</details></article>`;
   }
   function bind(container,list){
     container.querySelectorAll('[data-monitor-player]').forEach(b=>b.onclick=()=>{const board=list.find(x=>x.slot===Number(b.dataset.monitorSlot));if(board)openPopup(board,Number(b.dataset.monitorPlayer))});
+    container.querySelectorAll('[data-monitor-winner]').forEach(b=>b.onclick=()=>{const board=list.find(x=>x.slot===Number(b.dataset.monitorSlot));if(board)winner(board,Number(b.dataset.monitorWinner))});
     for(const action of ['undo','redo'])container.querySelectorAll(`[data-monitor-${action}]`).forEach(b=>b.onclick=()=>{const board=list.find(x=>x.slot===Number(b.dataset[action==='undo'?'monitorUndo':'monitorRedo']));if(board)send(board,{type:action})});
   }
   function renderOverview(container,data){
