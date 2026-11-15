@@ -56,7 +56,7 @@
     status('');
   }
   function request(mode, force = false) {
-    if (!force && (guest || (ready && user))) { openMode(mode); return; }
+    if (!force && (ready && user)) { openMode(mode); return; }
     window.sessionStorage.setItem(pendingKey, mode);
     setRegister(false);
     if (!dialog.open) dialog.showModal();
@@ -143,7 +143,9 @@
     } finally { setBusy(false); }
   };
   e('accountRegister').onclick = () => setRegister(!registering);
+  e('accountGuest').hidden = true;
   e('accountGuest').onclick = () => {
+    alert('Für die neue Zugangskontrolle ist ein freigegebenes Benutzerkonto erforderlich.'); return;
     e('accountPassword').value = ''; e('accountRepeat').value = '';
     if (guest) { openMode(pendingMode() || currentMode || 'single'); return; }
     raw.setItem(guestKey,'1');
@@ -189,9 +191,9 @@
     block() { if (guest) return; ready=false; document.body.classList.remove('snookerFullscreenScore','snookerFullscreenTournament','compactTournament'); document.body.classList.add('modeHome'); e('singleMode').classList.add('hidden'); e('tournamentMode').classList.add('hidden'); e('modeStart').classList.remove('hidden'); },
   });
   // Previously authenticated account data remains available on this device offline.
-  if (guest) {
+  if (false && guest) {
     finishLogin(null);
     e('fbStatus').textContent = 'Ohne Anmeldung – nur lokal auf diesem Gerät gespeichert.';
     if (pendingMode()) openMode(pendingMode());
-  } else if (!navigator.onLine && uid) finishLogin({uid,email:raw.getItem(prefix(uid)+'email') || ''});
+  } // Offline-Zugang wird bis zur erneuten Freigabeprüfung nicht automatisch geöffnet.
 })();

@@ -2,11 +2,15 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     function signedIn() { return request.auth != null; }
+    function isAdmin() { return signedIn() && request.auth.uid == 'SRx2kZD2jzdM3Q6RVVOjioAuHuw1'; }
+    function approved() {
+      return isAdmin() || (signedIn() && exists(/databases/$(database)/documents/snookerAccess/$(request.auth.uid)) && get(/databases/$(database)/documents/snookerAccess/$(request.auth.uid)).data.status == 'approved');
+    }
     function normalAccount() {
       return signedIn() && request.auth.token.firebase.sign_in_provider != 'anonymous';
     }
     match /privateSnooker/{userId} {
-      allow read, write: if signedIn() && request.auth.uid == userId;
+      allow read, write: if approved() && request.auth.uid == userId;
     }
     // Single-use 128-bit invitations. Claim is bound atomically to one
     // anonymous Firebase Auth UID; only the same device can reconnect.
@@ -18,7 +22,7 @@ service cloud.firestore {
       allow get: if signedIn();
       allow list: if false;
       allow create: if normalAccount()
-        && request.resource.data.owner == request.auth.uid
+        && approved() && request.resource.data.owner == request.auth.uid
         && validToken()
         && request.resource.data.keys().hasOnly(['owner','slot','tournamentKey'])
         && request.resource.data.slot is int
@@ -30,12 +34,11 @@ service cloud.firestore {
         && exists(boardPath(resource.data.owner,resource.data.slot))
         && get(boardPath(resource.data.owner,resource.data.slot)).data.joinToken == token
         && get(boardPath(resource.data.owner,resource.data.slot)).data.joinOpen == true
-        && get(boardPath(resource.data.owner,resource.data.slot)).data.enabled == true
-        && get(boardPath(resource.data.owner,resource.data.slot)).data.tournamentKey == resource.data.tournamentKey;
-      allow delete: if normalAccount() && resource.data.owner == request.auth.uid;
+                && get(boardPath(resource.data.owner,resource.data.slot)).data.tournamentKey == resource.data.tournamentKey;
+      allow delete: if approved() && normalAccount() && resource.data.owner == request.auth.uid;
     }
     match /snookerTableBoards/{organizer}/tables/{slot} {
-      function isOwner() { return normalAccount() && request.auth.uid == organizer; }
+      function isOwner() { return approved() && normalAccount() && request.auth.uid == organizer; }
       function isMember() {
         return signedIn()
           && exists(/databases/$(database)/documents/snookerTableBoards/$(organizer)/tables/$(slot)/members/$(request.auth.uid))
@@ -77,13 +80,35 @@ service cloud.firestore {
         allow delete: if signedIn() && (request.auth.uid == member || request.auth.uid == organizer);
       }
     }
+
+    // Einmalige Freigabe pro Firebase UID; Benutzer dürfen nur Antrag anlegen.
+    match /snookerAccess/{uid} {
+      allow get: if signedIn() && (request.auth.uid == uid || isAdmin());
+      allow list: if isAdmin();
+      allow create: if signedIn() && request.auth.uid == uid
+        && request.auth.token.firebase.sign_in_provider != 'anonymous'
+        && request.resource.data.keys().hasOnly(['email','status','createdAt'])
+        && request.resource.data.email == request.auth.token.email
+        && request.resource.data.status == 'pending'
+        && request.resource.data.createdAt == request.time;
+      allow update: if isAdmin() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','reviewedAt'])
+        && request.resource.data.status in ['approved','rejected']
+        && request.resource.data.reviewedAt == request.time;
+      allow delete: if false;
+    }
+    // Push-Abonnements darf nur der Administrator selbst anlegen und lesen.
+    match /snookerAdminPush/{uid}/subscriptions/{subscriptionId} {
+      allow read, create, update, delete: if isAdmin() && request.auth.uid == uid;
+    }
     // Existing operator access, keeping private Snooker accounts separated.
     match /{collection}/{document=**} {
       allow read, write: if signedIn()
         && request.auth.uid == 'SRx2kZD2jzdM3Q6RVVOjioAuHuw1'
         && collection != 'privateSnooker'
         && collection != 'snookerTableInvites'
-        && collection != 'snookerTableBoards';
+        && collection != 'snookerTableBoards'
+        && collection != 'snookerAccess'
+        && collection != 'snookerAdminPush';
     }
     // Existing Pool group access.
     match /privatePool/SRx2kZD2jzdM3Q6RVVOjioAuHuw1 {

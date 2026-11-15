@@ -1,11 +1,13 @@
 import {initializeApp} from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js';
 import {getAuth,signInAnonymously,signInWithEmailAndPassword,createUserWithEmailAndPassword,sendPasswordResetEmail,setPersistence,browserLocalPersistence,inMemoryPersistence,signOut,onAuthStateChanged} from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-auth.js';
-import {getFirestore,doc,getDoc,setDoc,onSnapshot,runTransaction} from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore.js';
+import {getFirestore,doc,getDoc,setDoc,onSnapshot,runTransaction,collection,getDocs,updateDoc,serverTimestamp} from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore.js';
 import {createTableSync} from './table-sync.js?v=7.63';
 const config={apiKey:'AIzaSyBgmv1v5APpPReJ4olWCusUhhGGevcvRcE',authDomain:'snooker-money-match.firebaseapp.com',projectId:'snooker-money-match',storageBucket:'snooker-money-match.firebasestorage.app',messagingSenderId:'423302158497',appId:'1:423302158497:web:706c1fec068959b7bbb8e0'};
 const localStorage = window.snookerStorage;
 const app=initializeApp(config),auth=getAuth(app),db=getFirestore(app),e=id=>document.getElementById(id),msg=t=>e('fbStatus').textContent=t;
-const permitted=()=>Boolean(!window.localStorage.getItem('snooker-table-code-device-v2') && auth.currentUser && !auth.currentUser.isAnonymous && localStorage.uid && auth.currentUser.uid===localStorage.uid);
+let accessGranted=false;
+const ADMIN_UID='SRx2kZD2jzdM3Q6RVVOjioAuHuw1';
+const permitted=()=>Boolean(accessGranted && !window.localStorage.getItem('snooker-table-code-device-v2') && auth.currentUser && !auth.currentUser.isAnonymous && localStorage.uid && auth.currentUser.uid===localStorage.uid);
 await setPersistence(auth,browserLocalPersistence);
 window.snookerAccount.bind({
   login:(name,password)=>signInWithEmailAndPassword(auth,window.snookerTableAccess.resolveName(name),password),
@@ -285,7 +287,7 @@ window.addEventListener('snooker-roster-change',({detail})=>{
 });
 window.addEventListener('snooker-state-changed',syncNow);
 window.addEventListener('online',()=>{if(pending)flush();flushTournament();flushTable();flushRoster()});
-onAuthStateChanged(auth,u=>{
+function connectApproved(u){
   tableSync.stop();
   if(deviceSetup())return;
   window.snookerMonitors.deactivate();
@@ -357,6 +359,70 @@ onAuthStateChanged(auth,u=>{
     window.snookerAccount.connectionError(text);
   });
   if(!navigator.onLine)window.snookerAccount.ready(u);
+}
+
+let accessUnsubscribe=null, accessSession=0, approvedConnection=null;
+const accessDoc=uid=>doc(db,'snookerAccess',uid);
+const publicPushKey='__VAPID_PUBLIC_KEY__';
+window.snookerAccessApi={
+  logout:()=>signOut(auth),
+  async list(){
+    if(auth.currentUser?.uid!==ADMIN_UID)throw Error('Nur für Administrator.');
+    const snap=await getDocs(collection(db,'snookerAccess'));
+    window.snookerAccessUI.render(snap.docs.map(x=>({uid:x.id,...x.data()})).filter(x=>x.uid!==ADMIN_UID).sort((a,b)=>(a.status==='pending'?-1:1)-(b.status==='pending'?-1)), async(uid,status)=>{
+      try{await updateDoc(accessDoc(uid),{status,reviewedAt:serverTimestamp()});await window.snookerAccessApi.list()}catch(e){alert('Änderung nicht gespeichert: '+e.message)}
+    });
+  },
+  async enablePush(){
+    if(auth.currentUser?.uid!==ADMIN_UID)throw Error('Nur für Administrator.');
+    if(publicPushKey.startsWith('__'))throw Error('VAPID-Schlüssel in firebase-sync.js fehlt noch.');
+    if(!('serviceWorker' in navigator)||!('PushManager' in window))throw Error('Dieses Gerät unterstützt keine Web-Push-Nachrichten.');
+    if(Notification.permission==='denied')throw Error('Benachrichtigungen sind auf diesem Gerät blockiert.');
+    const permission=await Notification.requestPermission();if(permission!=='granted')throw Error('Benachrichtigung nicht erlaubt.');
+    const reg=await navigator.serviceWorker.ready;
+    const key=Uint8Array.from(atob(publicPushKey.replace(/-/g,'+').replace(/_/g,'/')),c=>c.charCodeAt(0));
+    const sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:key});
+    const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(sub.endpoint));
+    const id=Array.from(new Uint8Array(digest),x=>x.toString(16).padStart(2,'0')).join('');
+    await setDoc(doc(db,'snookerAdminPush',ADMIN_UID,'subscriptions',id),{subscription:sub.toJSON(),updatedAt:serverTimestamp()});
+    return 'Push auf diesem Gerät aktiviert.';
+  }
+};
+onAuthStateChanged(auth,async u=>{
+  const session=++accessSession;
+  if(accessUnsubscribe){accessUnsubscribe();accessUnsubscribe=null}
+  accessGranted=false;approvedConnection=null;
+  if(deviceSetup()) { // Tischgeräte werden ausschließlich über ihre einmaligen Codes autorisiert.
+    return;
+  }
+  window.snookerAccount.block();
+  if(window.snookerAccount.switchUser(u))return;
+  if(!u){window.snookerAccessUI.hidePending();msg('Nicht angemeldet');return}
+  if(u.isAnonymous)return;
+  if(u.uid===ADMIN_UID){accessGranted=true;window.snookerAccessUI.showAdmin();connectApproved(u);return}
+  msg('Prüfe Zugangsfreigabe …');
+  accessUnsubscribe=onSnapshot(accessDoc(u.uid),async snap=>{
+    if(session!==accessSession)return;
+    if(!snap.exists()){
+      try {await setDoc(accessDoc(u.uid),{email:u.email||'',status:'pending',createdAt:serverTimestamp()});}
+      catch(e){msg('Freigabeanfrage fehlgeschlagen: '+(e.code||e.message));window.snookerAccessUI.showPending('pending',u.email)}
+      return;
+    }
+    const status=snap.data()?.status;
+    if(status==='approved'){
+      if(!accessGranted){accessGranted=true;window.snookerAccessUI.hidePending();approvedConnection=u.uid;connectApproved(u)}
+    }else{
+      accessGranted=false;
+      if(approvedConnection){window.location.reload();return}
+      window.snookerAccessUI.showPending(status,u.email);
+      msg(status==='rejected'?'Zugang gesperrt':'Freigabe durch Administrator ausstehend');
+    }
+  },err=>{
+    if(session!==accessSession)return;
+    accessGranted=false;
+    msg('Zugangsprüfung nicht möglich: '+(err.code||err.message));
+    window.snookerAccessUI.showPending('pending',u.email);
+  });
 });
 e('fbSave').onclick=async()=>{if(!permitted()){msg('Bitte zuerst anmelden.');return}const raw=localStorage.getItem('snookerMoneyMatchState');if(!raw){msg('Kein lokaler Spielstand vorhanden.');return}if(!confirm('Cloud-Sicherung überschreiben?'))return;try{await setDoc(cloudDoc(),{state:raw,updatedAt:new Date().toISOString()},{merge:true});lastCloudRaw=raw;msg('✅ In Cloud gesichert')}catch(err){msg('Fehler: '+err.code)}};
 e('fbLoad').onclick=async()=>{if(!permitted()){msg('Bitte zuerst anmelden.');return}try{const snap=await getDoc(cloudDoc());if(!snap.exists()){msg('Noch keine Cloud-Sicherung vorhanden.');return}const raw=snap.data().state,obj=JSON.parse(raw);if(!Array.isArray(obj.players)||!Number.isFinite(Number(obj.target)))throw Error('Ungültige Daten');if(!confirm('Lokalen Spielstand durch Cloud-Sicherung ersetzen?'))return;window.dispatchEvent(new CustomEvent('snooker-single-received',{detail:raw}));msg('✅ Cloud-Spielstand geladen')}catch(err){msg('Laden fehlgeschlagen: '+(err.code||err.message))}};
