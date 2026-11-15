@@ -1,0 +1,9 @@
+Snooker Money Match v7.68 – Push-Registrierung TESTVERSION
+
+Basiert auf v7.67. Der öffentliche Firebase-VAPID-Schlüssel wurde eingefügt.
+Unter Benutzerfreigaben > Push auf diesem Gerät aktivieren wird ein Web-Push-Abonnement unter snookerAdminPush gespeichert. Wo möglich wird zusätzlich ein Firebase Cloud Messaging Token gespeichert.
+ACHTUNG: Der automatische Versand von Push-Benachrichtigungen ist NICHT eingerichtet. Der Button bestätigt nur die Speicherung des Abonnements; nicht die Zustellung.
+Die bestehende Firestore-Regel für snookerAdminPush reicht für die Speicherung durch das Admin-Konto.
+Es werden keine privaten VAPID-Schlüssel, Service-Account-Zugangsdaten oder kostenpflichtigen Dienste benötigt/aktiviert.
+Für iOS bitte die App über das Home-Bildschirm-Icon öffnen.
+Tischcode- und Turnierlogik unverändert.

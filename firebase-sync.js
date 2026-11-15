@@ -382,7 +382,7 @@ function connectApproved(u){
 
 let accessUnsubscribe=null, accessSession=0, approvedConnection=null;
 const accessDoc=uid=>doc(db,'snookerAccess',uid);
-const publicPushKey='__VAPID_PUBLIC_KEY__';
+const publicPushKey='BLv00R-ryVyvAkX-GYNF-Ar4Z-D0kAnIMw9W568EoNkIxGfvapGfbzOZZsCIJ1OBtc4jjNc1-HzQQh8S_Y4ozr4';
 window.snookerAccessApi={
   logout:()=>signOut(auth),
   async list(){
@@ -395,17 +395,35 @@ window.snookerAccessApi={
   },
   async enablePush(){
     if(auth.currentUser?.uid!==ADMIN_UID)throw Error('Nur für Administrator.');
-    if(publicPushKey.startsWith('__'))throw Error('VAPID-Schlüssel in firebase-sync.js fehlt noch.');
-    if(!('serviceWorker' in navigator)||!('PushManager' in window))throw Error('Dieses Gerät unterstützt keine Web-Push-Nachrichten.');
-    if(Notification.permission==='denied')throw Error('Benachrichtigungen sind auf diesem Gerät blockiert.');
-    const permission=await Notification.requestPermission();if(permission!=='granted')throw Error('Benachrichtigung nicht erlaubt.');
+    if(!('serviceWorker' in navigator)||!('PushManager' in window)||!('Notification' in window))
+      throw Error('Dieses Gerät unterstützt Web-Push nicht. Auf dem iPhone die App über das Home-Bildschirm-Symbol öffnen.');
+    if(Notification.permission==='denied')throw Error('Mitteilungen sind in den Geräteeinstellungen blockiert.');
+    const permission=await Notification.requestPermission();
+    if(permission!=='granted')throw Error('Mitteilungen wurden nicht erlaubt.');
     const reg=await navigator.serviceWorker.ready;
-    const key=Uint8Array.from(atob(publicPushKey.replace(/-/g,'+').replace(/_/g,'/')),c=>c.charCodeAt(0));
+    const encoded=publicPushKey.replace(/-/g,'+').replace(/_/g,'/');
+    const padded=encoded.padEnd(Math.ceil(encoded.length/4)*4,'=');
+    const key=Uint8Array.from(atob(padded),c=>c.charCodeAt(0));
     const sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:key});
     const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(sub.endpoint));
     const id=Array.from(new Uint8Array(digest),x=>x.toString(16).padStart(2,'0')).join('');
-    await setDoc(doc(db,'snookerAdminPush',ADMIN_UID,'subscriptions',id),{subscription:sub.toJSON(),updatedAt:serverTimestamp()});
-    return 'Push auf diesem Gerät aktiviert.';
+    // No secrets stored in the client. Firestore rules restrict these records to ADMIN_UID.
+    const record={subscription:sub.toJSON(),updatedAt:serverTimestamp(),kind:'webpush'};
+    // Prefer a Firebase Cloud Messaging target when its Web SDK supports this browser.
+    // iOS Home Screen PWAs may support native Web Push even if Firebase Messaging's
+    // feature-detection declines this browser; preserve the native subscription then.
+    let fcmNote='';
+    try{
+      const messagingSDK=await import('https://www.gstatic.com/firebasejs/13.1.0/firebase-messaging.js');
+      if(await messagingSDK.isSupported()){
+        const token=await messagingSDK.getToken(messagingSDK.getMessaging(app),{
+          vapidKey:publicPushKey,serviceWorkerRegistration:reg
+        });
+        if(token){record.fcmToken=token;record.kind='fcm';fcmNote=' Firebase-Gerätekennung vorhanden.';}
+      }
+    }catch(err){console.warn('FCM registration is not available in this browser; using Web Push subscription.',err)}
+    await setDoc(doc(db,'snookerAdminPush',ADMIN_UID,'subscriptions',id),record);
+    return 'Push-Abonnement gespeichert.'+fcmNote+' Automatischer Versand ist noch nicht eingerichtet.';
   }
 };
 onAuthStateChanged(auth,async u=>{
