@@ -1,0 +1,11 @@
+{
+  "functions": [
+    {
+      "source": "functions",
+      "codebase": "snooker-access"
+    }
+  ],
+  "firestore": {
+    "rules": "firestore.rules"
+  }
+}

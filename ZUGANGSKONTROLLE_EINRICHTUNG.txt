@@ -1,0 +1,18 @@
+Snooker Money Match v7.65 – Zugangskontrolle / Push / E-Mail (Vorbereitung)
+
+WICHTIG: NICHT nur ZIP auf GitHub hochladen. Ohne Veröffentlichung der begleitenden Sicherheitsregeln und Cloud Function ist die neue Sperre bzw. Benachrichtigung nicht vollständig aktiv.
+
+1. Sicherheitskopie von v7.64 und aktuellen Firestore-Regeln anfertigen.
+2. VAPID-Schlüsselpaar erzeugen, z.B. mit npx web-push generate-vapid-keys. Den privaten Schlüssel niemals im GitHub-Repository ablegen. In firebase-sync.js den Platzhalter __VAPID_PUBLIC_KEY__ durch einen selbst erzeugten öffentlichen VAPID-Schlüssel ersetzen. Der private Schlüssel darf NUR als Firebase-Secret gespeichert werden.
+3. In Firebase ein abrechenbares Projekt (Blaze) für Functions v2 aktivieren. Cloud Functions v2 und SMTP können Kosten verursachen.
+4. Firebase CLI installieren; im Projekt snooker-money-match mit firebase login anmelden.
+5. Functions-Secrets SNOOKER_SMTP_PASSWORD und SNOOKER_VAPID_PRIVATE setzen: firebase functions:secrets:set NAME.
+6. Die Parameter SNOOKER_SMTP_HOST, SNOOKER_SMTP_PORT, SNOOKER_SMTP_USER, SNOOKER_SMTP_FROM, SNOOKER_ADMIN_EMAIL, SNOOKER_VAPID_PUBLIC bei Deploy angeben. E-Mail-Adresse des Administrators muss vom Benutzer selbst eingetragen werden, sie wird nicht geraten.
+7. cd functions && npm install; im Projektstamm: firebase deploy --only functions:snooker-access,firestore:rules
+8. Erst danach HTML-App auf GitHub Pages hochladen und Browser-Cache aktualisieren.
+9. Administrator-UID ist die bisherige bestätigte Firebase-UID aus den vorhandenen Firestore-Regeln. Auf dem Administrator-iPhone: App zum Home-Bildschirm hinzufügen, Benutzerfreigaben öffnen, Push aktivieren, Berechtigungsdialog bestätigen.
+10. Mit einem bestehenden Nicht-Admin-Konto einmalig anmelden und Antrags-E-Mail, Push, Freigabe und Neustart testen.
+
+Die E-Mail-Adresse und SMTP-Zugangsdaten des Administrators wurden nicht bereitgestellt und sind deshalb bewusst nicht eingebettet.
+
+Die Sperre gilt serverseitig für privateSnooker. Für Offline-Kopien bereits ausgelieferter öffentlicher HTML-Dateien ist ein vollständiger nachträglicher Zugriffsentzug technisch nicht möglich. Die Tischgeräte bleiben mit ihren einmaligen Codes angemeldet.

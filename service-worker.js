@@ -1,18 +1,19 @@
-const CACHE_NAME = 'v7-64-swiss-tournament';
+const CACHE_NAME = 'v7-65-swiss-tournament';
 const APP_SHELL = [
   './',
   './index.html',
   './infos.html',
-  './app-navigation.js?v=7.64',
-  './account-access.js?v=7.64',
-  './table-access.js?v=7.64',
-  './table-score.js?v=7.64',
-  './table-sync.js?v=7.64',
-  './table-monitor.js?v=7.64',
-  './firebase-sync.js?v=7.64',
-  './pdf-export.js?v=7.64',
-  './tournament.js?v=7.64',
-  './tournament.css?v=7.64',
+  './app-navigation.js?v=7.65',
+  './account-access.js?v=7.65',
+  './access-ui.js?v=7.65',
+  './table-access.js?v=7.65',
+  './table-score.js?v=7.65',
+  './table-sync.js?v=7.65',
+  './table-monitor.js?v=7.65',
+  './firebase-sync.js?v=7.65',
+  './pdf-export.js?v=7.65',
+  './tournament.js?v=7.65',
+  './tournament.css?v=7.65',
   './manifest.webmanifest',
   './icon-192.png',
   './icon-512.png',
@@ -78,4 +79,19 @@ self.addEventListener('fetch', event => {
       });
     })
   );
+});
+
+
+self.addEventListener('push', event => {
+  let payload={};try{payload=event.data?.json()||{}}catch{}
+  event.waitUntil(self.registration.showNotification(payload.title||'Snooker Money Match',{
+    body:payload.body||'Neue Freigabeanfrage',icon:'./icon-192.png',badge:'./icon-192.png',tag:'snooker-access-request',data:{url:'./index.html'}
+  }));
+});
+self.addEventListener('notificationclick', event=>{
+  event.notification.close();
+  event.waitUntil(clients.matchAll({type:'window',includeUncontrolled:true}).then(async wins=>{
+    for(const win of wins){if(win.url.startsWith(self.registration.scope)){await win.focus();return}}
+    await clients.openWindow('./index.html');
+  }));
 });
