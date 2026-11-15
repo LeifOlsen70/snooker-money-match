@@ -8,18 +8,37 @@ const app=initializeApp(config),auth=getAuth(app),db=getFirestore(app),e=id=>doc
 let accessGranted=false;
 const ADMIN_UID='SRx2kZD2jzdM3Q6RVVOjioAuHuw1';
 const permitted=()=>Boolean(accessGranted && !window.localStorage.getItem('snooker-table-code-device-v2') && auth.currentUser && !auth.currentUser.isAnonymous && localStorage.uid && auth.currentUser.uid===localStorage.uid);
-await setPersistence(auth,browserLocalPersistence);
+// v7.66: The login handlers must be ready even if browser persistence stalls
+// (for example in older Safari/WebView contexts). Previously an unresolved
+// setPersistence() left the login dialog permanently at "Anmeldung wird geladen".
 window.snookerAccount.bind({
   login:(name,password)=>signInWithEmailAndPassword(auth,window.snookerTableAccess.resolveName(name),password),
   register:(email,password)=>createUserWithEmailAndPassword(auth,email,password),
   reset:email=>sendPasswordResetEmail(auth,email),
   logout:()=>signOut(auth)
 });
+window.dispatchEvent(new Event('snooker-auth-handlers-ready'));
+async function initializePersistence(instance,label){
+  // Never block startup indefinitely while persistence storage initializes.
+  let timer;
+  try{
+    await Promise.race([
+      setPersistence(instance,browserLocalPersistence),
+      new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error('Zeitüberschreitung beim lokalen Auth-Speicher')),6000)})
+    ]);
+  }catch(err){
+    console.warn('Snooker '+label+': persistente Anmeldung nicht verfügbar',err);
+    // Firebase Auth defaults to its supported persistence fallback. Do not
+    // clear or overwrite any existing tournament or authentication data.
+    msg('⚠️ Lokale Anmeldespeicherung eingeschränkt. Anmeldung kann erneut erforderlich sein.');
+  }finally{clearTimeout(timer)}
+}
+await initializePersistence(auth,'Spielleiter');
 const tableSync=createTableSync({auth,db,doc,getDoc,onSnapshot,runTransaction});
 const deviceKey='snooker-table-code-device-v2';
 function deviceSetup(){try{return JSON.parse(window.localStorage.getItem(deviceKey))}catch{return null}}
 const deviceApp=initializeApp(config,'table-code-device-v2'),deviceAuth=getAuth(deviceApp),deviceDb=getFirestore(deviceApp);
-await setPersistence(deviceAuth,browserLocalPersistence);
+await initializePersistence(deviceAuth,'Tischgerät');
 const deviceSync=createTableSync({auth:deviceAuth,db:deviceDb,doc,getDoc,onSnapshot,runTransaction});
 window.snookerTableSync=tableSync;
 window.snookerTableBackend={

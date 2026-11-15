@@ -1,0 +1,12 @@
+Snooker Money Match v7.66 – Anmeldung beim Start repariert
+
+- Die Anmeldeaktionen werden jetzt vor der asynchronen Firebase-Persistence-Initialisierung freigeschaltet.
+- Der Start wartet maximal sechs Sekunden auf den lokalen Auth-Speicher, statt unendlich bei „Anmeldung wird geladen“ hängen zu bleiben.
+- Bei fehlgeschlagenem Modulstart wird spätestens nach zehn Sekunden eine aussagekräftige Fehlermeldung angezeigt.
+- Bestehende Firebase-Zugangsregeln v7.65, Tischcodes, Saison- und Einzelspielstände bleiben unverändert.
+- E-Mail/Push-Benachrichtigungen sind weiterhin NICHT aktiv (Spark-Tarif).
+
+GitHub: ZIP entpacken, alle Dateien ins bestehende Repository hochladen und Commit auf main.
+Firebase: Regeln NICHT ersetzen, keine kostenpflichtigen Dienste aktivieren.
+
+Nicht live mit einem Firebase-Konto getestet; erst Administrator-Anmeldung und Tisch-Sync prüfen.
