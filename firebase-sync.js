@@ -1,7 +1,7 @@
 import {initializeApp} from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js';
 import {getAuth,signInAnonymously,signInWithEmailAndPassword,createUserWithEmailAndPassword,sendPasswordResetEmail,setPersistence,browserLocalPersistence,inMemoryPersistence,signOut,onAuthStateChanged} from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-auth.js';
-import {getFirestore,doc,getDoc,setDoc,onSnapshot,runTransaction,collection,getDocs,updateDoc,serverTimestamp} from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore.js';
-import {createTableSync} from './table-sync.js?v=7.63';
+import {getFirestore,doc,getDoc,setDoc,onSnapshot,runTransaction,collection,getDocs,getDocsFromServer,getDocFromServer,updateDoc,serverTimestamp} from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore.js';
+import {createTableSync} from './table-sync.js?v=7.70';
 const config={apiKey:'AIzaSyBgmv1v5APpPReJ4olWCusUhhGGevcvRcE',authDomain:'snooker-money-match.firebaseapp.com',projectId:'snooker-money-match',storageBucket:'snooker-money-match.firebasestorage.app',messagingSenderId:'423302158497',appId:'1:423302158497:web:706c1fec068959b7bbb8e0'};
 const localStorage = window.snookerStorage;
 const app=initializeApp(config),auth=getAuth(app),db=getFirestore(app),e=id=>document.getElementById(id),msg=t=>e('fbStatus').textContent=t;
@@ -34,12 +34,12 @@ async function initializePersistence(instance,label){
   }finally{clearTimeout(timer)}
 }
 await initializePersistence(auth,'Spielleiter');
-const tableSync=createTableSync({auth,db,doc,getDoc,onSnapshot,runTransaction});
+const tableSync=createTableSync({auth,db,doc,getDoc,getDocFromServer,onSnapshot,runTransaction});
 const deviceKey='snooker-table-code-device-v2';
 function deviceSetup(){try{return JSON.parse(window.localStorage.getItem(deviceKey))}catch{return null}}
 const deviceApp=initializeApp(config,'table-code-device-v2'),deviceAuth=getAuth(deviceApp),deviceDb=getFirestore(deviceApp);
 await initializePersistence(deviceAuth,'Tischgerät');
-const deviceSync=createTableSync({auth:deviceAuth,db:deviceDb,doc,getDoc,onSnapshot,runTransaction});
+const deviceSync=createTableSync({auth:deviceAuth,db:deviceDb,doc,getDoc,getDocFromServer,onSnapshot,runTransaction});
 window.snookerTableSync=tableSync;
 window.snookerTableBackend={
   async join(code){
@@ -99,6 +99,13 @@ onAuthStateChanged(deviceAuth,async account=>{
   if(!account){window.dispatchEvent(new CustomEvent('snooker-table-error',{detail:'Tischanmeldung fehlt. Bitte mit dem aktuellen Tischcode erneut beitreten.'}));return}
   await deviceSync.start(account,setup.slot,setup.owner);
 });
+window.snookerTableBackend.refresh=async()=>{
+  const setup=deviceSetup();
+  if(setup){await deviceSync.refresh(setup.slot);return 'Tischstand frisch abgerufen.';}
+  if(!permitted())throw Error('Bitte anmelden und die Freigabe abwarten.');
+  await tableSync.refresh();
+  return 'Tischstände frisch abgerufen.';
+};
 window.dispatchEvent(new Event('snooker-table-backend-ready'));
 let unsubscribe=null, initialized=false, writeTimer=null, writing=false, pending=false;
 let lastCloudRaw=null;
@@ -387,7 +394,7 @@ window.snookerAccessApi={
   logout:()=>signOut(auth),
   async list(){
     if(auth.currentUser?.uid!==ADMIN_UID)throw Error('Nur für Administrator.');
-    const snap=await getDocs(collection(db,'snookerAccess'));
+    const snap=await getDocsFromServer(collection(db,'snookerAccess'));
     const users = snap.docs.map(x=>({uid:x.id,...x.data()})).filter(x=>x.uid!==ADMIN_UID).sort((a,b)=>Number(b.status==='pending')-Number(a.status==='pending'));
     window.snookerAccessUI.render(users, async(uid,status)=>{
       try{await updateDoc(accessDoc(uid),{status,reviewedAt:serverTimestamp()});await window.snookerAccessApi.list()}catch(e){alert('Änderung nicht gespeichert: '+e.message)}
@@ -426,6 +433,13 @@ window.snookerAccessApi={
     return 'Push-Abonnement gespeichert.'+fcmNote+' Automatischer Versand ist noch nicht eingerichtet.';
   }
 };
+let lastAccessRefresh=0;
+window.addEventListener('focus',()=>{
+  if(auth.currentUser?.uid===ADMIN_UID && !deviceSetup() && Date.now()-lastAccessRefresh>10000){
+    lastAccessRefresh=Date.now();
+    window.snookerAccessApi.list().catch(e=>console.warn('Freigaben aktualisieren:',e));
+  }
+});
 onAuthStateChanged(auth,async u=>{
   const session=++accessSession;
   if(accessUnsubscribe){accessUnsubscribe();accessUnsubscribe=null}
@@ -437,7 +451,7 @@ onAuthStateChanged(auth,async u=>{
   if(window.snookerAccount.switchUser(u))return;
   if(!u){window.snookerAccessUI.hidePending();msg('Nicht angemeldet');return}
   if(u.isAnonymous)return;
-  if(u.uid===ADMIN_UID){accessGranted=true;window.snookerAccessUI.showAdmin();connectApproved(u);return}
+  if(u.uid===ADMIN_UID){accessGranted=true;window.snookerAccessUI.showAdmin();connectApproved(u);window.snookerAccessApi.list().catch(e=>console.warn('Benutzerfreigaben nicht geladen:',e));return}
   msg('Prüfe Zugangsfreigabe …');
   accessUnsubscribe=onSnapshot(accessDoc(u.uid),async snap=>{
     if(session!==accessSession)return;

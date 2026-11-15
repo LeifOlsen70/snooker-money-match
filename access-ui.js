@@ -21,21 +21,36 @@ refresh.onclick=()=>window.snookerAccessApi?.list?.();close.onclick=()=>admin.cl
 push.onclick=async()=>{push.disabled=true;try{pushStatus.textContent=await window.snookerAccessApi.enablePush()}catch(e){pushStatus.textContent='Push nicht aktiviert: '+e.message}finally{push.disabled=false}};
 admin.append(adminHead,note,push,pushStatus,rows,refresh,close);document.body.append(admin);
 const adminButton=el('button','Benutzerfreigaben');adminButton.className='secondary';adminButton.type='button';adminButton.hidden=true;
+const adminCount=el('span','', 'accessPendingCount');adminCount.hidden=true;adminCount.setAttribute('aria-label','Offene Freigabeanfragen');adminButton.append(adminCount);
 adminButton.onclick=()=>{admin.showModal();window.snookerAccessApi?.list?.()};
 document.getElementById('accountBar')?.append(adminButton);
+const updateButton=el('button','↻ Aktualisieren','secondary accessRefreshButton');updateButton.type='button';updateButton.hidden=true;
+const refreshNote=el('span','');refreshNote.className='accessRefreshStatus';refreshNote.hidden=true;refreshNote.setAttribute('role','status');
+document.getElementById('accountBar')?.append(updateButton,refreshNote);
+updateButton.onclick=async()=>{
+  updateButton.disabled=true;refreshNote.hidden=false;refreshNote.textContent='Aktualisierung läuft …';
+  try{
+    const result=await window.snookerTableBackend?.refresh?.();
+    if(!result)throw Error('Die Verbindung ist noch nicht bereit.');
+    await window.snookerAccessApi.list();
+    refreshNote.textContent='Aktualisiert: Tischstände und Freigaben.';
+  }catch(err){refreshNote.textContent='Aktualisierung nicht vollständig: '+(err.message||err)}
+  finally{updateButton.disabled=false}
+};
 function showPending(status,email){
   head.textContent=status==='rejected'?'Zugangsanfrage abgelehnt':'Zugangsfreigabe erforderlich';
   info.textContent=(email||'')+' – '+(status==='rejected'?'Bitte den Administrator kontaktieren.':'Deine Anfrage wartet auf Freigabe.');
   if(!pending.open)pending.showModal();
 }
 function hidePending(){if(pending.open)pending.close()}
-function showAdmin(){adminButton.hidden=false}
-function render(list,change){rows.replaceChildren(); if(!list.length){rows.append(el('p','Noch keine Anfragen.'));return}
+function showAdmin(){adminButton.hidden=false;updateButton.hidden=false}
+function updateCount(count){adminCount.textContent=String(count);adminCount.hidden=count===0;adminButton.setAttribute('aria-label',`Benutzerfreigaben, ${count} offene Anfragen`)}
+function render(list,change){updateCount(list.filter(a=>a.status==='pending').length);rows.replaceChildren(); if(!list.length){rows.append(el('p','Noch keine Anfragen.'));return}
   for(const a of list){const row=el('div',undefined,'accessRow');const name=el('div');name.append(el('strong',a.email||a.uid),el('p',a.status==='approved'?'Freigegeben':a.status==='rejected'?'Abgelehnt':'Wartet auf Freigabe'));
     const actions=el('div',undefined,'accessActions');
     if(a.status!=='approved'){const ok=el('button','Freigeben');ok.onclick=()=>change(a.uid,'approved');actions.append(ok)}
     if(a.status!=='rejected'){const no=el('button','Sperren');no.onclick=()=>change(a.uid,'rejected');actions.append(no)}
     row.append(name,actions);rows.append(row)}
 }
-window.snookerAccessUI={showPending,hidePending,showAdmin,render};
+window.snookerAccessUI={showPending,hidePending,showAdmin,render,updateCount};
 })();

@@ -107,9 +107,15 @@
   function renderTable(){
     if(!tableSlot)return;
     const board=boards.find(b=>b.slot===tableSlot);
-    tablePage.innerHTML=`<div class="monitorTableHeader"><h2>Tisch ${tableSlot}</h2><button type="button" data-table-leave>Tisch verlassen</button><button type="button" data-table-full>Vollbild ${document.body.classList.contains('tableMonitorFullscreen')?'aus':'an'}</button></div><p data-monitor-message role="status">${escape(message||(navigator.onLine?'Tischverbindung wird hergestellt …':'Offline – für den Tischbetrieb bitte Internet verbinden.'))}</p>${landing?'<button type="button" class="primary" data-table-return>Zur Partie</button>':card(board??{slot:tableSlot})}`;
+    tablePage.innerHTML=`<div class="monitorTableHeader"><h2>Tisch ${tableSlot}</h2><button type="button" data-table-leave>Tisch verlassen</button><button type="button" data-table-refresh>↻ Aktualisieren</button><button type="button" data-table-full>Vollbild ${document.body.classList.contains('tableMonitorFullscreen')?'aus':'an'}</button></div><p data-monitor-message role="status">${escape(message||(navigator.onLine?'Tischverbindung wird hergestellt …':'Offline – für den Tischbetrieb bitte Internet verbinden.'))}</p>${landing?'<button type="button" class="primary" data-table-return>Zur Partie</button>':card(board??{slot:tableSlot})}`;
     if(board?.assignment)bind(tablePage,[board]);
     tablePage.querySelector('[data-table-leave]').onclick=()=>{if(confirm('Tischverbindung auf diesem Gerät beenden?'))window.snookerTableBackend.leave()};
+    tablePage.querySelector('[data-table-refresh]').onclick=async e=>{
+      const button=e.currentTarget;button.disabled=true;
+      status('Tischstand wird aktualisiert …');
+      try{status(await window.snookerTableBackend.refresh())}catch(err){status('Aktualisieren fehlgeschlagen: '+(err.message||err))}
+      finally{button.disabled=false}
+    };
     tablePage.querySelector('[data-table-full]').onclick=()=>{document.body.classList.toggle('tableMonitorFullscreen');renderTable()};
     tablePage.querySelector('[data-table-return]')?.addEventListener('click',()=>{landing=false;renderTable()});
   }

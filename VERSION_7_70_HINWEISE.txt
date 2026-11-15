@@ -1,0 +1,7 @@
+Version 7.70 – Freigabezaehler und Aktualisieren
+
+- Zahl offener (pending) Benutzeranfragen am Button Benutzerfreigaben beim Administrator; nur bei der App-Nutzung geladen, keine Push-Funktion.
+- Aktualisieren unter Benutzerfreigaben: erneuter Serverabruf der Freigaben und Tischstaende.
+- Auf dem Tischgeraet: Aktualisieren direkt in der Tisch-Leiste fuer einen frischen Serverabruf.
+- Bestehende Firestore-Live-Synchronisation bleibt aktiv. Aktualisieren beschleunigt keine noch nicht gesendete Aenderung, fragt lediglich den letzten Serverstand ab.
+- Firestore-Regeln unveraendert, keine Cloud Functions oder neuen Datenbanken.

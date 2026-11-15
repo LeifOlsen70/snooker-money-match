@@ -1,4 +1,4 @@
-export function createTableSync({auth,db,doc,getDoc,onSnapshot,runTransaction}){
+export function createTableSync({auth,db,doc,getDoc,getDocFromServer,onSnapshot,runTransaction}){
   const model=window.SnookerTableScore;
   let role=null,user=null,stops=[],cache=new Map(),organizer=null,queue=Promise.resolve(),syncCount=0,session=0;
   const ref=slot=>doc(db,'snookerTableBoards',organizer,'tables',String(slot));
@@ -85,6 +85,20 @@ export function createTableSync({auth,db,doc,getDoc,onSnapshot,runTransaction}){
     const result=queue.then(job).then(()=>{if(token===session&&active())window.dispatchEvent(new Event('snooker-table-synced'))}).catch(error).finally(()=>{if(token===session){syncCount--;if(!syncCount)notify()}});
     queue=result;return result;
   }
+  async function refresh(slot=null){
+    if(!active()||!organizer||!role)throw Error('Tischverbindung ist noch nicht bereit.');
+    const token=session;
+    const slots=slot==null?(role==='table'?[]:[1,2,3,4,5,6]):[slot];
+    if(!slots.length)throw Error('Tisch noch nicht verbunden.');
+    const latest=await Promise.all(slots.map(async n=>({slot:n,snap:await getDocFromServer(ref(n))})));
+    if(token!==session||!active())throw Error('Tischverbindung hat sich geändert.');
+    for(const {slot:n,snap} of latest){
+      const board=decodeBoard(snap.data());
+      if(board?.assignment)model.derive(board.state,board.assignment.rules);
+      if(board)cache.set(n,{...board,slot:n});else cache.delete(n);
+    }
+    notify();
+  }
   async function command(slot,id,revision,action){
     if(!active())throw Error('Bitte erneut anmelden.');
     const token=session;
@@ -100,5 +114,5 @@ export function createTableSync({auth,db,doc,getDoc,onSnapshot,runTransaction}){
     });
   }
   async function codes(data){await sync(data);if(role!=='owner'||!active())throw Error('Bitte als Spielleiter anmelden.');const key=tournamentKey(data);const values=await Promise.all(Array.from({length:data.tables},(_,i)=>getDoc(ref(i+1))));return values.map(s=>s.data()).filter(b=>b?.joinOpen&&b.tournamentKey===key).map(b=>({slot:b.tableNumber,code:b.joinToken}));}
-  return Object.freeze({start,stop,sync,command,assignment,codes,get owner(){return organizer},get role(){return role},get boards(){return [...cache.values()]}});
+  return Object.freeze({start,stop,sync,refresh,command,assignment,codes,get owner(){return organizer},get role(){return role},get boards(){return [...cache.values()]}});
 }
