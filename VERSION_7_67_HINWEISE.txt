@@ -1,0 +1,5 @@
+Snooker Money Match v7.67 – Firebase Syntaxfehler behoben
+
+In firebase-sync.js war die Sortierung der Freigabeanfragen syntaktisch ungültig (Unexpected token ")"). Die fehlerhafte Zeile wurde ersetzt. Alle JavaScript-Dateien wurden mit Node.js auf Syntax geprüft.
+
+Firebase-Regeln nicht ändern. E-Mail und Push weiterhin nicht aktiv.

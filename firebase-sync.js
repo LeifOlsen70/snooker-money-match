@@ -388,7 +388,8 @@ window.snookerAccessApi={
   async list(){
     if(auth.currentUser?.uid!==ADMIN_UID)throw Error('Nur für Administrator.');
     const snap=await getDocs(collection(db,'snookerAccess'));
-    window.snookerAccessUI.render(snap.docs.map(x=>({uid:x.id,...x.data()})).filter(x=>x.uid!==ADMIN_UID).sort((a,b)=>(a.status==='pending'?-1:1)-(b.status==='pending'?-1)), async(uid,status)=>{
+    const users = snap.docs.map(x=>({uid:x.id,...x.data()})).filter(x=>x.uid!==ADMIN_UID).sort((a,b)=>Number(b.status==='pending')-Number(a.status==='pending'));
+    window.snookerAccessUI.render(users, async(uid,status)=>{
       try{await updateDoc(accessDoc(uid),{status,reviewedAt:serverTimestamp()});await window.snookerAccessApi.list()}catch(e){alert('Änderung nicht gespeichert: '+e.message)}
     });
   },
