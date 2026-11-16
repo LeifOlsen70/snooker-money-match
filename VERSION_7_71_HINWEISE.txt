@@ -1,0 +1,3 @@
+v7.71 – Score Monitor kompakt
+
+Drei Tischzeilen im Vollbild, Punkte rechts, Namen links, Frames und HB je Spieler. Nur das höchste Break ab 20 wird angezeigt. Tisch antippen für Eingabe/Details. Firebase-Regeln und Synchronisierung unverändert aus v7.70.

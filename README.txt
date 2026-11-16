@@ -1,4 +1,20 @@
-Snooker Money Match v7.61
+Snooker Money Match v7.71
+
+Neu: Kompakter Score Monitor im bestätigten Entwurf.
+- Drei Paarungen untereinander mit Spielernamen links und Live-Punkten rechts.
+- Frames und ausschließlich höchstes Break (HB) je Spieler. Kein Break unter 20; ohne qualifizierendes Break erscheint –.
+- Einzelne gespielte Breaks werden im Monitor nicht aufgelistet. Die Turnier-Breakhistorie bleibt erhalten.
+- Tisch antippen öffnet Eingabe und Details mit bisherigen Frame-Siegern und Zurück/Vor.
+- Vollbild verwendet die Bildschirmhöhe für drei Tischzeilen; zusätzliche Tische sind darunter scrollbar.
+- Bestehende Funktionen aus v7.70 (Freigabezähler, Aktualisieren, Tischcodes und Synchronisierung) erhalten.
+- Firebase-Regeln bytegleich mit v7.70; keine neue Veröffentlichung nötig.
+- Alle Dateien wie bisher auf GitHub hochladen und Geräte aktualisieren, bis v7.71 erscheint.
+
+Prüfung: JavaScript-Syntax, kompakte Zeilen, HB-Schwelle, Rücknahme des höchsten Breaks und Datenzugriffsdateien geprüft. Die visuelle Browserprüfung war in dieser Umgebung wegen eines blockierten Browserstarts nicht möglich. Bitte auf iPhone und iPad/TV die tatsächliche Darstellung kontrollieren.
+
+Bisherige Anleitung:
+
+Snooker Money Match v7.71
 Alle Dateien auf GitHub hochladen und die App anschließend neu öffnen.
 Im Turniermodus sichern und laden die beiden Schaltflächen eine JSON-Datei.
 Die Matchzeit startet mit der Tischzuweisung und endet beim Speichern des Ergebnisses.
