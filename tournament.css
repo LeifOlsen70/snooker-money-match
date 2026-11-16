@@ -390,7 +390,7 @@ body.monitorOverviewFullscreen .pageFooter {display:none!important}
  .monitorKeypad button {min-height:42px}
 }
 
-/* v7.75: approval counter and refresh control */
+/* v7.76: approval counter and refresh control */
 .accessPendingCount {display:inline-flex;align-items:center;justify-content:center;min-width:23px;height:23px;padding:0 5px;box-sizing:border-box;border-radius:999px;background:#eac374;color:#25142d;border:1px solid #f7e0a1;font-weight:900;font-size:14px;margin-left:8px;vertical-align:middle}
 .accessPendingCount[hidden] {display:none!important}
 .pageFooter .accessRefreshButton {grid-column:1;grid-row:auto;background:#433052;border:1px solid #b69269;color:#f6e9d1}
@@ -445,3 +445,29 @@ body.monitorOverviewFullscreen .monitorRowTime {font-size:clamp(11px,2.2vh,22px)
 .monitorMuteButton {align-self:flex-end;font-size:12px!important;min-height:28px;padding:4px 10px!important;background:#34213e;color:#fff0d0;border:1px solid #bd9d54;border-radius:8px}
 #tournamentUndo,#tournamentRedo,[data-monitor-undo],[data-monitor-redo] {animation:none!important}
 .monitorCard .frameLimitWarning.frameLimitExceeded {padding:8px;border:2px solid #ffd078;border-radius:8px}
+/* Shared menu below the unchanged logo, then three history/refresh actions. */
+.appUtilityNav {margin:8px 0 12px}
+.appMenuRow {display:flex;justify-content:flex-start;margin-bottom:7px}
+#appMenuToggle {font-size:25px;line-height:1;padding:9px 17px;min-height:44px;background:#301d40;border:1px solid #ac8b4e;border-radius:11px;color:#fff1d3;cursor:pointer}
+.appHistoryToolbar {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;padding-bottom:8px;border-bottom:1px solid #796382}
+.appHistoryToolbar button {min-width:0;min-height:44px;padding:10px 4px;font-size:clamp(11px,3vw,16px);font-weight:750;color:#fff0d4;background:#34203f;border:1px solid #8f724c;border-radius:11px;cursor:pointer;animation:none!important}
+.appHistoryToolbar button:disabled {opacity:.35;cursor:default}
+#appRefreshStatus {font-size:12px;margin:6px 0 0;color:#e9cd8e;overflow-wrap:anywhere}
+#appRefreshStatus[hidden] {display:none}
+#appUtilityMenu {position:fixed;margin:0;width:min(420px,calc(100vw - 24px));box-sizing:border-box;padding:15px;border:1px solid #c5a15f;border-radius:16px;background:linear-gradient(140deg,#35203f,#170d24);color:#fff0d7;box-shadow:0 15px 50px #000b;overflow:auto}
+#appUtilityMenu::backdrop {background:#0007}
+.appMenuHeading {display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}
+.appMenuHeading h2 {font-size:24px;margin:0}
+#appUtilityMenu [data-menu-close] {width:40px;min-height:36px!important;font-size:26px!important;padding:2px!important;margin:0!important}
+#appUtilityMenu #accountBar {display:contents}
+#appUtilityMenu #accountBar[hidden],#appUtilityMenu .menuTableDeviceHidden {display:none!important}
+#appUtilityMenu #accountEmailLabel {display:block;font-size:13px;overflow-wrap:anywhere;margin:8px 0 12px;color:#d4bfdc}
+#appUtilityMenu button {box-sizing:border-box;display:block;width:100%;padding:12px;margin:7px 0;min-height:44px;border:1px solid #8a6a97;border-radius:10px;background:#3b2549;color:#fff0d9;text-align:left;font-size:15px;font-weight:700;cursor:pointer}
+#appUtilityMenu button[hidden],#appUtilityMenu .accessRefreshButton,#appUtilityMenu .accessRefreshStatus {display:none!important}
+#tournamentMode .tournamentHistory,#singleMode #undoBtn,#singleMode .scorerHistoryControls {display:none!important}
+body.snookerFullscreenScore #singleMode .scorerHistoryControls {display:grid!important}
+body.snookerFullscreenScore .appUtilityNav,body.snookerFullscreenTournament .appUtilityNav,body.monitorOverviewFullscreen .appUtilityNav,body.tableMonitorFullscreen .appUtilityNav {display:none!important}
+#tableMode [data-table-refresh],#tableMode [data-table-leave] {display:none}
+body.tableMonitorFullscreen #tableMode [data-table-refresh] {display:block}
+.modeHome .app {display:flex;flex-direction:column;align-items:stretch;min-height:100dvh}
+.modeHome #modeStart {margin:clamp(16px,7vh,80px) auto;width:min(100%,360px)}

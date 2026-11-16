@@ -1,7 +1,7 @@
 import {initializeApp} from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js';
 import {getAuth,signInAnonymously,signInWithEmailAndPassword,createUserWithEmailAndPassword,sendPasswordResetEmail,setPersistence,browserLocalPersistence,inMemoryPersistence,signOut,onAuthStateChanged} from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-auth.js';
 import {getFirestore,doc,getDoc,setDoc,onSnapshot,runTransaction,collection,getDocs,getDocsFromServer,getDocFromServer,updateDoc,serverTimestamp} from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore.js';
-import {createTableSync} from './table-sync.js?v=7.75';
+import {createTableSync} from './table-sync.js?v=7.76';
 const config={apiKey:'AIzaSyBgmv1v5APpPReJ4olWCusUhhGGevcvRcE',authDomain:'snooker-money-match.firebaseapp.com',projectId:'snooker-money-match',storageBucket:'snooker-money-match.firebasestorage.app',messagingSenderId:'423302158497',appId:'1:423302158497:web:706c1fec068959b7bbb8e0'};
 const localStorage = window.snookerStorage;
 const app=initializeApp(config),auth=getAuth(app),db=getFirestore(app),e=id=>document.getElementById(id),msg=t=>e('fbStatus').textContent=t;
@@ -105,6 +105,19 @@ window.snookerTableBackend.refresh=async()=>{
   if(!permitted())throw Error('Bitte anmelden und die Freigabe abwarten.');
   await tableSync.refresh();
   return 'Tischstände frisch abgerufen.';
+};
+window.snookerRefresh=async()=>{
+  if(deviceSetup())return await window.snookerTableBackend.refresh();
+  if(window.snookerAccount.guest)return 'Lokaler Stand aktuell – ohne Cloud-Anmeldung.';
+  if(!permitted())throw Error('Bitte anmelden und die Freigabe abwarten.');
+  const snap=await getDocFromServer(cloudDoc()),data=snap.data();
+  if(!pendingTournament&&!tournamentWriting)applyTournamentSnapshot(data?.tournamentSync??data?.tournamentState??null,data?.tournamentRevision??0);
+  receiveTable(data?.tournamentTable);receiveRoster(data?.tournamentRoster);
+  const raw=data?.state??null;
+  if(!pending&&!writing&&(raw===''||valid(raw))){lastCloudRaw=raw;if(localRaw()!==raw)window.dispatchEvent(new CustomEvent('snooker-single-received',{detail:raw}))}
+  if(tableSync.role==='owner')await tableSync.refresh();
+  if(auth.currentUser?.uid===ADMIN_UID)await window.snookerAccessApi.list();
+  return 'Spielstände aktualisiert.';
 };
 window.dispatchEvent(new Event('snooker-table-backend-ready'));
 let unsubscribe=null, initialized=false, writeTimer=null, writing=false, pending=false;

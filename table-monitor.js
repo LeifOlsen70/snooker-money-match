@@ -87,8 +87,25 @@
     <div class="monitorActions"><button type="button" data-monitor-undo="${board.slot}" ${board.state.cursor&&board.enabled?'':'disabled'}>↶ Zurück</button><button type="button" data-monitor-redo="${board.slot}" ${board.state.cursor<board.state.events.length&&board.enabled?'':'disabled'}>Vor ↷</button></div>
 </article>`;
   }
+  const localWarningStorageKey='snooker-table-local-warning-v1';
+  let localWarningMute='';
+  try{localWarningMute=window.localStorage.getItem(localWarningStorageKey)||''}catch{}
+  function warningFrameKey(board){
+    let frame='first';
+    board.state.events.slice(0,board.state.cursor).forEach((event,index)=>{if(event.type==='frame')frame=index+':'+event.at});
+    return (window.snookerTableSync?.owner??'')+'|'+board.assignment.id+'|'+frame;
+  }
+  function locallyMuted(board){return tableSlot!==null&&localWarningMute===warningFrameKey(board)}
+  function muteWarning(board){
+    if(tableSlot!==null){
+      localWarningMute=warningFrameKey(board);
+      try{window.localStorage.setItem(localWarningStorageKey,localWarningMute)}catch{}
+      status('Warnung nur auf diesem Tischgerät ausgeschaltet.');renderTable();return;
+    }
+    return send(board,{type:'warningOff'});
+  }
   function bind(container,list){
-    container.querySelectorAll('[data-monitor-warning-off]').forEach(b=>b.onclick=()=>{const board=list.find(x=>x.slot===Number(b.dataset.monitorWarningOff));if(board)send(board,{type:'warningOff'})});
+    container.querySelectorAll('[data-monitor-warning-off]').forEach(b=>b.onclick=()=>{const board=list.find(x=>x.slot===Number(b.dataset.monitorWarningOff));if(board)muteWarning(board)});
     container.querySelectorAll('[data-monitor-player]').forEach(b=>b.onclick=()=>{const board=list.find(x=>x.slot===Number(b.dataset.monitorSlot));if(board)openPopup(board,Number(b.dataset.monitorPlayer))});
     container.querySelectorAll('[data-monitor-winner]').forEach(b=>b.onclick=()=>{const board=list.find(x=>x.slot===Number(b.dataset.monitorSlot));if(board)winner(board,Number(b.dataset.monitorWinner))});
     for(const action of ['undo','redo'])container.querySelectorAll(`[data-monitor-${action}]`).forEach(b=>b.onclick=()=>{const board=list.find(x=>x.slot===Number(b.dataset[action==='undo'?'monitorUndo':'monitorRedo']));if(board)send(board,{type:action})});
@@ -96,6 +113,7 @@
   function frameWarningMarkup(board){
     const a=board.assignment,start=board.startedAt??Number(a.id?.split(':').at(-1));
     const w=model.frameWarning(board.state,a.rules,start,a.frameTimeLimitMinutes,Date.now(),Boolean(board.stoppedAt));
+    if(locallyMuted(board)){w.overdue=false;w.startedAt=null;}
     return `<span class="frameLimitWarning" data-frame-warning data-frame-start="${w.startedAt??''}" data-frame-limit="${w.limit}" ${w.overdue?'':'hidden'}>⚠ Spielzeit überschritten</span>`;
   }
   function updateFrameWarnings(){

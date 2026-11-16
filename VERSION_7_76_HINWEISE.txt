@@ -1,0 +1,3 @@
+v7.76 – Menü und gemeinsame Bedienzeile
+
+Kontoaktionen und Startseite im ☰-Menü links unter dem Logo. Darunter Zurück – Aktualisieren – Vor. Untere Bedienbuttons entfernt; CSV/PDF bleiben an der Tabelle. Bestehendes Clublogo, Rechte und Firebase-Regeln unverändert.

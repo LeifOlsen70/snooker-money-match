@@ -1,3 +1,25 @@
+Snooker Money Match v7.76
+
+Neue aufgeräumte Navigation gemäß Entwurf:
+- Links unter dem unveränderten Clublogo öffnet ☰ das Menü.
+- Kontoanzeige, Anmelden/Abmelden/Konto wechseln, Startseite, Mit Tischcode beitreten und Benutzerfreigaben mit Anfragezahl befinden sich im Menü. Nur die für die Rolle verfügbaren Aktionen werden angezeigt.
+- Direkt darunter stehen Zurück – Aktualisieren – Vor als drei Buttons in einer Zeile. Die Buttons verwenden die bestehenden Rückgängig-/Wiederholen-Aktionen.
+- Aktualisieren ruft den aktuellen Serverstand ab, ohne die Seite neu zu laden; noch ausstehende Eingaben werden nicht durch den Abruf ersetzt.
+- Am Tischgerät aktualisiert der Button ausschließlich dessen Tischstand. Tisch verlassen befindet sich dort im Menü.
+- Die bisherigen unteren Bedienbuttons entfallen. CSV/PDF bleiben bei den Tabellen, weitere Reiter bleiben wischbar und Allgemeine Infos & Regeln weiterhin letzter Reiter.
+- In der Vollbildanzeige bleiben die zur Anzeige passenden bisherigen Bedienmöglichkeiten erhalten.
+- Firebase-Regeln unverändert gegenüber v7.75. Kein erneutes Veröffentlichen nötig.
+- Alle Dateien auf GitHub aktualisieren und App neu öffnen, bis v7.76 erscheint.
+
+Prüfung: Menü-/Toolbar-DOM-Logik, erhaltene Button-Funktionen, Drei-Button-Reihenfolge, Status gesperrter Buttons, Aktualisierung ohne Reload, Schutz ausstehender Eingaben, Tisch-Synchronisierung und lokale/globale Warnabschaltung automatisiert geprüft. Die visuelle Prüfung im Browser konnte in dieser Umgebung nicht durchgeführt werden; bitte die Darstellung auf iPhone und iPad kontrollieren.
+
+Bisherige Hinweise:
+
+Ergänzung innerhalb v7.75 – unterschiedliche Warnabschaltung:
+- Am Tischgerät: „Warnung aus“ gilt nur lokal auf diesem Gerät für den aktuellen Frame, auch nach Neuladen. Keine Übertragung einer Abschaltung an die Spielleitung.
+- Am Spielleitergerät im Score Monitor oder in Runden: „Warnung aus“ wird für diesen Tisch und Frame an alle Geräte übertragen.
+- Im folgenden Frame ist die Warnung wieder aktiv. Versionsnummer und Firebase-Regeln bleiben unverändert.
+
 Snooker Money Match v7.75
 
 Korrektur Zurück/Vor:

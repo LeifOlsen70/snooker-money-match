@@ -1,3 +1,8 @@
+Ergänzung innerhalb v7.75 – unterschiedliche Warnabschaltung:
+- Am Tischgerät: „Warnung aus“ gilt nur lokal auf diesem Gerät für den aktuellen Frame, auch nach Neuladen. Keine Übertragung einer Abschaltung an die Spielleitung.
+- Am Spielleitergerät im Score Monitor oder in Runden: „Warnung aus“ wird für diesen Tisch und Frame an alle Geräte übertragen.
+- Im folgenden Frame ist die Warnung wieder aktiv. Versionsnummer und Firebase-Regeln bleiben unverändert.
+
 v7.75 – Zurück/Vor zwischen Geräten
 
 Zählwerk-Schritte nutzen im oberen Turniermenü dieselbe gemeinsame Ereignisliste wie das Tischgerät. Wiederholen bleibt synchron verfügbar. Alle Geräte aktualisieren. Firebase-Regeln unverändert.

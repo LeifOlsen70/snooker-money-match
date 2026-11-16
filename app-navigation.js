@@ -7,18 +7,48 @@
   panel.hidden = true;
   panel.innerHTML = '<iframe title="Allgemeine Infos & Regeln" data-src="infos.html?embedded=1"></iframe>';
   app.append(panel);
-  const footer=document.createElement('footer');
-  footer.className='pageFooter';
+  const utility=document.createElement('section');utility.className='appUtilityNav';utility.setAttribute('aria-label','Menü und Verlauf');
+  utility.innerHTML='<div class="appMenuRow"><button type="button" id="appMenuToggle" aria-label="Menü öffnen" aria-haspopup="dialog" aria-expanded="false">☰</button></div><div class="appHistoryToolbar"><button type="button" id="appUndo" disabled>↶ Zurück</button><button type="button" id="appRefresh">↻ Aktualisieren</button><button type="button" id="appRedo" disabled>Vor ↷</button></div><p id="appRefreshStatus" role="status" hidden></p>';
+  app.querySelector('.clubBrand').after(utility);
+  const menu=document.createElement('dialog');menu.id='appUtilityMenu';menu.setAttribute('aria-label','Menü');
+  menu.innerHTML='<div class="appMenuHeading"><h2>Menü</h2><button type="button" data-menu-close aria-label="Menü schließen">×</button></div>';
   const accountBar=document.getElementById('accountBar');
-  footer.append(accountBar);
-  const home=document.createElement('button');
-  home.type='button';home.className='secondary';home.id='pageFooterHome';home.textContent='← Startseite';
+  const home=document.createElement('button');home.type='button';home.className='secondary';home.id='pageFooterHome';home.textContent='← Startseite';
   home.onclick=()=>{
+    closeMenu();
     if(document.body.classList.contains('tableDeviceMode')){window.snookerMonitors.tableHome();return;}
-    const source=document.getElementById(isVisible(document.getElementById('singleMode'))?'singleHome':'tournamentHome');
-    source?.click();
+    const source=document.getElementById(isVisible(document.getElementById('singleMode'))?'singleHome':'tournamentHome');source?.click();
   };
-  footer.append(home);app.append(footer);
+  menu.append(home,accountBar);
+  const fallbackLogin=document.createElement('button');fallbackLogin.type='button';fallbackLogin.textContent='Anmelden / Registrieren';fallbackLogin.onclick=()=>{closeMenu();window.snookerAccount.request('single',true)};
+  const fallbackJoin=document.createElement('button');fallbackJoin.type='button';fallbackJoin.textContent='Mit Tischcode beitreten';fallbackJoin.onclick=()=>{closeMenu();document.getElementById('tableDeviceSetup').click()};
+  const leaveTable=document.createElement('button');leaveTable.type='button';leaveTable.textContent='Tisch verlassen';leaveTable.onclick=()=>{closeMenu();document.querySelector('#tableMode [data-table-leave]')?.click()};
+  menu.append(fallbackLogin,fallbackJoin,leaveTable);document.body.append(menu);
+  const menuToggle=document.getElementById('appMenuToggle');
+  function closeMenu(){if(menu.open)menu.close();menuToggle.setAttribute('aria-expanded','false')}
+  function openMenu(){
+    update();
+    const rect=menuToggle.getBoundingClientRect();menu.style.left=Math.max(8,rect.left)+'px';menu.style.top=Math.min(rect.bottom+6,window.innerHeight-180)+'px';menu.style.maxHeight=Math.max(160,window.innerHeight-rect.bottom-20)+'px';
+    menu.showModal();menuToggle.setAttribute('aria-expanded','true');
+  }
+  menuToggle.onclick=()=>menu.open?closeMenu():openMenu();menu.querySelector('[data-menu-close]').onclick=closeMenu;
+  menu.oncancel=event=>{event.preventDefault();closeMenu()};menu.addEventListener('close',()=>menuToggle.setAttribute('aria-expanded','false'));
+  menu.addEventListener('click',event=>{if(event.target===menu){const r=menu.getBoundingClientRect();if(event.clientX<r.left||event.clientX>r.right||event.clientY<r.top||event.clientY>r.bottom)closeMenu()}else if(event.target.closest('button'))closeMenu()},true);
+  const byId=id=>document.getElementById(id);
+  function historySource(direction){
+    if(body.classList.contains('tableDeviceMode'))return document.querySelector('#tableMode [data-monitor-'+(direction<0?'undo':'redo')+']');
+    if(isVisible(byId('tournamentMode')))return byId(direction<0?'tournamentUndo':'tournamentRedo');
+    if(isVisible(byId('singleMode')))return byId(direction<0?'scorerUndo':'scorerRedo');
+    return null;
+  }
+  function updateHistoryButtons(){for(const [id,direction] of [['appUndo',-1],['appRedo',1]]){const source=historySource(direction),disabled=!source||source.disabled;if(byId(id).disabled!==disabled)byId(id).disabled=disabled}}
+  byId('appUndo').onclick=()=>{const source=historySource(-1);if(source&&!source.disabled)source.click();queueMicrotask(updateHistoryButtons)};
+  byId('appRedo').onclick=()=>{const source=historySource(1);if(source&&!source.disabled)source.click();queueMicrotask(updateHistoryButtons)};
+  byId('appRefresh').onclick=async()=>{
+    const button=byId('appRefresh'),note=byId('appRefreshStatus');button.disabled=true;note.hidden=false;note.textContent='Aktualisierung läuft …';
+    try{if(!window.snookerRefresh)throw Error('Verbindung wird noch vorbereitet.');note.textContent=await window.snookerRefresh()}
+    catch(err){note.textContent='Aktualisieren: '+err.message}finally{button.disabled=false;updateHistoryButtons()}
+  };
   let opened = false, owner = null, queued = false;
   const positions = new Map();
   let swipeStart=null;
@@ -57,7 +87,11 @@
     queued=false;
     const single = document.getElementById('singleMode');
     const tournament = document.getElementById('tournamentMode');
-    home.hidden=!isVisible(single)&&!isVisible(tournament)&&!body.classList.contains('tableDeviceMode');
+    const tableDevice=body.classList.contains('tableDeviceMode');
+    home.hidden=!isVisible(single)&&!isVisible(tournament)&&!tableDevice;
+    fallbackLogin.hidden=tableDevice||!accountBar.hidden;fallbackJoin.hidden=tableDevice||!accountBar.hidden;leaveTable.hidden=!tableDevice;
+    accountBar.classList.toggle('menuTableDeviceHidden',tableDevice);
+    updateHistoryButtons();
     if (opened && ((owner==='single' && !isVisible(single)) || (owner==='tournament' && !isVisible(tournament)))) {
       opened=false;owner=null;body.classList.remove('appRulesOpen');panel.hidden=true;
     }
@@ -143,6 +177,7 @@
     if(e.origin===location.origin && e.source===panel.querySelector('iframe').contentWindow && e.data==='snooker-rules-back')closeInfo();
     if(e.origin===location.origin && e.source===panel.querySelector('iframe').contentWindow && e.data==='snooker-rules-swipe-back')movePage(-1);
   });
+  new MutationObserver(changes=>{if(changes.some(change=>change.target.matches?.('#tournamentUndo,#tournamentRedo,#scorerUndo,#scorerRedo,[data-monitor-undo],[data-monitor-redo]')))updateHistoryButtons();if(changes.some(change=>change.target===accountBar))queueMicrotask(update)}).observe(app,{attributes:true,attributeFilter:['disabled','hidden'],subtree:true});
   // Child-list observation handles dynamically rebuilt tournament bars without
   // creating a mutation loop from updating classes and ARIA attributes.
   new MutationObserver(()=>{if(!queued){queued=true;queueMicrotask(update)}}).observe(app,{childList:true,subtree:true});
