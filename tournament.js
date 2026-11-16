@@ -166,7 +166,13 @@
     else if (result === 'finish') { tournament.finishLastRound = true; saveTournament(); }
     deadlineDialog = false;
   }
+  function refreshHistory(){
+    const syncing=Boolean(window.snookerTableSync?.syncing);
+    if($('tournamentUndo'))$('tournamentUndo').disabled=drafting||!undoStates.length||syncing;
+    if($('tournamentRedo'))$('tournamentRedo').disabled=drafting||!redoStates.length||syncing;
+  }
   function historyStep(direction) {
+    if(window.snookerTableSync?.syncing)return;
     if (openMatch !== null && !confirm('Ergebniseingabe ohne Speichern verlassen?')) return;
     const source = direction < 0 ? undoStates : redoStates;
     const destination = direction < 0 ? redoStates : undoStates;
@@ -1008,7 +1014,7 @@
               <select name="tables">${options(6, 1)}</select>
             </label>
             <label>Spielzeitlimit pro Frame (Minuten)
-              <input name="frameTimeLimitMinutes" type="number" min="0" max="1440" step="1" value="0" inputmode="numeric">
+              <input name="frameTimeLimitMinutes" type="number" min="0" max="1440" step="1" value="30" inputmode="numeric">
               <span class="small">0 = keine Warnung. Neustart der Warnzeit nach jedem Frame.</span>
             </label>
           </div>
@@ -1259,6 +1265,7 @@
         ${waiting && !match.paused && !blocked ? freeTables.map(table => `<button type="button" class="secondary tournamentStart tournamentPulse" data-start="${index}" data-table="${table}">An Tisch ${table} starten</button>`).join('') : ''}
         ${waiting ? `<button type="button" class="secondary tournamentStart${match.paused ? ' tournamentPulse' : ''}" data-pause="${index}">${match.paused ? 'Pause beenden' : 'Pausieren'}</button>` : ''}
         ${match.table || match.result ? `<button type="button" class="secondary ${match.result ? 'tournamentCorrect' : 'tournamentResult'}" data-edit="${index}">${match.result ? 'Ergebnis korrigieren' : 'Ergebnis eintragen'}</button>` : ''}
+        ${match.table&&!match.result?`<button type="button" data-warning-off="${index}" hidden>Warnung aus</button>`:''}
       </div>` : ''}
     </article>`;
   }
@@ -1391,7 +1398,8 @@
       const rules=tournament.framesPerMatch!=null?{framesPerMatch:tournament.framesPerMatch}:{target:tournament.target};
       const warning=window.SnookerTableScore.frameWarning(match.scoreMonitor?.state,rules,match.startedAt,tournament.frameTimeLimitMinutes,now,Boolean(tournament.ended||match.result));
       button.classList.toggle('frameLimitExceeded',warning.overdue);
-      const text=(match.result?'Ergebnis korrigieren':'Ergebnis eintragen')+(warning.overdue?'\n⚠ Spielzeit überschritten':'');
+      const text=warning.overdue?'⚠ Spielzeit überschritten':(match.result?'Ergebnis korrigieren':'Ergebnis eintragen');
+      const off=panel.querySelector(`[data-warning-off="${button.dataset.edit}"]`);if(off)off.hidden=!warning.overdue;
       if(button.textContent!==text)button.textContent=text;
     }
     for (const clock of panel.querySelectorAll('[data-match-time]')) {
@@ -1782,7 +1790,8 @@
     renderBackupControls();
     renderLiveStatus();
     panel.insertAdjacentHTML('beforeend', roundCards.reverse().join(''));
-    updateClocks();
+    updateClocks();refreshHistory();
+    panel.querySelectorAll('[data-warning-off]').forEach(button=>button.onclick=()=>window.snookerMonitors.silence(button.dataset.warningOff));
 
     function matchAt(index) {
       const [roundIndex, matchIndex] = index.split(':').map(Number);
@@ -1835,16 +1844,22 @@
   }
 
 window.snookerTournamentBridge=Object.freeze({
+    refreshHistory,
     get current(){return tournament},
     get canApply(){return tournament&&!drafting&&openMatch===null},
     applyBoard(board){
-      if(!tournament||tournament.ended||drafting||openMatch!==null||!board.assignment)return;
+      if(!tournament||tournament.ended||drafting||openMatch!==null||!board.assignment||window.snookerTableSync?.syncing)return;
       const a=board.assignment,match=tournament.rounds[a.round]?.matches[a.index];
       if(!match||a.tournament!==String(tournament.started)||match.table!==board.tableNumber)return;
       const expected=[tournament.freeTournament?'free':'club',tournament.started,a.round,a.index,match.startedAt].join(':');
       if(expected!==a.id)return;
       if(tournament.rounds.some(round=>round.matches.some(other=>other!==match&&other.table===board.tableNumber&&!other.result)))return;
       if(JSON.stringify(match.scoreMonitor?.state)===JSON.stringify(board.state))return;
+      const previousState=match.scoreMonitor?.state;
+      if(previousState&&previousState.cursor===board.state.cursor&&JSON.stringify(previousState.events)===JSON.stringify(board.state.events)){
+        const before=committed;match.scoreMonitor={assignmentId:a.id,state:clone(board.state)};committed=JSON.stringify(tournament);localStorage.setItem(key,committed);
+        monitorApplying=true;try{publishTournament(before)}finally{monitorApplying=false}renderTournament();return;
+      }
       const summary=window.SnookerTableScore.derive(board.state,a.rules);
       match.scoreMonitor={assignmentId:a.id,state:clone(board.state)};
       if(summary.complete){

@@ -1,0 +1,3 @@
+v7.74 – Warnung abschalten und Undo/Redo
+
+Nur Warnhinweis bei Zeitüberschreitung, keine automatische Eingabeaufforderung. Warnung aus gilt je Frame, im nächsten Frame wieder aktiv. Kein Pulsieren von Zurück/Vor. Synchronisierungsbestätigungen erhalten die Undo/Redo-Historie. Alle Geräte aktualisieren. Firebase-Regeln unverändert.

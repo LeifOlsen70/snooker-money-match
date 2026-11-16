@@ -83,11 +83,12 @@
     const value=model.derive(board.state,board.assignment.rules);
     return `<article class="monitorCard frameLimitTarget ${compact?'monitorCompact':''}"><h3>Tisch ${board.tableNumber} · ${value.complete?'Partie beendet':'Frame '+(value.frames[0]+value.frames[1]+1)}</h3>
     <div class="monitorPlayers">${board.assignment.names.map((name,i)=>`<div class="monitorPlayerColumn"><button type="button" class="monitorScoreButton" data-monitor-player="${i}" data-monitor-slot="${board.slot}" ${board.enabled&&!value.complete?'':'disabled'}><span class="monitorName">${escape(name)}</span><strong class="monitorPoints">${value.scores[i]}</strong><span>Frames <b>${value.frames[i]}</b></span><span>HB: ${highestBreak(value.breaks[i])}</span></button><button type="button" class="monitorFrameWinner" data-monitor-winner="${i}" data-monitor-slot="${board.slot}" ${board.enabled&&!value.complete?'':'disabled'}>Frame-Sieger: ${escape(name)}</button></div>`).join('')}</div>
-    ${frameWarningMarkup(board)}<p class="small">${board.assignment.rules.framesPerMatch!=null?board.assignment.rules.framesPerMatch+' Frames insgesamt':'Bis '+board.assignment.rules.target+' Gewinnframes'}${value.complete?' · Ergebnis '+value.frames.join(':'):''}</p>
+    <div>${frameWarningMarkup(board)}<button type="button" data-monitor-warning-off="${board.slot}" hidden>Warnung aus</button></div><p class="small">${board.assignment.rules.framesPerMatch!=null?board.assignment.rules.framesPerMatch+' Frames insgesamt':'Bis '+board.assignment.rules.target+' Gewinnframes'}${value.complete?' · Ergebnis '+value.frames.join(':'):''}</p>
     <div class="monitorActions"><button type="button" data-monitor-undo="${board.slot}" ${board.state.cursor&&board.enabled?'':'disabled'}>↶ Zurück</button><button type="button" data-monitor-redo="${board.slot}" ${board.state.cursor<board.state.events.length&&board.enabled?'':'disabled'}>Vor ↷</button></div>
 </article>`;
   }
   function bind(container,list){
+    container.querySelectorAll('[data-monitor-warning-off]').forEach(b=>b.onclick=()=>{const board=list.find(x=>x.slot===Number(b.dataset.monitorWarningOff));if(board)send(board,{type:'warningOff'})});
     container.querySelectorAll('[data-monitor-player]').forEach(b=>b.onclick=()=>{const board=list.find(x=>x.slot===Number(b.dataset.monitorSlot));if(board)openPopup(board,Number(b.dataset.monitorPlayer))});
     container.querySelectorAll('[data-monitor-winner]').forEach(b=>b.onclick=()=>{const board=list.find(x=>x.slot===Number(b.dataset.monitorSlot));if(board)winner(board,Number(b.dataset.monitorWinner))});
     for(const action of ['undo','redo'])container.querySelectorAll(`[data-monitor-${action}]`).forEach(b=>b.onclick=()=>{const board=list.find(x=>x.slot===Number(b.dataset[action==='undo'?'monitorUndo':'monitorRedo']));if(board)send(board,{type:action})});
@@ -101,7 +102,8 @@
     for(const warning of document.querySelectorAll('[data-frame-warning]')){
       const start=warning.dataset.frameStart,limit=Number(warning.dataset.frameLimit);
       const overdue=start!==''&&limit>0&&Date.now()-Number(start)>limit*60000;
-      warning.hidden=!overdue;warning.closest('.frameLimitTarget')?.classList.toggle('frameLimitExceeded',overdue);
+      warning.hidden=!overdue;const target=warning.closest('.monitorRow')??warning;target.classList.toggle('frameLimitExceeded',overdue);
+      const off=(warning.closest('.monitorRowGroup')??warning.parentElement).querySelector('[data-monitor-warning-off]');if(off)off.hidden=!overdue;
     }
   }
   function elapsedTime(start,stop,now=Date.now()){
@@ -136,9 +138,9 @@
       if(current)list.push(forMatch(data,current.r,current.m,current.match));else list.push({slot});
     }
     const live=window.snookerTableSync?.role==='owner';
-    container.innerHTML=`<div class="card monitorOverview"><div class="monitorOverviewHeader"><h3>Score Monitor</h3><span class="monitorLive ${live?'isLive':''}">${live?'● Live':'Lokal'}</span><button type="button" data-monitor-full>Vollbild ${document.body.classList.contains('monitorOverviewFullscreen')?'aus':'an'}</button><button type="button" data-table-codes>Tischcodes</button></div><p data-monitor-message role="status" class="monitorOverviewStatus">${escape(message)}</p><div class="monitorOverviewGrid">${list.map(overviewRow).join('')}</div><p class="monitorOverviewHint">Tisch antippen für Eingabe &amp; Details</p></div>`;
+    container.innerHTML=`<div class="card monitorOverview"><div class="monitorOverviewHeader"><h3>Score Monitor</h3><span class="monitorLive ${live?'isLive':''}">${live?'● Live':'Lokal'}</span><button type="button" data-monitor-full>Vollbild ${document.body.classList.contains('monitorOverviewFullscreen')?'aus':'an'}</button><button type="button" data-table-codes>Tischcodes</button></div><p data-monitor-message role="status" class="monitorOverviewStatus">${escape(message)}</p><div class="monitorOverviewGrid">${list.map(board=>`<div class="monitorRowGroup">${overviewRow(board)}${board.assignment?`<button type="button" class="monitorMuteButton" data-monitor-warning-off="${board.slot}" hidden>Warnung aus</button>`:''}</div>`).join('')}</div><p class="monitorOverviewHint">Tisch antippen für Eingabe &amp; Details</p></div>`;
     container.querySelectorAll('[data-monitor-detail]').forEach(button=>button.onclick=()=>{detailSlot=Number(button.dataset.monitorDetail);renderDetail(list);if(!detail.open)detail.showModal()});
-    renderDetail(list);updateFrameWarnings();
+    bind(container,list);renderDetail(list);updateFrameWarnings();
     container.querySelector('[data-table-codes]').onclick=()=>window.snookerTableCodes();
     container.querySelector('[data-monitor-full]').onclick=()=>{const on=document.body.classList.toggle('monitorOverviewFullscreen');container.querySelector('[data-monitor-full]').textContent=on?'Vollbild aus':'Vollbild an'};
   }
@@ -167,9 +169,11 @@
   function reconcile(){
     if(tableSlot){renderTable();return}
     if(bridge.canApply)for(const board of boards){try{bridge.applyBoard(board)}catch(err){status(err.message)}}
+    bridge.refreshHistory?.();
     const overview=document.getElementById('tournamentMonitors');if(overview&&bridge.current)renderOverview(overview,bridge.current);
   }
   window.snookerMonitors=Object.freeze({activateTable,renderOverview,reconcile,
+    silence(index){const data=bridge.current;if(!data)return;const [r,m]=index.split(':').map(Number),match=data.rounds[r]?.matches[m];if(match?.table)return send(forMatch(data,r,m,match),{type:'warningOff'})},
     deactivate(){closeDetail();tableSlot=null;boards=[];tablePage.hidden=true;closePopup();document.body.classList.remove('tableDeviceMode','tableMonitorFullscreen','monitorOverviewFullscreen')},
     tableHome(){landing=true;document.body.classList.remove('tableMonitorFullscreen');closePopup();renderTable()},
     async commitManual(index,result){

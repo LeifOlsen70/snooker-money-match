@@ -23,6 +23,7 @@ export function createTableSync({auth,db,doc,getDoc,getDocFromServer,onSnapshot,
         if(token!==session||!active())return;
         if(snap.metadata.fromCache||snap.metadata.hasPendingWrites)return;
         const board=decodeBoard(snap.data());
+        if(board?.state?.revision<(cache.get(slot)?.state?.revision??-1))return;
         if(board?.assignment){try{model.derive(board.state,board.assignment.rules)}catch(err){error(err);return;}}
         if(board){cache.set(slot,{...board,slot});if(!syncCount)notify()}
         else {cache.delete(slot);if(!syncCount)notify()}
@@ -50,7 +51,7 @@ export function createTableSync({auth,db,doc,getDoc,getDocFromServer,onSnapshot,
         const cached=cache.get(slot);
         const old=matches.find(({match,r,m})=>assignment(snapshot,r,m,match).id===cached?.assignment?.id);
         const selected=live??old??matches.at(-1);
-        await runTransaction(db,async tx=>{
+        const saved=await runTransaction(db,async tx=>{
           if(token!==session||!active())throw Error('Anmeldung wurde gewechselt.');
           const existing=decodeBoard((await tx.get(ref(slot))).data());
           const key=tournamentKey(snapshot),newTournament=existing?.tournamentKey!==key;
@@ -61,7 +62,7 @@ export function createTableSync({auth,db,doc,getDoc,getDocFromServer,onSnapshot,
           if(!selected){
             const next={...shared,assignment:null,enabled:false,state:model.initial((existing?.state?.revision??0)+1)};
             if(newTournament||existing?.assignment||existing?.enabled||existing?.joinOpen!==shared.joinOpen)tx.set(ref(slot),encodeBoard(next));
-            return;
+            return (newTournament||existing?.assignment||existing?.enabled||existing?.joinOpen!==shared.joinOpen)?next:existing;
           }
           const {match,r,m}=selected,a=assignment(snapshot,r,m,match),enabled=!snapshot.ended;
           let state=existing?.state;
@@ -79,7 +80,9 @@ export function createTableSync({auth,db,doc,getDoc,getDocFromServer,onSnapshot,
           }
           const next={...shared,assignment:a,enabled,state};
           if(!same(existing,next))tx.set(ref(slot),encodeBoard(next));
+          return next;
         });
+        if(token===session&&active()&&saved)cache.set(slot,{...saved,slot});
       }
     };
     const result=queue.then(job).then(()=>{if(token===session&&active())window.dispatchEvent(new Event('snooker-table-synced'))}).catch(error).finally(()=>{if(token===session){syncCount--;if(!syncCount)notify()}});
@@ -114,5 +117,5 @@ export function createTableSync({auth,db,doc,getDoc,getDocFromServer,onSnapshot,
     });
   }
   async function codes(data){await sync(data);if(role!=='owner'||!active())throw Error('Bitte als Spielleiter anmelden.');const key=tournamentKey(data);const values=await Promise.all(Array.from({length:data.tables},(_,i)=>getDoc(ref(i+1))));return values.map(s=>s.data()).filter(b=>b?.joinOpen&&b.tournamentKey===key).map(b=>({slot:b.tableNumber,code:b.joinToken}));}
-  return Object.freeze({start,stop,sync,refresh,command,assignment,codes,get owner(){return organizer},get role(){return role},get boards(){return [...cache.values()]}});
+  return Object.freeze({start,stop,sync,refresh,command,assignment,codes,get syncing(){return syncCount>0},get owner(){return organizer},get role(){return role},get boards(){return [...cache.values()]}});
 }

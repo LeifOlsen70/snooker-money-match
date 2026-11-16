@@ -1,7 +1,23 @@
+Snooker Money Match v7.74
+
+Neu:
+- Bei Zeitüberschreitung steht am Rundenbutton nur „Spielzeit überschritten“, ohne Aufforderung zur Ergebniseingabe. Es öffnet sich kein automatisches Eingabefenster; die Spielleitung entscheidet selbst.
+- „Warnung aus“ in Runden, Score Monitor und Tischdetails schaltet die Warnung für den aktuellen Frame ab. Beim nächsten Frame ist die Warnung wieder aktiv.
+- In Tischdetails pulsiert nur der Warnhinweis; Zurück/Vor blinken nicht.
+- Synchronisierungs-Rückmeldungen mit ausschließlich neuer Versionsnummer überschreiben nicht mehr den Zurück-/Vor-Verlauf. Veraltete Tischstände werden während einer Rücknahme nicht erneut angewandt.
+- Kurz während einer laufenden Tisch-Synchronisierung sind globale Zurück-/Vor-Aktionen gesperrt; nach Abschluss werden die Buttons passend zur Historie wieder freigegeben.
+- 30 Minuten pro Frame bleiben voreingestellt, 0 schaltet das Limit aus.
+- Alle Geräte auf v7.74 aktualisieren: Das neue Warnung-aus-Ereignis setzt die neue Version auch auf den Tischgeräten voraus.
+- Firestore-Regeln unverändert gegenüber v7.72/v7.73. Keine erneute Veröffentlichung erforderlich, wenn diese bereits veröffentlicht sind.
+
+Prüfung: Warnung-aus ohne Punkteänderung, Reaktivierung im nächsten Frame, Rückgängig/Wiederholen der Abschaltung, Wiederherstellung von Undo/Redo trotz Tisch-Synchronisation, Zeitgrenzen sowie getrennte Tischstände automatisiert geprüft. Kein echter Firebase-Mehrgerätetest und keine visuelle Browserprüfung durchgeführt.
+
+Bisherige Hinweise:
+
 Snooker Money Match v7.73
 
 Neu: Spielzeitlimit pro Frame
-- Bei „Turnier anlegen“ Minuten pro Frame einstellen (0 = keine Warnung, bis 1440 Minuten).
+- Bei „Turnier anlegen“ Minuten pro Frame einstellen (Voreinstellung 30 Minuten; 0 = keine Warnung, bis 1440 Minuten).
 - Die Warnzeit beginnt bei Matchstart. Jeder bestätigte Frame-Sieg startet die Warnzeit für den nächsten Frame neu.
 - Überschreitung: Ergebnisbutton unter Runden sowie Tischzeile im Score Monitor und Tischanzeige pulsieren mit „Spielzeit überschritten“.
 - Punkteingaben setzen die Warnzeit nicht zurück. Rückgängig/Wiederholen berücksichtigt den jeweiligen Frame-Verlauf.

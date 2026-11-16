@@ -390,7 +390,7 @@ body.monitorOverviewFullscreen .pageFooter {display:none!important}
  .monitorKeypad button {min-height:42px}
 }
 
-/* v7.73: approval counter and refresh control */
+/* v7.74: approval counter and refresh control */
 .accessPendingCount {display:inline-flex;align-items:center;justify-content:center;min-width:23px;height:23px;padding:0 5px;box-sizing:border-box;border-radius:999px;background:#eac374;color:#25142d;border:1px solid #f7e0a1;font-weight:900;font-size:14px;margin-left:8px;vertical-align:middle}
 .accessPendingCount[hidden] {display:none!important}
 .pageFooter .accessRefreshButton {grid-column:1;grid-row:auto;background:#433052;border:1px solid #b69269;color:#f6e9d1}
@@ -440,3 +440,8 @@ body.monitorOverviewFullscreen .monitorRowTime {font-size:clamp(11px,2.2vh,22px)
 .frameLimitWarning {display:block;font-size:12px;font-weight:800;color:#ffce75;line-height:1.2;margin-top:3px}
 .frameLimitWarning[hidden] {display:none!important}
 @media(prefers-reduced-motion:reduce){.frameLimitExceeded{animation:none!important;outline:3px solid #ffd078;background:#65172d!important}}
+.monitorRowGroup {display:flex;flex-direction:column;min-height:0;gap:4px}
+.monitorRowGroup > .monitorRow {flex:1}
+.monitorMuteButton {align-self:flex-end;font-size:12px!important;min-height:28px;padding:4px 10px!important;background:#34213e;color:#fff0d0;border:1px solid #bd9d54;border-radius:8px}
+#tournamentUndo,#tournamentRedo,[data-monitor-undo],[data-monitor-redo] {animation:none!important}
+.monitorCard .frameLimitWarning.frameLimitExceeded {padding:8px;border:2px solid #ffd078;border-radius:8px}

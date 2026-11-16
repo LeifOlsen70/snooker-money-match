@@ -10,6 +10,7 @@
     const value={scores:[0,0],frames:[0,0],breaks:[[],[]],complete:false,finishedAt:null};
     for(const event of state.events.slice(0,state.cursor)){
       if(!event||!Number.isFinite(event.at)||event.at<0)throw Error('Ungültige Zeitangabe.');
+      if(event.type==='warningOff')continue;
       if(event.type==='manual'){
         const f=event.frames,b=event.breaks,max=rules.framesPerMatch??rules.target;
         if(!Array.isArray(f)||f.length!==2||!f.every(n=>Number.isInteger(n)&&n>=0&&n<=max)||!complete(f,rules)||(rules.framesPerMatch==null&&f[0]===f[1])||!Array.isArray(b)||b.length!==2||!b.every(list=>Array.isArray(list)&&list.every(n=>Number.isInteger(n)&&n>=20&&n<=155)))throw Error('Ungültiges manuelles Ergebnis.');
@@ -53,7 +54,9 @@
     const current=state??initial();
     if(derive(current,rules).complete)return {overdue:false,startedAt:null,limit};
     let start=startedAt;
-    for(const event of current.events.slice(0,current.cursor))if(event.type==='frame')start=event.at;
+    let muted=false;
+    for(const event of current.events.slice(0,current.cursor)){if(event.type==='frame'){start=event.at;muted=false}else if(event.type==='warningOff')muted=true;}
+    if(muted)return {overdue:false,startedAt:null,limit};
     return {overdue:now-start>limit*60000,startedAt:start,limit};
   }
   root.SnookerTableScore=Object.freeze({initial,derive,command,complete,frameWarning});
