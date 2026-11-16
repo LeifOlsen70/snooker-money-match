@@ -45,11 +45,15 @@ function showPending(status,email){
 function hidePending(){if(pending.open)pending.close()}
 function showAdmin(){adminButton.hidden=false;updateButton.hidden=false}
 function updateCount(count){adminCount.textContent=String(count);adminCount.hidden=count===0;adminButton.setAttribute('aria-label',`Benutzerfreigaben, ${count} offene Anfragen`)}
-function render(list,change){updateCount(list.filter(a=>a.status==='pending').length);rows.replaceChildren(); if(!list.length){rows.append(el('p','Noch keine Anfragen.'));return}
+function render(list,change,remove){updateCount(list.filter(a=>a.status==='pending').length);rows.replaceChildren(); if(!list.length){rows.append(el('p','Noch keine Anfragen.'));return}
   for(const a of list){const row=el('div',undefined,'accessRow');const name=el('div');name.append(el('strong',a.email||a.uid),el('p',a.status==='approved'?'Freigegeben':a.status==='rejected'?'Abgelehnt':'Wartet auf Freigabe'));
     const actions=el('div',undefined,'accessActions');
     if(a.status!=='approved'){const ok=el('button','Freigeben');ok.onclick=()=>change(a.uid,'approved');actions.append(ok)}
     if(a.status!=='rejected'){const no=el('button','Sperren');no.onclick=()=>change(a.uid,'rejected');actions.append(no)}
+    if(a.status==='rejected'&&remove){const del=el('button','Löschen','accessDeleteButton');del.type='button';del.onclick=async()=>{
+      if(!confirm(`Gesperrten Eintrag ${a.email||a.uid} aus der Benutzerverwaltung löschen? Das Anmeldekonto bleibt bestehen. Bei einer späteren Anmeldung kann eine neue Freigabe angefragt werden.`))return;
+      del.disabled=true;try{await remove(a.uid)}catch(err){alert('Eintrag nicht gelöscht: '+err.message)}finally{del.disabled=false}
+    };actions.append(del)}
     row.append(name,actions);rows.append(row)}
 }
 window.snookerAccessUI={showPending,hidePending,showAdmin,render,updateCount};

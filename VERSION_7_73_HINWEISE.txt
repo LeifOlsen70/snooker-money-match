@@ -1,0 +1,3 @@
+v7.73 – Warnung je Frame
+
+Optionales Limit pro Frame in Minuten beim Anlegen, 0 = aus. Ergebnisbutton und Score-Monitor-Anzeige pulsieren bei Überschreitung. Frame-Sieg startet neue Warnzeit. Gesamtspielzeit bleibt bestehen. Kein automatisches Spielende. Alle Geräte aktualisieren. Regeln unverändert aus v7.72.

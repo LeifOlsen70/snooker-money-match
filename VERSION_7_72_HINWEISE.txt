@@ -1,0 +1,3 @@
+v7.72 – Spielzeit und Löschen gesperrter Freigaben
+
+Spielzeit im Monitor sichtbar. Gesperrte Freigabeeinträge nach Warnabfrage löschbar. Firebase-Anmeldekonto bleibt für spätere Anmeldung und neue Freigabeanfrage erhalten. Keine Cloud Functions erforderlich. Die neue firestore.rules muss in Firebase veröffentlicht werden.

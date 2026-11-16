@@ -1,7 +1,7 @@
 import {initializeApp} from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js';
 import {getAuth,signInAnonymously,signInWithEmailAndPassword,createUserWithEmailAndPassword,sendPasswordResetEmail,setPersistence,browserLocalPersistence,inMemoryPersistence,signOut,onAuthStateChanged} from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-auth.js';
 import {getFirestore,doc,getDoc,setDoc,onSnapshot,runTransaction,collection,getDocs,getDocsFromServer,getDocFromServer,updateDoc,serverTimestamp} from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore.js';
-import {createTableSync} from './table-sync.js?v=7.71';
+import {createTableSync} from './table-sync.js?v=7.73';
 const config={apiKey:'AIzaSyBgmv1v5APpPReJ4olWCusUhhGGevcvRcE',authDomain:'snooker-money-match.firebaseapp.com',projectId:'snooker-money-match',storageBucket:'snooker-money-match.firebasestorage.app',messagingSenderId:'423302158497',appId:'1:423302158497:web:706c1fec068959b7bbb8e0'};
 const localStorage = window.snookerStorage;
 const app=initializeApp(config),auth=getAuth(app),db=getFirestore(app),e=id=>document.getElementById(id),msg=t=>e('fbStatus').textContent=t;
@@ -398,7 +398,12 @@ window.snookerAccessApi={
     const users = snap.docs.map(x=>({uid:x.id,...x.data()})).filter(x=>x.uid!==ADMIN_UID).sort((a,b)=>Number(b.status==='pending')-Number(a.status==='pending'));
     window.snookerAccessUI.render(users, async(uid,status)=>{
       try{await updateDoc(accessDoc(uid),{status,reviewedAt:serverTimestamp()});await window.snookerAccessApi.list()}catch(e){alert('Änderung nicht gespeichert: '+e.message)}
-    });
+    },uid=>window.snookerAccessApi.remove(uid));
+  },
+  async remove(uid){
+    if(auth.currentUser?.uid!==ADMIN_UID||uid===ADMIN_UID)throw Error('Nur für Administrator.');
+    await runTransaction(db,async tx=>{const ref=accessDoc(uid),snap=await tx.get(ref);if(!snap.exists())return;if(snap.data().status!=='rejected')throw Error('Nur gesperrte Einträge können gelöscht werden. Bitte aktualisieren.');tx.delete(ref)});
+    await window.snookerAccessApi.list();
   },
   async enablePush(){
     if(auth.currentUser?.uid!==ADMIN_UID)throw Error('Nur für Administrator.');
@@ -453,13 +458,16 @@ onAuthStateChanged(auth,async u=>{
   if(u.isAnonymous)return;
   if(u.uid===ADMIN_UID){accessGranted=true;window.snookerAccessUI.showAdmin();connectApproved(u);window.snookerAccessApi.list().catch(e=>console.warn('Benutzerfreigaben nicht geladen:',e));return}
   msg('Prüfe Zugangsfreigabe …');
+  let accessRecordSeen=false;
   accessUnsubscribe=onSnapshot(accessDoc(u.uid),async snap=>{
     if(session!==accessSession)return;
     if(!snap.exists()){
+      if(accessRecordSeen){accessGranted=false;window.snookerAccessUI.hidePending();await signOut(auth);return;}
       try {await setDoc(accessDoc(u.uid),{email:u.email||'',status:'pending',createdAt:serverTimestamp()});}
       catch(e){msg('Freigabeanfrage fehlgeschlagen: '+(e.code||e.message));window.snookerAccessUI.showPending('pending',u.email)}
       return;
     }
+    accessRecordSeen=true;
     const status=snap.data()?.status;
     if(status==='approved'){
       if(!accessGranted){accessGranted=true;window.snookerAccessUI.hidePending();approvedConnection=u.uid;connectApproved(u)}

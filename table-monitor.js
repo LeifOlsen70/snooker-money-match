@@ -24,14 +24,14 @@
     else if(e.key==='Enter'&&e.target!==popup.querySelector('[data-close]')){e.preventDefault();document.getElementById('tableInputSubmit').click()}
   });
   function status(text){message=text;document.querySelectorAll('[data-monitor-message]').forEach(el=>el.textContent=text)}
-  function assignment(data,r,m,match){return {id:[data.freeTournament?'free':'club',data.started,r,m,match.startedAt].join(':'),tournament:String(data.started),round:r,index:m,names:match.players.map(id=>data.players[id]),players:[...match.players],rules:data.framesPerMatch!=null?{framesPerMatch:data.framesPerMatch}:{target:data.target}}}
+  function assignment(data,r,m,match){return {id:[data.freeTournament?'free':'club',data.started,r,m,match.startedAt].join(':'),tournament:String(data.started),frameTimeLimitMinutes:data.frameTimeLimitMinutes??0,round:r,index:m,names:match.players.map(id=>data.players[id]),players:[...match.players],rules:data.framesPerMatch!=null?{framesPerMatch:data.framesPerMatch}:{target:data.target}}}
   function forMatch(data,r,m,match){
     const a=assignment(data,r,m,match),remote=boards.find(board=>board.assignment?.id===a.id);
-    if(remote)return remote;
+    if(remote)return {...remote,assignment:{...remote.assignment,frameTimeLimitMinutes:data.frameTimeLimitMinutes??0},startedAt:match.startedAt,stoppedAt:match.finishedAt??data.ended??null};
     let state=match.scoreMonitor?.state??model.initial();
     try{model.derive(state,a.rules)}catch{state=model.initial()}
     if(match.result&&!model.derive(state,a.rules).complete)state=model.command(state,a.rules,{type:'manual',frames:match.result.frames,breaks:match.result.breaks,at:match.finishedAt??Date.now()});
-    return {slot:match.table,tableNumber:match.table,assignment:a,state,enabled:!data.ended,_local:window.snookerTableSync?.role!=='owner'};
+    return {startedAt:match.startedAt,stoppedAt:match.finishedAt??data.ended??null,slot:match.table,tableNumber:match.table,assignment:a,state,enabled:!data.ended,_local:window.snookerTableSync?.role!=='owner'};
   }
   async function send(board,action){
     if(busy)return;busy=true;
@@ -81,9 +81,9 @@
   function card(board,compact=false){
     if(!board?.assignment)return `<article class="monitorCard"><h3>Tisch ${board?.slot??''}</h3><p>Warten auf eine gestartete Partie.</p></article>`;
     const value=model.derive(board.state,board.assignment.rules);
-    return `<article class="monitorCard ${compact?'monitorCompact':''}"><h3>Tisch ${board.tableNumber} · ${value.complete?'Partie beendet':'Frame '+(value.frames[0]+value.frames[1]+1)}</h3>
+    return `<article class="monitorCard frameLimitTarget ${compact?'monitorCompact':''}"><h3>Tisch ${board.tableNumber} · ${value.complete?'Partie beendet':'Frame '+(value.frames[0]+value.frames[1]+1)}</h3>
     <div class="monitorPlayers">${board.assignment.names.map((name,i)=>`<div class="monitorPlayerColumn"><button type="button" class="monitorScoreButton" data-monitor-player="${i}" data-monitor-slot="${board.slot}" ${board.enabled&&!value.complete?'':'disabled'}><span class="monitorName">${escape(name)}</span><strong class="monitorPoints">${value.scores[i]}</strong><span>Frames <b>${value.frames[i]}</b></span><span>HB: ${highestBreak(value.breaks[i])}</span></button><button type="button" class="monitorFrameWinner" data-monitor-winner="${i}" data-monitor-slot="${board.slot}" ${board.enabled&&!value.complete?'':'disabled'}>Frame-Sieger: ${escape(name)}</button></div>`).join('')}</div>
-    <p class="small">${board.assignment.rules.framesPerMatch!=null?board.assignment.rules.framesPerMatch+' Frames insgesamt':'Bis '+board.assignment.rules.target+' Gewinnframes'}${value.complete?' · Ergebnis '+value.frames.join(':'):''}</p>
+    ${frameWarningMarkup(board)}<p class="small">${board.assignment.rules.framesPerMatch!=null?board.assignment.rules.framesPerMatch+' Frames insgesamt':'Bis '+board.assignment.rules.target+' Gewinnframes'}${value.complete?' · Ergebnis '+value.frames.join(':'):''}</p>
     <div class="monitorActions"><button type="button" data-monitor-undo="${board.slot}" ${board.state.cursor&&board.enabled?'':'disabled'}>↶ Zurück</button><button type="button" data-monitor-redo="${board.slot}" ${board.state.cursor<board.state.events.length&&board.enabled?'':'disabled'}>Vor ↷</button></div>
 </article>`;
   }
@@ -92,12 +92,32 @@
     container.querySelectorAll('[data-monitor-winner]').forEach(b=>b.onclick=()=>{const board=list.find(x=>x.slot===Number(b.dataset.monitorSlot));if(board)winner(board,Number(b.dataset.monitorWinner))});
     for(const action of ['undo','redo'])container.querySelectorAll(`[data-monitor-${action}]`).forEach(b=>b.onclick=()=>{const board=list.find(x=>x.slot===Number(b.dataset[action==='undo'?'monitorUndo':'monitorRedo']));if(board)send(board,{type:action})});
   }
+  function frameWarningMarkup(board){
+    const a=board.assignment,start=board.startedAt??Number(a.id?.split(':').at(-1));
+    const w=model.frameWarning(board.state,a.rules,start,a.frameTimeLimitMinutes,Date.now(),Boolean(board.stoppedAt));
+    return `<span class="frameLimitWarning" data-frame-warning data-frame-start="${w.startedAt??''}" data-frame-limit="${w.limit}" ${w.overdue?'':'hidden'}>⚠ Spielzeit überschritten</span>`;
+  }
+  function updateFrameWarnings(){
+    for(const warning of document.querySelectorAll('[data-frame-warning]')){
+      const start=warning.dataset.frameStart,limit=Number(warning.dataset.frameLimit);
+      const overdue=start!==''&&limit>0&&Date.now()-Number(start)>limit*60000;
+      warning.hidden=!overdue;warning.closest('.frameLimitTarget')?.classList.toggle('frameLimitExceeded',overdue);
+    }
+  }
+  function elapsedTime(start,stop,now=Date.now()){
+    if(!Number.isFinite(start))return '–';
+    const seconds=Math.max(0,Math.floor(((Number.isFinite(stop)?stop:now)-start)/1000));
+    return [Math.floor(seconds/3600),Math.floor(seconds/60)%60,seconds%60].map(n=>String(n).padStart(2,'0')).join(':');
+  }
+  function clockMarkup(board,value){const start=board.startedAt??Number(board.assignment.id?.split(':').at(-1)),stop=value.finishedAt??board.stoppedAt;return `<span class="monitorRowTime">Spielzeit <time data-monitor-start="${start}" ${Number.isFinite(stop)?`data-monitor-stop="${stop}"`:''}>${elapsedTime(start,stop)}</time></span>`}
+  function updateMonitorClocks(){for(const clock of document.querySelectorAll('[data-monitor-start]'))clock.textContent=elapsedTime(Number(clock.dataset.monitorStart),clock.dataset.monitorStop===undefined?null:Number(clock.dataset.monitorStop));}
+  setInterval(()=>{updateMonitorClocks();updateFrameWarnings()},1000);
   function highestBreak(list){const valid=list.filter(n=>Number.isFinite(n)&&n>=20);return valid.length?Math.max(...valid):'–'}
   function overviewRow(board){
     if(!board?.assignment)return `<article class="monitorRow monitorRowWaiting"><span class="monitorRowInfo"><span class="monitorRowTable">Tisch ${board.slot}</span><span class="monitorRowNames">Warten auf eine Partie</span></span><strong class="monitorRowScore">– : –</strong></article>`;
     const value=model.derive(board.state,board.assignment.rules);
     const names=board.assignment.names.map(escape);
-    return `<button type="button" class="monitorRow" data-monitor-detail="${board.slot}" aria-label="Tisch ${board.slot}: ${names.join(' gegen ')}, Punkte ${value.scores.join(' zu ')}, Details öffnen"><span class="monitorRowInfo"><span class="monitorRowTable">Tisch ${board.tableNumber}<span class="monitorRowPhase">${value.complete?'Beendet':'Frame '+(value.frames[0]+value.frames[1]+1)}</span></span><span class="monitorRowNames">${names.join(' – ')}</span><span class="monitorRowMeta">Frames <b>${value.frames.join(' : ')}</b><span>HB <b>${value.breaks.map(highestBreak).join(' : ')}</b></span></span></span><strong class="monitorRowScore">${value.scores[0]}<span>:</span>${value.scores[1]}</strong></button>`;
+    return `<button type="button" class="monitorRow frameLimitTarget" data-monitor-detail="${board.slot}" aria-label="Tisch ${board.slot}: ${names.join(' gegen ')}, Punkte ${value.scores.join(' zu ')}, Details öffnen"><span class="monitorRowInfo"><span class="monitorRowTable">Tisch ${board.tableNumber}<span class="monitorRowPhase">${value.complete?'Beendet':'Frame '+(value.frames[0]+value.frames[1]+1)}</span></span><span class="monitorRowNames">${names.join(' – ')}</span><span class="monitorRowMeta">Frames <b>${value.frames.join(' : ')}</b><span>HB <b>${value.breaks.map(highestBreak).join(' : ')}</b></span></span>${clockMarkup(board,value)}${frameWarningMarkup(board)}</span><strong class="monitorRowScore">${value.scores[0]}<span>:</span>${value.scores[1]}</strong></button>`;
   }
   const detail=document.createElement('dialog');detail.id='monitorDetailDialog';detail.className='tournamentDialog monitorDetailDialog';document.body.append(detail);
   function closeDetail(){detailSlot=null;if(detail.open)detail.close()}
@@ -118,7 +138,7 @@
     const live=window.snookerTableSync?.role==='owner';
     container.innerHTML=`<div class="card monitorOverview"><div class="monitorOverviewHeader"><h3>Score Monitor</h3><span class="monitorLive ${live?'isLive':''}">${live?'● Live':'Lokal'}</span><button type="button" data-monitor-full>Vollbild ${document.body.classList.contains('monitorOverviewFullscreen')?'aus':'an'}</button><button type="button" data-table-codes>Tischcodes</button></div><p data-monitor-message role="status" class="monitorOverviewStatus">${escape(message)}</p><div class="monitorOverviewGrid">${list.map(overviewRow).join('')}</div><p class="monitorOverviewHint">Tisch antippen für Eingabe &amp; Details</p></div>`;
     container.querySelectorAll('[data-monitor-detail]').forEach(button=>button.onclick=()=>{detailSlot=Number(button.dataset.monitorDetail);renderDetail(list);if(!detail.open)detail.showModal()});
-    renderDetail(list);
+    renderDetail(list);updateFrameWarnings();
     container.querySelector('[data-table-codes]').onclick=()=>window.snookerTableCodes();
     container.querySelector('[data-monitor-full]').onclick=()=>{const on=document.body.classList.toggle('monitorOverviewFullscreen');container.querySelector('[data-monitor-full]').textContent=on?'Vollbild aus':'Vollbild an'};
   }
@@ -127,7 +147,7 @@
     if(!tableSlot)return;
     const board=boards.find(b=>b.slot===tableSlot);
     tablePage.innerHTML=`<div class="monitorTableHeader"><h2>Tisch ${tableSlot}</h2><button type="button" data-table-leave>Tisch verlassen</button><button type="button" data-table-refresh>↻ Aktualisieren</button><button type="button" data-table-full>Vollbild ${document.body.classList.contains('tableMonitorFullscreen')?'aus':'an'}</button></div><p data-monitor-message role="status">${escape(message||(navigator.onLine?'Tischverbindung wird hergestellt …':'Offline – für den Tischbetrieb bitte Internet verbinden.'))}</p>${landing?'<button type="button" class="primary" data-table-return>Zur Partie</button>':card(board??{slot:tableSlot})}`;
-    if(board?.assignment)bind(tablePage,[board]);
+    if(board?.assignment)bind(tablePage,[board]);updateFrameWarnings();
     tablePage.querySelector('[data-table-leave]').onclick=()=>{if(confirm('Tischverbindung auf diesem Gerät beenden?'))window.snookerTableBackend.leave()};
     tablePage.querySelector('[data-table-refresh]').onclick=async e=>{
       const button=e.currentTarget;button.disabled=true;

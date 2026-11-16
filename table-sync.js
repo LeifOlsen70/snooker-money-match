@@ -33,7 +33,7 @@ export function createTableSync({auth,db,doc,getDoc,getDocFromServer,onSnapshot,
   function randomToken(){const bytes=new Uint8Array(16);crypto.getRandomValues(bytes);return Array.from(bytes,b=>b.toString(16).padStart(2,'0')).join('')}
   function tournamentKey(data){return (data.freeTournament?'free:':'club:')+String(data.started)}
   function assignment(data,round,index,match){
-    return {id:[data.freeTournament?'free':'club',data.started,round,index,match.startedAt].join(':'),tournament:String(data.started),round,index,names:match.players.map(id=>data.players[id]),players:[...match.players],rules:data.framesPerMatch!=null?{framesPerMatch:data.framesPerMatch}:{target:data.target}};
+    return {id:[data.freeTournament?'free':'club',data.started,round,index,match.startedAt].join(':'),tournament:String(data.started),frameTimeLimitMinutes:data.frameTimeLimitMinutes??0,round,index,names:match.players.map(id=>data.players[id]),players:[...match.players],rules:data.framesPerMatch!=null?{framesPerMatch:data.framesPerMatch}:{target:data.target}};
   }
   function sync(data,{before=null,replace=false,monitorSource=false}={}){
     if(role!=='owner'||!active()||!data)return Promise.resolve();

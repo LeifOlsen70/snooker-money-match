@@ -390,7 +390,7 @@ body.monitorOverviewFullscreen .pageFooter {display:none!important}
  .monitorKeypad button {min-height:42px}
 }
 
-/* v7.71: approval counter and refresh control */
+/* v7.73: approval counter and refresh control */
 .accessPendingCount {display:inline-flex;align-items:center;justify-content:center;min-width:23px;height:23px;padding:0 5px;box-sizing:border-box;border-radius:999px;background:#eac374;color:#25142d;border:1px solid #f7e0a1;font-weight:900;font-size:14px;margin-left:8px;vertical-align:middle}
 .accessPendingCount[hidden] {display:none!important}
 .pageFooter .accessRefreshButton {grid-column:1;grid-row:auto;background:#433052;border:1px solid #b69269;color:#f6e9d1}
@@ -432,3 +432,11 @@ body.monitorOverviewFullscreen .monitorRowMeta {font-size:clamp(12px,2.8vh,26px)
 body.monitorOverviewFullscreen .monitorRowScore {font-size:clamp(34px,min(11vw,13vh),130px)}
 @media(max-width:400px){.monitorOverviewHeader{gap:6px}.monitorOverviewHeader h3{font-size:20px}.monitorOverviewHeader button{font-size:12px!important;padding:6px 8px!important}.monitorRow{gap:8px;padding:10px!important}.monitorRowMeta{font-size:11px;gap:3px 8px}.monitorRowPhase{display:none}}
 @media(max-width:600px){.monitorRowScore{font-size:clamp(23px,7vw,42px)}body.monitorOverviewFullscreen .monitorRowScore{font-size:clamp(23px,7.5vw,45px)}body.monitorOverviewFullscreen .monitorRowNames{font-size:clamp(14px,3.8vw,22px)}body.monitorOverviewFullscreen .monitorRowMeta{font-size:clamp(11px,2.8vw,16px)}body.monitorOverviewFullscreen .monitorRowTable{font-size:clamp(15px,4vw,24px)}}
+.monitorRowTime {font-size:12px;font-weight:400;color:#e2cda8;line-height:1.25;font-variant-numeric:tabular-nums}
+body.monitorOverviewFullscreen .monitorRowTime {font-size:clamp(11px,2.2vh,22px)}
+.accessDeleteButton {color:#a31f38!important;border:1px solid #a31f38!important}
+@keyframes frameTimeWarningPulse {0%,100%{box-shadow:0 0 0 2px #f0ac45;background-color:#65172d}50%{box-shadow:0 0 0 5px #ffce75,0 0 22px #e35b3c;background-color:#a93237}}
+.frameLimitExceeded {animation:frameTimeWarningPulse 1.4s ease-in-out infinite!important;border-color:#ffd078!important;background-image:none!important;color:#fff3cf!important;white-space:pre-line}
+.frameLimitWarning {display:block;font-size:12px;font-weight:800;color:#ffce75;line-height:1.2;margin-top:3px}
+.frameLimitWarning[hidden] {display:none!important}
+@media(prefers-reduced-motion:reduce){.frameLimitExceeded{animation:none!important;outline:3px solid #ffd078;background:#65172d!important}}

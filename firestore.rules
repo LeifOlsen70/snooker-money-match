@@ -94,7 +94,7 @@ service cloud.firestore {
       allow update: if isAdmin() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','reviewedAt'])
         && request.resource.data.status in ['approved','rejected']
         && request.resource.data.reviewedAt == request.time;
-      allow delete: if false;
+      allow delete: if isAdmin() && uid != request.auth.uid && resource.data.status == 'rejected';
     }
     // Push-Abonnements darf nur der Administrator selbst anlegen und lesen.
     match /snookerAdminPush/{uid}/subscriptions/{subscriptionId} {

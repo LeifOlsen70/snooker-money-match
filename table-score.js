@@ -47,5 +47,14 @@
     next.revision++;
     derive(next,rules);return next;
   }
-  root.SnookerTableScore=Object.freeze({initial,derive,command,complete});
+  function frameWarning(state,rules,startedAt,minutes,now=Date.now(),ended=false){
+    const limit=Number(minutes)||0;
+    if(ended||!Number.isFinite(startedAt)||limit<=0)return {overdue:false,startedAt:null,limit};
+    const current=state??initial();
+    if(derive(current,rules).complete)return {overdue:false,startedAt:null,limit};
+    let start=startedAt;
+    for(const event of current.events.slice(0,current.cursor))if(event.type==='frame')start=event.at;
+    return {overdue:now-start>limit*60000,startedAt:start,limit};
+  }
+  root.SnookerTableScore=Object.freeze({initial,derive,command,complete,frameWarning});
 })(typeof window!=='undefined'?window:globalThis);

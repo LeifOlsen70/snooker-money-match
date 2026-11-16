@@ -1,3 +1,35 @@
+Snooker Money Match v7.73
+
+Neu: Spielzeitlimit pro Frame
+- Bei „Turnier anlegen“ Minuten pro Frame einstellen (0 = keine Warnung, bis 1440 Minuten).
+- Die Warnzeit beginnt bei Matchstart. Jeder bestätigte Frame-Sieg startet die Warnzeit für den nächsten Frame neu.
+- Überschreitung: Ergebnisbutton unter Runden sowie Tischzeile im Score Monitor und Tischanzeige pulsieren mit „Spielzeit überschritten“.
+- Punkteingaben setzen die Warnzeit nicht zurück. Rückgängig/Wiederholen berücksichtigt den jeweiligen Frame-Verlauf.
+- Bei abgeschlossenem Match oder beendetem Turnier keine Warnung. Keine automatische Vergabe eines Sieges, keine automatische Beendigung.
+- Die gesamte Matchspielzeit bleibt unverändert sichtbar.
+- Limit und Frame-Ereignisse werden mit dem Turnier gespeichert und an Tischgeräte synchronisiert. Ältere Sicherungen ohne Limit bleiben ohne Warnung nutzbar.
+- Alle beteiligten Geräte auf v7.73 aktualisieren.
+- Firestore-Regeln bytegleich mit v7.72. Keine weitere Regeländerung für die Zeitwarnung nötig. Die Löschfunktion aus v7.72 setzt weiterhin deren veröffentlichte Regeln voraus.
+
+Prüfung: Zeitgrenze, Framewechsel 1/2/3, Punkteingaben, Rückgängig/Wiederholen, beendete Partien, deaktiviertes Limit und tatsächliche Rundenbutton-Logik automatisiert geprüft. Kein Live-Mehrgerätetest und keine visuelle Browserprüfung in dieser Umgebung durchgeführt.
+
+Bisherige Hinweise:
+
+Snooker Money Match v7.72
+
+Neu:
+- Spielzeit HH:MM:SS je Paarung im kompakten Score Monitor, aktualisiert jede Sekunde. Nach Ende der Partie bzw. des Turniers bleibt die Zeit stehen.
+- Gesperrte/abgelehnte Benutzer können aus der Benutzerfreigabeliste gelöscht werden, nach Bestätigung. Freigegebene Konten zuerst sperren.
+- Gelöscht wird der Freigabeeintrag, nicht das Firebase-Authentication-Konto und nicht der persönliche Spielstand.
+- Bei späterer Anmeldung mit derselben E-Mail und dem bisherigen Passwort entsteht eine neue Freigabeanfrage. Bei vergessenem Passwort die vorhandene Wiederherstellung nutzen.
+- Es ist kein zusätzlicher kostenpflichtiger Server erforderlich. Admin-Löschung des eigentlichen Authentication-Kontos wird nicht angeboten.
+- Neue firestore.rules veröffentlichen: Löschen von snookerAccess ist ausschließlich dem Administrator und nur für abgelehnte Einträge gestattet.
+- Alle Webdateien auf GitHub hochladen und Geräte aktualisieren, bis v7.72 angezeigt wird.
+
+Prüfung: Zeitberechnung, höchste Breaks, Administratorrechte, Löschen nur abgelehnter Einträge, Schutz freigegebener/offener Konten, keine sofortige Neuanfrage nach Löschung und erneute Anfrage bei späterer Anmeldung automatisiert geprüft. Kein Live-Firebase-/Mehrgerätetest durchgeführt.
+
+Bisherige Hinweise:
+
 Snooker Money Match v7.71
 
 Neu: Kompakter Score Monitor im bestätigten Entwurf.

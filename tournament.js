@@ -1007,6 +1007,10 @@
             <label>Tische
               <select name="tables">${options(6, 1)}</select>
             </label>
+            <label>Spielzeitlimit pro Frame (Minuten)
+              <input name="frameTimeLimitMinutes" type="number" min="0" max="1440" step="1" value="0" inputmode="numeric">
+              <span class="small">0 = keine Warnung. Neustart der Warnzeit nach jedem Frame.</span>
+            </label>
           </div>
           <section class="tournamentRoster" aria-label="Gespeicherte Spieler">
             <h3>Spieler auswählen</h3>
@@ -1196,6 +1200,8 @@
       if (timed && !(endAt > Date.now())) {
         $('tournamentSetupError').textContent = 'Bitte eine gültige Uhrzeit für das Turnierende eingeben.'; return;
       }
+      const frameTimeLimitMinutes=Number(form.elements.frameTimeLimitMinutes.value);
+      if(!Number.isInteger(frameTimeLimitMinutes)||frameTimeLimitMinutes<0||frameTimeLimitMinutes>1440){$('tournamentSetupError').textContent='Bitte ein Frame-Zeitlimit von 0 bis 1440 Minuten eingeben.';return;}
       const freeTournament = draftFreeTournament ?? Boolean(tournament?.freeTournament);
       const previous = tournamentOfType(freeTournament);
       if (previous && !confirm('Das bisherige Turnier dieser Turnierart wird ersetzt. Fortfahren?')) return;
@@ -1218,6 +1224,7 @@
         framesPerMatch: Number(form.elements.framesPerMatch.value),
         byePoints: Number(form.elements.byePoints.value),
         tables: Number(form.elements.tables.value),
+        frameTimeLimitMinutes,
         playDate, started: Date.now(), ended: null, rounds: [],
         endAt,
         finishLastRound: false
@@ -1378,6 +1385,15 @@
 
   function updateClocks() {
     const now = Date.now();
+    if(!tournament)return;
+    for(const button of panel.querySelectorAll('[data-edit]')){
+      const [r,m]=button.dataset.edit.split(':').map(Number),match=tournament.rounds[r]?.matches[m];if(!match)continue;
+      const rules=tournament.framesPerMatch!=null?{framesPerMatch:tournament.framesPerMatch}:{target:tournament.target};
+      const warning=window.SnookerTableScore.frameWarning(match.scoreMonitor?.state,rules,match.startedAt,tournament.frameTimeLimitMinutes,now,Boolean(tournament.ended||match.result));
+      button.classList.toggle('frameLimitExceeded',warning.overdue);
+      const text=(match.result?'Ergebnis korrigieren':'Ergebnis eintragen')+(warning.overdue?'\n⚠ Spielzeit überschritten':'');
+      if(button.textContent!==text)button.textContent=text;
+    }
     for (const clock of panel.querySelectorAll('[data-match-time]')) {
       const [roundIndex, matchIndex] = clock.dataset.matchTime.split(':').map(Number);
       const match = tournament.rounds[roundIndex].matches[matchIndex];
@@ -1401,6 +1417,7 @@
     if (!data || !Array.isArray(data.players) || !integer(data.players.length, 2, 12)
       || !data.players.every(name => typeof name === 'string' && name.trim())
       || !integer(data.tables, 1, 6)
+      || (data.frameTimeLimitMinutes!=null&&!integer(data.frameTimeLimitMinutes,0,1440))
       || (data.framesPerMatch == null ? !integer(data.target, 1, 50)
         : !integer(data.framesPerMatch, 1, 50) || ![0, 0.5, 1].includes(data.byePoints))
       || !Array.isArray(data.rounds) || !data.rounds.length
