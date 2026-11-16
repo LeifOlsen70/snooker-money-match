@@ -1,4 +1,4 @@
-Snooker Money Match v7.77
+Snooker Money Match v7.78
 
 Neu: vier Ziffern und erneutes Verbinden
 - Tischcodes haben exakt vier zufällige Ziffern, z. B. 0427. Führende Nullen gehören zum Code.
@@ -15,7 +15,7 @@ Update:
 1. Turnierstand vorsorglich als JSON sichern.
 2. Alle Webdateien auf GitHub aktualisieren und die neue firestore.rules in Firebase veröffentlichen. Die Regeln aus v7.76 sind für das neue Verfahren nicht ausreichend.
 3. Zuerst das Turnier am Spielleitergerät öffnen, damit die kurzen Codes erzeugt werden.
-4. Alle Geräte auf v7.77 aktualisieren. Bisherige lange Codes durch die neuen vierstelligen ersetzen und Geräte erneut verbinden.
+4. Alle Geräte auf v7.78 aktualisieren. Bisherige lange Codes durch die neuen vierstelligen ersetzen und Geräte erneut verbinden.
 5. Kein zusätzlicher Server, keine Cloud Functions und kein Tarifwechsel erforderlich.
 
 Prüfung: Join/Leave-Funktionen mit simulierten Firebase-Transaktionen, gleiche/andere Geräte nach Trennung, Offline-Abbruch ohne Verlust der Identität, konkurrierende Beitritte, Code-Kollisionen, führende Null, Generationswechsel ohne Scoreverlust, Undo/Redo und Frame-Ergebnisse automatisiert geprüft. Kein Live-Firebase-Mehrgerätetest oder Firebase-Regel-Emulatortest in dieser Umgebung durchgeführt.

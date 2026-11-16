@@ -1,7 +1,7 @@
 import {initializeApp} from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js';
 import {getAuth,signInAnonymously,signInWithEmailAndPassword,createUserWithEmailAndPassword,sendPasswordResetEmail,setPersistence,browserLocalPersistence,inMemoryPersistence,signOut,onAuthStateChanged} from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-auth.js';
 import {getFirestore,doc,getDoc,setDoc,onSnapshot,runTransaction,collection,getDocs,getDocsFromServer,getDocFromServer,updateDoc,serverTimestamp} from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore.js';
-import {createTableSync} from './table-sync.js?v=7.77';
+import {createTableSync} from './table-sync.js?v=7.78';
 const config={apiKey:'AIzaSyBgmv1v5APpPReJ4olWCusUhhGGevcvRcE',authDomain:'snooker-money-match.firebaseapp.com',projectId:'snooker-money-match',storageBucket:'snooker-money-match.firebasestorage.app',messagingSenderId:'423302158497',appId:'1:423302158497:web:706c1fec068959b7bbb8e0'};
 const localStorage = window.snookerStorage;
 const app=initializeApp(config),auth=getAuth(app),db=getFirestore(app),e=id=>document.getElementById(id),msg=t=>e('fbStatus').textContent=t;
@@ -65,7 +65,7 @@ window.snookerTableBackend={
         tx.set(memberRef,{token,generation:current.generation});
       });
     }catch(err){
-      if(err.code==='permission-denied')throw Error('Tischzugriff abgelehnt. Bitte die neuen Firebase-Regeln für Version 7.77 veröffentlichen.');
+      if(err.code==='permission-denied')throw Error('Tischzugriff abgelehnt. Bitte die neuen Firebase-Regeln für Version 7.78 veröffentlichen.');
       throw err;
     }
     window.localStorage.setItem(deviceKey,JSON.stringify({owner:invite.owner,slot:invite.slot,token,generation:invite.generation}));
@@ -104,6 +104,13 @@ window.snookerTableBackend={
     return await tableSync.codes(data);
   }
 };
+let tableRevoking=false;
+window.addEventListener('snooker-table-revoked',async()=>{
+  if(tableRevoking||!deviceSetup())return;
+  tableRevoking=true;window.localStorage.removeItem(deviceKey);deviceSync.stop();
+  window.snookerMonitors.deactivate();
+  try{await signOut(deviceAuth)}finally{window.location.reload()}
+});
 onAuthStateChanged(deviceAuth,async account=>{
   const setup=deviceSetup();if(!setup)return;
   window.snookerTableSync=deviceSync;

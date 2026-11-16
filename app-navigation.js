@@ -23,7 +23,8 @@
   const fallbackLogin=document.createElement('button');fallbackLogin.type='button';fallbackLogin.textContent='Anmelden / Registrieren';fallbackLogin.onclick=()=>{closeMenu();window.snookerAccount.request('single',true)};
   const fallbackJoin=document.createElement('button');fallbackJoin.type='button';fallbackJoin.textContent='Mit Tischcode beitreten';fallbackJoin.onclick=()=>{closeMenu();document.getElementById('tableDeviceSetup').click()};
   const leaveTable=document.createElement('button');leaveTable.type='button';leaveTable.textContent='Tisch verlassen';leaveTable.onclick=()=>{closeMenu();document.querySelector('#tableMode [data-table-leave]')?.click()};
-  menu.append(fallbackLogin,fallbackJoin,leaveTable);document.body.append(menu);
+  const dismissTable=document.createElement('button');dismissTable.type='button';dismissTable.textContent='Tischgerät abmelden';dismissTable.onclick=()=>{closeMenu();window.snookerDismissTable()};
+  menu.append(fallbackLogin,fallbackJoin,leaveTable,dismissTable);document.body.append(menu);
   const menuToggle=document.getElementById('appMenuToggle');
   function closeMenu(){if(menu.open)menu.close();menuToggle.setAttribute('aria-expanded','false')}
   function openMenu(){
@@ -90,6 +91,7 @@
     const tableDevice=body.classList.contains('tableDeviceMode');
     home.hidden=!isVisible(single)&&!isVisible(tournament)&&!tableDevice;
     fallbackLogin.hidden=tableDevice||!accountBar.hidden;fallbackJoin.hidden=tableDevice||!accountBar.hidden;leaveTable.hidden=!tableDevice;
+    dismissTable.hidden=tableDevice||window.snookerTableSync?.role!=='owner';
     accountBar.classList.toggle('menuTableDeviceHidden',tableDevice);
     updateHistoryButtons();
     if (opened && ((owner==='single' && !isVisible(single)) || (owner==='tournament' && !isVisible(tournament)))) {
@@ -181,6 +183,6 @@
   // Child-list observation handles dynamically rebuilt tournament bars without
   // creating a mutation loop from updating classes and ARIA attributes.
   new MutationObserver(()=>{if(!queued){queued=true;queueMicrotask(update)}}).observe(app,{childList:true,subtree:true});
-  for(const event of ['snooker-account-enter','snooker-state-changed','snooker-single-received'])window.addEventListener(event,()=>queueMicrotask(update));
+  for(const event of ['snooker-account-enter','snooker-state-changed','snooker-single-received','snooker-table-owner-ready','snooker-table-boards'])window.addEventListener(event,()=>queueMicrotask(update));
   update();
 })();

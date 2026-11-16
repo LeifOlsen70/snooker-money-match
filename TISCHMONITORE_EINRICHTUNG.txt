@@ -1,10 +1,10 @@
-Snooker Money Match v7.77 – Einrichtung
+Snooker Money Match v7.78 – Einrichtung
 
 1. Firebase > Authentication > Anmeldemethode: E-Mail/Passwort und Anonym aktiviert lassen.
 2. Firestore Database > Regeln: aktuellen Stand sichern, dann die gesamte beiliegende firestore.rules einsetzen und veröffentlichen. Bekannte Pool-Zugänge, Benutzerfreigaben und die Löschberechtigung für gesperrte Freigabeeinträge bleiben enthalten.
 3. Alle Webdateien auf GitHub aktualisieren. GitHub-Upload allein veröffentlicht keine Firebase-Regeln.
 4. Zuerst als freigegebener Spielleiter anmelden und das Turnier öffnen. Score Monitor > Tischcodes zeigt vier Ziffern je Tisch.
-5. Am Tischgerät v7.77 öffnen und im ☰-Menü Mit Tischcode beitreten wählen. Alle vier Ziffern einschließlich führender Null eingeben.
+5. Am Tischgerät v7.78 öffnen und im ☰-Menü Mit Tischcode beitreten wählen. Alle vier Ziffern einschließlich führender Null eingeben.
 6. Tisch verlassen gibt die Reservierung frei. Bei hängen gebliebener Verbindung beim Spielleiter unter Tischcodes > Verbindung Tisch … zurücksetzen wählen. Der bisherige Client verliert seinen Zugriff; Score und Frames bleiben bestehen.
 7. Ein Gerät verbindet sich neu. Gleichzeitige Beitritte werden atomar auf ein Gerät begrenzt.
 8. Bisherige lange Codes sind nach der Umstellung nicht mehr gültig. Keine erneute Kontoregistrierung erforderlich.

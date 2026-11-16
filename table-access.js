@@ -60,4 +60,26 @@
       status.textContent='Gültig für das aktuell geöffnete Turnier.';
     }catch(err){status.textContent=err.message||'Codes konnten nicht geladen werden.'}
   };
+  const dismiss=document.createElement('dialog');dismiss.className='tournamentDialog tableAccessDialog';
+  dismiss.innerHTML='<h2>Tischgerät abmelden</h2><p>Tisch auswählen. Das verbundene Gerät verliert seinen Zugriff. Der Spielstand und der Tischcode bleiben erhalten.</p><div data-tables></div><p role="status"></p><button type="button" data-close>Schließen</button>';
+  document.body.append(dismiss);dismiss.querySelector('[data-close]').onclick=()=>dismiss.close();
+  window.snookerDismissTable=async()=>{
+    const box=dismiss.querySelector('[data-tables]'),status=dismiss.querySelector('[role=status]');box.replaceChildren();status.textContent='Tische werden geladen …';dismiss.showModal();
+    try{
+      const codes=await window.snookerTableBackend.codes();
+      if(!dismiss.open)return;
+      if(!codes.length)throw Error('Keine aktiven Tische verfügbar.');
+      for(const {slot} of codes){
+        const button=document.createElement('button');button.type='button';button.textContent='Tisch '+slot+' – Gerät abmelden';
+        button.onclick=async()=>{
+          if(!confirm('Tischgerät an Tisch '+slot+' abmelden? Der Spielstand bleibt erhalten.'))return;
+          const buttons=box.querySelectorAll('button');buttons.forEach(b=>b.disabled=true);
+          try{await window.snookerTableBackend.reset(slot);status.textContent='Tischgerät an Tisch '+slot+' abgemeldet. Ein Gerät kann jetzt mit dem bisherigen Tischcode beitreten.'}
+          catch(err){status.textContent=err.message||'Abmelden fehlgeschlagen.'}
+          finally{buttons.forEach(b=>b.disabled=false)}
+        };box.append(button);
+      }
+      status.textContent='Welches Tischgerät möchtest du abmelden?';
+    }catch(err){status.textContent=err.message||'Tische konnten nicht geladen werden.'}
+  };
 })();
