@@ -12,29 +12,42 @@ service cloud.firestore {
     match /privateSnooker/{userId} {
       allow read, write: if approved() && request.auth.uid == userId;
     }
-    // Single-use 128-bit invitations. Claim is bound atomically to one
-    // anonymous Firebase Auth UID; only the same device can reconnect.
+    // Four-digit pairing codes; a generation binds every member to this reservation.
     match /snookerTableInvites/{token} {
-      function validToken() { return token.matches('^[a-f0-9]{32}$'); }
       function boardPath(owner,slot) {
         return /databases/$(database)/documents/snookerTableBoards/$(owner)/tables/$(string(slot));
       }
+      function ownedRecord() {
+        let data = request.resource.data;
+        let board = getAfter(boardPath(data.owner,data.slot)).data;
+        return approved() && normalAccount() && data.owner == request.auth.uid
+          && token.matches('^[0-9]{4}$')
+          && data.keys().hasOnly(['owner','slot','tournamentKey','generation'])
+          && data.slot is int && data.slot >= 1 && data.slot <= 6
+          && data.generation is string && data.generation.matches('^[a-f0-9]{32}$')
+          && board.joinToken == token && board.joinGeneration == data.generation
+          && board.tournamentKey == data.tournamentKey;
+      }
+      function claim() {
+        let board = get(boardPath(resource.data.owner,resource.data.slot)).data;
+        return signedIn() && token.matches('^[0-9]{4}$')
+          && !('claimedBy' in resource.data)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['claimedBy'])
+          && request.resource.data.claimedBy == request.auth.uid
+          && board.joinToken == token && board.joinOpen == true
+          && board.joinGeneration == resource.data.generation
+          && board.tournamentKey == resource.data.tournamentKey;
+      }
+      function release() {
+        return signedIn() && resource.data.claimedBy == request.auth.uid
+          && !('claimedBy' in request.resource.data)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['claimedBy'])
+          && !existsAfter(/databases/$(database)/documents/snookerTableBoards/$(resource.data.owner)/tables/$(string(resource.data.slot))/members/$(request.auth.uid));
+      }
       allow get: if signedIn();
       allow list: if false;
-      allow create: if normalAccount()
-        && approved() && request.resource.data.owner == request.auth.uid
-        && validToken()
-        && request.resource.data.keys().hasOnly(['owner','slot','tournamentKey'])
-        && request.resource.data.slot is int
-        && request.resource.data.slot >= 1 && request.resource.data.slot <= 6;
-      allow update: if signedIn() && validToken()
-        && !('claimedBy' in resource.data)
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['claimedBy'])
-        && request.resource.data.claimedBy == request.auth.uid
-        && exists(boardPath(resource.data.owner,resource.data.slot))
-        && get(boardPath(resource.data.owner,resource.data.slot)).data.joinToken == token
-        && get(boardPath(resource.data.owner,resource.data.slot)).data.joinOpen == true
-                && get(boardPath(resource.data.owner,resource.data.slot)).data.tournamentKey == resource.data.tournamentKey;
+      allow create: if ownedRecord();
+      allow update: if (ownedRecord() && resource.data.owner == request.auth.uid) || claim() || release();
       allow delete: if approved() && normalAccount() && resource.data.owner == request.auth.uid;
     }
     match /snookerTableBoards/{organizer}/tables/{slot} {
@@ -43,8 +56,10 @@ service cloud.firestore {
         return signedIn()
           && exists(/databases/$(database)/documents/snookerTableBoards/$(organizer)/tables/$(slot)/members/$(request.auth.uid))
           && get(/databases/$(database)/documents/snookerTableBoards/$(organizer)/tables/$(slot)/members/$(request.auth.uid)).data.token == resource.data.joinToken
+          && get(/databases/$(database)/documents/snookerTableBoards/$(organizer)/tables/$(slot)/members/$(request.auth.uid)).data.generation == resource.data.joinGeneration
           && exists(/databases/$(database)/documents/snookerTableInvites/$(resource.data.joinToken))
-          && get(/databases/$(database)/documents/snookerTableInvites/$(resource.data.joinToken)).data.claimedBy == request.auth.uid;
+          && get(/databases/$(database)/documents/snookerTableInvites/$(resource.data.joinToken)).data.claimedBy == request.auth.uid
+          && get(/databases/$(database)/documents/snookerTableInvites/$(resource.data.joinToken)).data.generation == resource.data.joinGeneration;
       }
       function validScoreState() {
         let state = request.resource.data.state;
@@ -67,8 +82,10 @@ service cloud.firestore {
           let token = request.resource.data.token;
           let board = get(/databases/$(database)/documents/snookerTableBoards/$(organizer)/tables/$(slot)).data;
           let invite = get(/databases/$(database)/documents/snookerTableInvites/$(token)).data;
-          return token is string && token.matches('^[a-f0-9]{32}$')
-            && request.resource.data.keys().hasOnly(['token'])
+          return token is string && token.matches('^[0-9]{4}$')
+            && request.resource.data.keys().hasOnly(['token','generation'])
+            && request.resource.data.generation == board.joinGeneration
+            && invite.generation == board.joinGeneration
             && board.joinOpen == true && board.joinToken == token
             && invite.owner == organizer && string(invite.slot) == slot
             && invite.tournamentKey == board.tournamentKey

@@ -168,7 +168,7 @@
     const board=boards.find(b=>b.slot===tableSlot);
     tablePage.innerHTML=`<div class="monitorTableHeader"><h2>Tisch ${tableSlot}</h2><button type="button" data-table-leave>Tisch verlassen</button><button type="button" data-table-refresh>↻ Aktualisieren</button><button type="button" data-table-full>Vollbild ${document.body.classList.contains('tableMonitorFullscreen')?'aus':'an'}</button></div><p data-monitor-message role="status">${escape(message||(navigator.onLine?'Tischverbindung wird hergestellt …':'Offline – für den Tischbetrieb bitte Internet verbinden.'))}</p>${landing?'<button type="button" class="primary" data-table-return>Zur Partie</button>':card(board??{slot:tableSlot})}`;
     if(board?.assignment)bind(tablePage,[board]);updateFrameWarnings();
-    tablePage.querySelector('[data-table-leave]').onclick=()=>{if(confirm('Tischverbindung auf diesem Gerät beenden?'))window.snookerTableBackend.leave()};
+    tablePage.querySelector('[data-table-leave]').onclick=async()=>{if(!confirm('Tischverbindung auf diesem Gerät beenden und Tisch freigeben?'))return;try{await window.snookerTableBackend.leave()}catch(err){status('Trennen fehlgeschlagen. Bitte Internetverbindung prüfen oder die Verbindung beim Spielleiter zurücksetzen lassen. '+err.message)}};
     tablePage.querySelector('[data-table-refresh]').onclick=async e=>{
       const button=e.currentTarget;button.disabled=true;
       status('Tischstand wird aktualisiert …');

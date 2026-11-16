@@ -390,7 +390,7 @@ body.monitorOverviewFullscreen .pageFooter {display:none!important}
  .monitorKeypad button {min-height:42px}
 }
 
-/* v7.76: approval counter and refresh control */
+/* v7.77: approval counter and refresh control */
 .accessPendingCount {display:inline-flex;align-items:center;justify-content:center;min-width:23px;height:23px;padding:0 5px;box-sizing:border-box;border-radius:999px;background:#eac374;color:#25142d;border:1px solid #f7e0a1;font-weight:900;font-size:14px;margin-left:8px;vertical-align:middle}
 .accessPendingCount[hidden] {display:none!important}
 .pageFooter .accessRefreshButton {grid-column:1;grid-row:auto;background:#433052;border:1px solid #b69269;color:#f6e9d1}
@@ -471,3 +471,4 @@ body.snookerFullscreenScore .appUtilityNav,body.snookerFullscreenTournament .app
 body.tableMonitorFullscreen #tableMode [data-table-refresh] {display:block}
 .modeHome .app {display:flex;flex-direction:column;align-items:stretch;min-height:100dvh}
 .modeHome #modeStart {margin:clamp(16px,7vh,80px) auto;width:min(100%,360px)}
+.shortNumericCode {font-size:2.6rem!important;font-weight:800;text-align:center;letter-spacing:.2em;color:#ffdf8d;background:#21132c;border:1px solid #bc9b59;border-radius:10px;padding:10px;box-sizing:border-box;width:100%}

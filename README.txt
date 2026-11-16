@@ -1,3 +1,27 @@
+Snooker Money Match v7.77
+
+Neu: vier Ziffern und erneutes Verbinden
+- Tischcodes haben exakt vier zufällige Ziffern, z. B. 0427. Führende Nullen gehören zum Code.
+- Ein Code wird in einer Datenbanktransaktion reserviert. Bereits belegte Codes werden nicht überschrieben.
+- Neue Turniere erhalten neue Codes. Neuladen erhält den aktuellen Code. Alte Reservierungen werden bei einer neuen Zuordnung freigegeben.
+- „Tisch verlassen“ gibt die Verbindung am Server frei und entfernt die Mitgliedschaft des Geräts. Danach kann dasselbe oder ein anderes Gerät den Code verwenden.
+- Ohne Internet wird das Trennen nicht als erfolgreich ausgegeben. Bitte dann erneut versuchen oder beim Spielleiter zurücksetzen.
+- Score Monitor > Tischcodes > Verbindung Tisch … zurücksetzen: alte Verbindung sperren und den Tisch für ein neues Gerät freigeben. Der Spielstand bleibt erhalten.
+- Die Verbindung hat zusätzlich zum sichtbaren Zahlencode eine interne Generation. Ältere Geräte erhalten durch eine spätere Wiederverwendung derselben vier Ziffern keinen Zugriff auf eine neue Tischzuordnung.
+- Pro Tisch bleibt genau ein Eingabegerät gleichzeitig verbunden.
+- Tischgeräte brauchen keine Registrierung und keine E-Mail: im ☰-Menü „Mit Tischcode beitreten“ wählen. Codes nur an die vorgesehenen Geräte weitergeben.
+
+Update:
+1. Turnierstand vorsorglich als JSON sichern.
+2. Alle Webdateien auf GitHub aktualisieren und die neue firestore.rules in Firebase veröffentlichen. Die Regeln aus v7.76 sind für das neue Verfahren nicht ausreichend.
+3. Zuerst das Turnier am Spielleitergerät öffnen, damit die kurzen Codes erzeugt werden.
+4. Alle Geräte auf v7.77 aktualisieren. Bisherige lange Codes durch die neuen vierstelligen ersetzen und Geräte erneut verbinden.
+5. Kein zusätzlicher Server, keine Cloud Functions und kein Tarifwechsel erforderlich.
+
+Prüfung: Join/Leave-Funktionen mit simulierten Firebase-Transaktionen, gleiche/andere Geräte nach Trennung, Offline-Abbruch ohne Verlust der Identität, konkurrierende Beitritte, Code-Kollisionen, führende Null, Generationswechsel ohne Scoreverlust, Undo/Redo und Frame-Ergebnisse automatisiert geprüft. Kein Live-Firebase-Mehrgerätetest oder Firebase-Regel-Emulatortest in dieser Umgebung durchgeführt.
+
+Bisherige Hinweise:
+
 Snooker Money Match v7.76
 
 Neue aufgeräumte Navigation gemäß Entwurf:

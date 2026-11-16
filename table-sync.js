@@ -31,7 +31,9 @@ export function createTableSync({auth,db,doc,getDoc,getDocFromServer,onSnapshot,
     }
     if(!table)window.dispatchEvent(new Event('snooker-table-owner-ready'));
   }
-  function randomToken(){const bytes=new Uint8Array(16);crypto.getRandomValues(bytes);return Array.from(bytes,b=>b.toString(16).padStart(2,'0')).join('')}
+  function randomToken(){const values=new Uint8Array(16);let code='';while(code.length<4){crypto.getRandomValues(values);for(const value of values){if(value<250)code+=String(value%10);if(code.length===4)break}}return code}
+  function randomGeneration(){const values=new Uint8Array(16);crypto.getRandomValues(values);return Array.from(values,n=>n.toString(16).padStart(2,'0')).join('')}
+  async function reserveTransaction(work){for(let attempt=0;attempt<40;attempt++){try{return await runTransaction(db,work)}catch(err){if(err.code!=='table-code-collision')throw err}}throw Error('Kein freier Tischcode gefunden. Bitte erneut versuchen.')}
   function tournamentKey(data){return (data.freeTournament?'free:':'club:')+String(data.started)}
   function assignment(data,round,index,match){
     return {id:[data.freeTournament?'free':'club',data.started,round,index,match.startedAt].join(':'),tournament:String(data.started),frameTimeLimitMinutes:data.frameTimeLimitMinutes??0,round,index,names:match.players.map(id=>data.players[id]),players:[...match.players],rules:data.framesPerMatch!=null?{framesPerMatch:data.framesPerMatch}:{target:data.target}};
@@ -51,18 +53,25 @@ export function createTableSync({auth,db,doc,getDoc,getDocFromServer,onSnapshot,
         const cached=cache.get(slot);
         const old=matches.find(({match,r,m})=>assignment(snapshot,r,m,match).id===cached?.assignment?.id);
         const selected=live??old??matches.at(-1);
-        const saved=await runTransaction(db,async tx=>{
+        const saved=await reserveTransaction(async tx=>{
           if(token!==session||!active())throw Error('Anmeldung wurde gewechselt.');
           const existing=decodeBoard((await tx.get(ref(slot))).data());
-          const key=tournamentKey(snapshot),newTournament=existing?.tournamentKey!==key;
-          const joinToken=newTournament?randomToken():existing.joinToken;
-          const shared={schema:2,tableNumber:slot,tournamentKey:key,joinToken,joinOpen:slot<=snapshot.tables&&!snapshot.ended};
+          const key=tournamentKey(snapshot),activeSlot=slot<=snapshot.tables;
+          const newTournament=existing?.tournamentKey!==key||(activeSlot&&(!/^\d{4}$/.test(existing?.joinToken??'')||!existing?.joinGeneration));
+          const joinToken=activeSlot?(newTournament?randomToken():existing.joinToken):null;
+          const joinGeneration=activeSlot?(newTournament?randomGeneration():existing.joinGeneration):null;
+          const inviteRef=joinToken?doc(db,'snookerTableInvites',joinToken):null;
+          if(activeSlot&&newTournament&&(await tx.get(inviteRef)).data())throw Object.assign(Error('Code bereits vergeben.'),{code:'table-code-collision'});
+          const oldRef=existing?.joinToken&&existing.joinToken!==joinToken?doc(db,'snookerTableInvites',existing.joinToken):null;
+          const oldInvite=oldRef?(await tx.get(oldRef)).data():null;
+          const shared={schema:3,tableNumber:slot,tournamentKey:key,joinToken,joinGeneration,joinOpen:activeSlot&&!snapshot.ended};
           if(token!==session||!active())throw Error('Anmeldung wurde gewechselt.');
-          if(newTournament)tx.set(doc(db,'snookerTableInvites',joinToken),{owner:organizer,slot,tournamentKey:key});
+          if(oldInvite?.owner===organizer&&oldInvite.slot===slot)tx.delete(oldRef);
+          if(activeSlot&&newTournament)tx.set(inviteRef,{owner:organizer,slot,tournamentKey:key,generation:joinGeneration});
           if(!selected){
             const next={...shared,assignment:null,enabled:false,state:model.initial((existing?.state?.revision??0)+1)};
-            if(newTournament||existing?.assignment||existing?.enabled||existing?.joinOpen!==shared.joinOpen)tx.set(ref(slot),encodeBoard(next));
-            return (newTournament||existing?.assignment||existing?.enabled||existing?.joinOpen!==shared.joinOpen)?next:existing;
+            if(newTournament||existing?.joinToken!==joinToken||existing?.assignment||existing?.enabled||existing?.joinOpen!==shared.joinOpen)tx.set(ref(slot),encodeBoard(next));
+            return (newTournament||existing?.joinToken!==joinToken||existing?.assignment||existing?.enabled||existing?.joinOpen!==shared.joinOpen)?next:existing;
           }
           const {match,r,m}=selected,a=assignment(snapshot,r,m,match),enabled=!snapshot.ended;
           let state=existing?.state;
@@ -118,6 +127,21 @@ export function createTableSync({auth,db,doc,getDoc,getDocFromServer,onSnapshot,
     if(token===session&&active()){cache.set(slot,saved);if(!syncCount)notify()}
     return saved;
   }
+  async function reset(slot){
+    if(role!=='owner'||!active())throw Error('Nur die Turnierleitung darf Tischverbindungen zurücksetzen.');
+    await queue;const token=session;
+    const saved=await runTransaction(db,async tx=>{
+      const board=decodeBoard((await tx.get(ref(slot))).data());
+      if(token!==session||!active())throw Error('Anmeldung wurde gewechselt.');
+      if(!board?.joinOpen||!/^\d{4}$/.test(board.joinToken??''))throw Error('Tischcodes zuerst aktualisieren.');
+      const generation=randomGeneration(),next={...board,joinGeneration:generation};
+      tx.set(ref(slot),encodeBoard(next));
+      tx.set(doc(db,'snookerTableInvites',board.joinToken),{owner:organizer,slot,tournamentKey:board.tournamentKey,generation});
+      return {...next,slot};
+    });
+    if(token===session&&active()){cache.set(slot,saved);notify()}
+    return {slot,code:saved.joinToken};
+  }
   async function codes(data){await sync(data);if(role!=='owner'||!active())throw Error('Bitte als Spielleiter anmelden.');const key=tournamentKey(data);const values=await Promise.all(Array.from({length:data.tables},(_,i)=>getDoc(ref(i+1))));return values.map(s=>s.data()).filter(b=>b?.joinOpen&&b.tournamentKey===key).map(b=>({slot:b.tableNumber,code:b.joinToken}));}
-  return Object.freeze({start,stop,sync,refresh,command,assignment,codes,async idle(){await queue},get syncing(){return syncCount>0},get owner(){return organizer},get role(){return role},get boards(){return [...cache.values()]}});
+  return Object.freeze({start,stop,sync,refresh,command,assignment,codes,reset,async idle(){await queue},get syncing(){return syncCount>0},get owner(){return organizer},get role(){return role},get boards(){return [...cache.values()]}});
 }

@@ -1,20 +1,13 @@
-Snooker Money Match v7.61 – Firebase einrichten
+Snooker Money Match v7.77 – Einrichtung
 
-Projekt: https://console.firebase.google.com/project/snooker-money-match/overview
+1. Firebase > Authentication > Anmeldemethode: E-Mail/Passwort und Anonym aktiviert lassen.
+2. Firestore Database > Regeln: aktuellen Stand sichern, dann die gesamte beiliegende firestore.rules einsetzen und veröffentlichen. Bekannte Pool-Zugänge, Benutzerfreigaben und die Löschberechtigung für gesperrte Freigabeeinträge bleiben enthalten.
+3. Alle Webdateien auf GitHub aktualisieren. GitHub-Upload allein veröffentlicht keine Firebase-Regeln.
+4. Zuerst als freigegebener Spielleiter anmelden und das Turnier öffnen. Score Monitor > Tischcodes zeigt vier Ziffern je Tisch.
+5. Am Tischgerät v7.77 öffnen und im ☰-Menü Mit Tischcode beitreten wählen. Alle vier Ziffern einschließlich führender Null eingeben.
+6. Tisch verlassen gibt die Reservierung frei. Bei hängen gebliebener Verbindung beim Spielleiter unter Tischcodes > Verbindung Tisch … zurücksetzen wählen. Der bisherige Client verliert seinen Zugriff; Score und Frames bleiben bestehen.
+7. Ein Gerät verbindet sich neu. Gleichzeitige Beitritte werden atomar auf ein Gerät begrenzt.
+8. Bisherige lange Codes sind nach der Umstellung nicht mehr gültig. Keine erneute Kontoregistrierung erforderlich.
+9. Spark beibehalten, keine Abrechnung aktivieren, keine Cloud Functions anlegen.
 
-1. Authentication > Anmeldemethode: E-Mail/Passwort und Anonym aktivieren. Normale Nutzer registrieren sich selbst mit E-Mail und Passwort. Tischgeräte verwenden eine separate anonyme Sitzung.
-2. Authentication > Einstellungen > Autorisierte Domains: tatsächliche GitHub-App-Domain freigeben.
-3. Die bereits veröffentlichten Firestore-Regeln aus v7.58 bleiben unverändert gültig. Die enthaltene firestore.rules ist bytegleich mit v7.58; keine erneute Veröffentlichung erforderlich.
-4. Alle Webdateien auf GitHub aktualisieren, bis die App v7.61 anzeigt. Das Hochladen von firestore.rules auf GitHub veröffentlicht keine Firebase-Regeln.
-5. Kein Tarifwechsel, keine Abrechnung und keine Cloud Functions erforderlich. Spark beibehalten.
-6. Mit E-Mail-/Passwort-Konto anmelden und Turnier öffnen. Score Monitor > Tischcodes anzeigen. Auf dem Tischgerät Mit Tischcode beitreten > Code einfügen.
-7. Testen: Partie an Tisch 1 starten, am Tischgerät 24 Punkte eingeben, auf dem Spielleitergerät den Live-Score prüfen. Frames abschließen und Ergebnis/Break in der Tabelle prüfen. Neues Testturnier erstellen: alter Code muss ungültig werden.
-
-Datenzugriff:
-- privateSnooker/{uid}: nur eigenes Konto wie bisher.
-- snookerTableBoards/{uid}/tables/{slot}: Spielleiter verwaltet seine Tische. Beigetretenes Gerät liest nur den verbundenen Tisch und ändert nur dessen Zählwerk.
-- members/{uid}: Zuordnung des Tischgeräts zum aktuell gültigen Code.
-- snookerTableInvites/{code}: nur direkter Abruf eines zufälligen Codes, keine Auflistung. Ein alter Code kann nicht erneut beitreten, sobald die Tischzuordnung erneuert bzw. das Turnier beendet ist.
-- Codes sind Zugangsschlüssel; vertraulich an die Tischgeräte weitergeben. Keine Passwörter im Code.
-
-Die unveränderten Regeln sind mitgeliefert; ein Firebase-Emulatortest wurde hier nicht durchgeführt. Einrichtung und Test vor dem produktiven Turnier durchführen.
+Die mitgelieferten Regeln wurden hier nicht im Projekt veröffentlicht und nicht mit einem Firebase-Emulator geprüft. Vor dem echten Turnier einen Test mit zwei Geräten durchführen.
