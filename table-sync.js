@@ -105,7 +105,7 @@ export function createTableSync({auth,db,doc,getDoc,getDocFromServer,onSnapshot,
   async function command(slot,id,revision,action){
     if(!active())throw Error('Bitte erneut anmelden.');
     const token=session;
-    return await runTransaction(db,async tx=>{
+    const saved=await runTransaction(db,async tx=>{
       const board=decodeBoard((await tx.get(ref(slot))).data());
       if(token!==session||!active())throw Error('Anmeldung wurde gewechselt.');
       if(!board?.enabled||board.assignment?.id!==id)throw Error('Die Tischzuordnung wurde geändert oder das Turnier beendet.');
@@ -115,7 +115,9 @@ export function createTableSync({auth,db,doc,getDoc,getDocFromServer,onSnapshot,
       tx.update(ref(slot),{state:encodeState(state)});
       return {...board,state,slot};
     });
+    if(token===session&&active()){cache.set(slot,saved);if(!syncCount)notify()}
+    return saved;
   }
   async function codes(data){await sync(data);if(role!=='owner'||!active())throw Error('Bitte als Spielleiter anmelden.');const key=tournamentKey(data);const values=await Promise.all(Array.from({length:data.tables},(_,i)=>getDoc(ref(i+1))));return values.map(s=>s.data()).filter(b=>b?.joinOpen&&b.tournamentKey===key).map(b=>({slot:b.tableNumber,code:b.joinToken}));}
-  return Object.freeze({start,stop,sync,refresh,command,assignment,codes,get syncing(){return syncCount>0},get owner(){return organizer},get role(){return role},get boards(){return [...cache.values()]}});
+  return Object.freeze({start,stop,sync,refresh,command,assignment,codes,async idle(){await queue},get syncing(){return syncCount>0},get owner(){return organizer},get role(){return role},get boards(){return [...cache.values()]}});
 }

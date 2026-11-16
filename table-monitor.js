@@ -172,7 +172,28 @@
     bridge.refreshHistory?.();
     const overview=document.getElementById('tournamentMonitors');if(overview&&bridge.current)renderOverview(overview,bridge.current);
   }
+  function historyBoards(direction){
+    const data=bridge.current;if(!data||data.ended)return [];
+    const list=[];
+    for(let slot=1;slot<=data.tables;slot++){
+      const all=data.rounds.flatMap((round,r)=>round.matches.map((match,m)=>({r,m,match}))).filter(x=>x.match.table===slot&&x.match.startedAt!=null);
+      const current=all.find(x=>!x.match.result)??all.at(-1);if(!current)continue;
+      const board=forMatch(data,current.r,current.m,current.match);if(!board.enabled)continue;
+      const state=board.state,index=direction<0?state.cursor-1:state.cursor;
+      if(index>=0&&index<state.events.length)list.push({board,at:state.events[index].at});
+    }
+    return list.sort((a,b)=>b.at-a.at);
+  }
   window.snookerMonitors=Object.freeze({activateTable,renderOverview,reconcile,
+    canStep(direction){return historyBoards(direction).length>0},
+    async step(direction){
+      if(window.snookerTableSync?.role==='owner')await window.snookerTableSync.idle();
+      const entry=historyBoards(direction)[0];if(!entry)throw Error('Keine Eingabe zum Zurücknehmen oder Wiederholen.');
+      const board=entry.board,action={type:direction<0?'undo':'redo'};
+      if(board._local){bridge.applyBoard({...board,forceResult:true,state:model.command(board.state,board.assignment.rules,{...action,at:Date.now()})})}
+      else {const result=await window.snookerTableSync.command(board.slot,board.assignment.id,board.state.revision,action);bridge.applyBoard(result)}
+      status(direction<0?'Eingabe synchron zurückgenommen.':'Eingabe synchron wiederholt.');
+    },
     silence(index){const data=bridge.current;if(!data)return;const [r,m]=index.split(':').map(Number),match=data.rounds[r]?.matches[m];if(match?.table)return send(forMatch(data,r,m,match),{type:'warningOff'})},
     deactivate(){closeDetail();tableSlot=null;boards=[];tablePage.hidden=true;closePopup();document.body.classList.remove('tableDeviceMode','tableMonitorFullscreen','monitorOverviewFullscreen')},
     tableHome(){landing=true;document.body.classList.remove('tableMonitorFullscreen');closePopup();renderTable()},

@@ -1,0 +1,3 @@
+v7.75 – Zurück/Vor zwischen Geräten
+
+Zählwerk-Schritte nutzen im oberen Turniermenü dieselbe gemeinsame Ereignisliste wie das Tischgerät. Wiederholen bleibt synchron verfügbar. Alle Geräte aktualisieren. Firebase-Regeln unverändert.

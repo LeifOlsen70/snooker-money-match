@@ -7,6 +7,7 @@
   let tournament = null;
   let openMatch = null;
   let monitorApplying = false;
+  let historyBusy=false;
   let drafting = false;
   let archiveSelection = null;
   let draftFreeTournament = null;
@@ -167,16 +168,23 @@
     deadlineDialog = false;
   }
   function refreshHistory(){
-    const syncing=Boolean(window.snookerTableSync?.syncing);
-    if($('tournamentUndo'))$('tournamentUndo').disabled=drafting||!undoStates.length||syncing;
-    if($('tournamentRedo'))$('tournamentRedo').disabled=drafting||!redoStates.length||syncing;
+    const monitor=window.snookerMonitors;
+    if($('tournamentUndo'))$('tournamentUndo').disabled=drafting||historyBusy||(!undoStates.length&&!monitor?.canStep?.(-1));
+    if($('tournamentRedo'))$('tournamentRedo').disabled=drafting||historyBusy||(!redoStates.length&&!monitor?.canStep?.(1));
   }
-  function historyStep(direction) {
-    if(window.snookerTableSync?.syncing)return;
+  async function historyStep(direction) {
+    if(historyBusy)return;
     if (openMatch !== null && !confirm('Ergebniseingabe ohne Speichern verlassen?')) return;
+    if(window.snookerMonitors?.canStep?.(direction)){
+      historyBusy=true;refreshHistory();
+      try{await window.snookerMonitors.step(direction)}catch(err){alert('Änderung nicht übernommen: '+err.message)}
+      finally{historyBusy=false;refreshHistory()}
+      return;
+    }
     const source = direction < 0 ? undoStates : redoStates;
     const destination = direction < 0 ? redoStates : undoStates;
     if (!source.length) return;
+    // Structural tournament history is separate from the shared score cursor.
     destination.push(clone(tournament)); tournament = source.pop();
     const before = committed;
     openMatch = null; committed = JSON.stringify(tournament);
@@ -937,14 +945,17 @@
     return pairRound(null, rounds);
   }
 
-  function saveTournament(keepHistory = true, replace = false) {
+  function saveTournament(keepHistory = true, replace = false, scoreChange = false) {
     const before = committed;
     const next = JSON.stringify(tournament);
     if (next !== committed) {
-      if (keepHistory) undoStates.push(JSON.parse(committed));
-      else undoStates = [];
-      if (undoStates.length > 100) undoStates.shift();
-      redoStates = []; committed = next;
+      if(!scoreChange){
+        if (keepHistory) undoStates.push(JSON.parse(committed));
+        else undoStates = [];
+        if (undoStates.length > 100) undoStates.shift();
+        redoStates = [];
+      }
+      committed = next;
     }
     localStorage.setItem(key, next);
     publishTournament(before, replace);
@@ -1868,7 +1879,7 @@ window.snookerTournamentBridge=Object.freeze({
         if(!tournament.freeTournament)match.eloAt=summary.finishedAt;
       }else if(match.monitorResult||board.forceResult){match.result=null;delete match.finishedAt;delete match.eloAt;delete match.monitorResult;}
       monitorApplying=true;
-      try{saveTournament()}finally{monitorApplying=false;}
+      try{saveTournament(true,false,true)}finally{monitorApplying=false;}
     }
   });
 

@@ -1,3 +1,19 @@
+Snooker Money Match v7.75
+
+Korrektur Zurück/Vor:
+- Die oberen Turnierbuttons führen vorhandene Zählwerk-Eingaben jetzt direkt über die gemeinsame Ereignisliste des Tischstands zurück bzw. wieder aus.
+- Dabei bleibt die Liste für Wiederholen auf dem Tischgerät bestehen. Punkte, Breaks, Warnung-aus und Frame-Abschlüsse folgen derselben Historie auf beiden Geräten.
+- Die verfügbaren Schritte kommen aus dem gespeicherten Tischstand, auch nach einer Anmeldung auf einem anderen Gerät oder einem Neuladen.
+- Echte Turnieraktionen (z. B. Tischzuweisung) behalten ihren separaten bisherigen Verlauf. Zählwerk-Rücknahmen haben Vorrang, solange entsprechende Schritte vorhanden sind.
+- Neu bestätigte Tischbefehle aktualisieren den lokalen Tischcache sofort nach erfolgreicher Datenbanktransaktion.
+- Bei einer zwischenzeitlichen Änderung wird der Schritt mit einer Meldung abgewiesen, statt einen fremden neueren Stand zu überschreiben.
+- Warnung aus und die Voreinstellung 30 Minuten pro Frame aus v7.74 bleiben erhalten.
+- Alle beteiligten Geräte auf v7.75 aktualisieren. Firestore-Regeln unverändert gegenüber v7.72/v7.73/v7.74.
+
+Prüfung: Zwei simulierte Firebase-Geräte mit tatsächlichem Toolbar-Controller: Punkte und Frame-Ende vom Tischgerät, Undo/Redo am Spielleitergerät und umgekehrt. Prüfung der übermittelten Cursor-/Wiederholen-Liste, privaten Tischrechte und Trennung struktureller Historie. Kein echter Firebase-Mehrgerätetest durchgeführt.
+
+Bisherige Hinweise:
+
 Snooker Money Match v7.74
 
 Neu:
