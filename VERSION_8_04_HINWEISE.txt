@@ -1,0 +1,1 @@
+8.04 – Laufende Pool-Begegnungen bleiben direkt in ihrer Runden-/Disziplinliste bedienbar. Kein siehe oben und kein separater oberer Am-Tisch-Block. Tabellen, Planung, Historie und Firebase-Regeln unverändert.
