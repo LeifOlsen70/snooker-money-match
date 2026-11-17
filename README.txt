@@ -1,4 +1,4 @@
-BILLARD & SNOOKER CLUB – VERSION 8.04
+BILLARD & SNOOKER CLUB – VERSION 8.05
 
 INSTALLATION / UPDATE
 1. Die bisherige App / vorhandene Daten bei Bedarf als JSON sichern.
@@ -6,7 +6,7 @@ INSTALLATION / UPDATE
    https://console.firebase.google.com/project/snooker-money-match/firestore/databases/-default-/security/rules
    Die Ergänzung erlaubt den eigenen Pool-Speicher und getrennte Pool-Tischgeräte. Bestehende Snooker- und Pool-Gruppenrechte bleiben bestehen.
 3. Alle Dateien dieses ZIPs zusammen in das bestehende App-Verzeichnis hochladen. index.html ist jetzt die gemeinsame Startseite. app.html enthält die gemeinsame App.
-4. App neu öffnen / bei Bedarf im Browser neu laden. Version 8.04 kontrollieren. Auch Tischgeräte aktualisieren.
+4. App neu öffnen / bei Bedarf im Browser neu laden. Version 8.05 kontrollieren. Auch Tischgeräte aktualisieren.
 
 EINSTIEG
 Die erste Seite bietet Snooker / Poolbillard. Snooker verwendet die vorhandenen Kontodaten und Spielstände ohne Datenmigration. Pool ist ein neuer, separater Spielbereich und übernimmt keine alten Spielabende der bisherigen separaten Pool-App.
@@ -57,3 +57,5 @@ NEU 8.02: Kompaktere Pool-Historie und auffälliger, nicht blockierender Zielpun
 NEU 8.03: Fertige Pool-Begegnungen zusätzlich in der normalen Liste sichtbar; Historie bleibt erhalten.
 
 NEU 8.04: Laufende Pool-Begegnungen mit Ergebnis eintragen direkt im Abschnitt der jeweiligen Runde und Disziplin. Separater Am-Tisch-Block oben entfällt. Regeln unverändert.
+
+NEU 8.05: Reihenfolge je Pool-Runde/Disziplin: fertige Begegnungen, laufende Begegnungen, startbereite Begegnungen. Startbuttons zeigen weiterhin nur tatsächlich freie Tische; bei belegten Tischen ist kein Start möglich.

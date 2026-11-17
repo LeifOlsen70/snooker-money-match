@@ -1,0 +1,1 @@
+8.05 – Pool-Listen: Ergebnis korrigieren → Ergebnis eintragen → nächste startbereite Partien mit freien Tischnummern. Spielplanung und Firebase-Regeln unverändert.
