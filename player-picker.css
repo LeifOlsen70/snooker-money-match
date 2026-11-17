@@ -1,0 +1,9 @@
+.playerPicker { width: min(640px, 94vw); max-height: 90dvh; overflow: auto; border: 2px solid #af9254; border-radius: 18px; padding: 20px; }
+.playerPickerList { display: grid; gap: 8px; max-height: 45dvh; overflow: auto; margin-bottom: 18px; }
+.playerPickerRow { display: flex; gap: 6px; align-items: center; }
+.playerPickerRow > button:first-child { flex: 1; text-align: left; overflow-wrap: anywhere; }
+.playerPickerRow button { min-height: 44px; }
+.playerPicker label { display: grid; gap: 8px; }
+.playerPicker input { width: 100%; box-sizing: border-box; }
+.playerPicker [role=alert] { color: #d53c3c; }
+.tournamentRoster[hidden] { display: none !important; }

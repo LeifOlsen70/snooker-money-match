@@ -21,6 +21,7 @@
       listen(input,'blur',()=>{input.readOnly=true;});
       listen(input,'click',e=>{
         if(Date.now()<suppressClickUntil){e.preventDefault();e.stopPropagation();return;}
+        if(window.ClubPlayerPicker){window.ClubPlayerPicker.open(input);return;}
         if(input.readOnly)input.blur();input.readOnly=false;input.focus();
       });
       listen(input,'keydown',e=>{if(e.key==='Enter'||e.key==='F2'){e.preventDefault();input.readOnly=false;input.focus();}if(e.key==='Escape')input.blur();});

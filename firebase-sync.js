@@ -1,7 +1,7 @@
 import {initializeApp} from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js';
 import {getAuth,signInAnonymously,signInWithEmailAndPassword,createUserWithEmailAndPassword,sendPasswordResetEmail,setPersistence,browserLocalPersistence,inMemoryPersistence,signOut,onAuthStateChanged} from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-auth.js';
 import {getFirestore,doc,getDoc,setDoc,onSnapshot,runTransaction,collection,getDocs,getDocsFromServer,getDocFromServer,updateDoc,serverTimestamp} from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore.js';
-import {createTableSync} from './table-sync.js?v=8.09';
+import {createTableSync} from './table-sync.js?v=8.10';
 const config={apiKey:'AIzaSyBgmv1v5APpPReJ4olWCusUhhGGevcvRcE',authDomain:'snooker-money-match.firebaseapp.com',projectId:'snooker-money-match',storageBucket:'snooker-money-match.firebasestorage.app',messagingSenderId:'423302158497',appId:'1:423302158497:web:706c1fec068959b7bbb8e0'};
 const localStorage = window.snookerStorage;
 const app=initializeApp(config),auth=getAuth(app),db=getFirestore(app),e=id=>document.getElementById(id),msg=t=>e('fbStatus').textContent=t;
@@ -66,7 +66,7 @@ window.snookerTableBackend={
         tx.set(memberRef,{token,generation:current.generation});
       });
     }catch(err){
-      if(err.code==='permission-denied')throw Error('Tischzugriff abgelehnt. Bitte die neuen Firebase-Regeln für Version 8.09 veröffentlichen.');
+      if(err.code==='permission-denied')throw Error('Tischzugriff abgelehnt. Bitte die neuen Firebase-Regeln für Version 8.10 veröffentlichen.');
       throw err;
     }
     window.localStorage.setItem(deviceKey,JSON.stringify({owner:invite.owner,slot:invite.slot,token,generation:invite.generation}));
@@ -132,7 +132,7 @@ window.snookerRefresh=async()=>{
   if(!permitted())throw Error('Bitte anmelden und die Freigabe abwarten.');
   const snap=await getDocFromServer(cloudDoc()),data=snap.data();
   if(!pendingTournament&&!tournamentWriting)applyTournamentSnapshot(data?.tournamentSync??data?.tournamentState??null,data?.tournamentRevision??0);
-  receiveTable(data?.tournamentTable);receiveRoster(data?.tournamentRoster);
+  receiveTable(data?.tournamentTable);receiveRoster(window.ClubSport.pool?(await getDocFromServer(rosterDoc())).data()?.tournamentRoster:data?.tournamentRoster);
   const raw=data?.state??null;
   if(!pending&&!writing&&(raw===''||valid(raw))){lastCloudRaw=raw;if(localRaw()!==raw)window.dispatchEvent(new CustomEvent('snooker-single-received',{detail:raw}))}
   if(tableSync.role==='owner')await tableSync.refresh();
@@ -291,6 +291,8 @@ window.addEventListener('snooker-tournament-view',({detail})=>{
   pendingTable=detail;
   flushTable();
 });
+const rosterDoc=()=>doc(db,'privateSnooker',localStorage.uid);
+let unsubscribeSharedRoster=null;
 const rosterStorage='snookerSwissPlayerNamesV1';
 const rosterQueueKey='snookerSwissRosterPendingV1';
 let rosterQueue=[], rosterCloud=null, rosterWriting=false;
@@ -308,24 +310,25 @@ function receiveRoster(entry){
   }
 }
 async function flushRoster(){
-  if(!permitted()||!tournamentReady||rosterWriting||(rosterCloud&&!rosterQueue.length))return;
+  if(!permitted()||!tournamentReady||rosterWriting||(rosterCloud?.poolRosterMerged&&!rosterQueue.length))return;
   const count=rosterQueue.length, changes=rosterQueue.slice(0,count), local=localRoster();
   if(!count&&!local.length)return;
   rosterWriting=true;
   try{
     const entry=await runTransaction(db,async transaction=>{
-      const existing=(await transaction.get(cloudDoc())).data()?.tournamentRoster;
-      if(existing&&!count)return existing;
+      const existing=(await transaction.get(rosterDoc())).data()?.tournamentRoster;
+      const legacy=existing?.poolRosterMerged?null:(await transaction.get(doc(db,'privateSnooker',localStorage.uid,'sports','pool'))).data()?.tournamentRoster;
+      if(existing&&!count&&existing.poolRosterMerged)return existing;
       const key=name=>name.toLocaleLowerCase('de');
-      const names=new Map((existing?.names??local).map(name=>[key(name),name]));
+      const names=new Map();for(const name of [...(existing?.names??local),...(legacy?.names??[])])if(typeof name==='string'&&!names.has(key(name)))names.set(key(name),name);
       for(const {before,after} of changes){
         const next=new Map(after.map(name=>[key(name),name]));
         for(const name of before)if(!next.has(key(name)))names.delete(key(name));
         const previous=new Set(before);
         for(const name of after)if(!previous.has(name))names.set(key(name),name);
       }
-      const entry={names:[...names.values()],revision:(existing?.revision??0)+1};
-      transaction.set(cloudDoc(),{tournamentRoster:entry},{merge:true});
+      const entry={names:[...names.values()],revision:(existing?.revision??0)+1,poolRosterMerged:true};
+      transaction.set(rosterDoc(),{tournamentRoster:entry},{merge:true});
       return entry;
     });
     rosterQueue.splice(0,count);
@@ -358,6 +361,7 @@ function connectApproved(u){
   window.snookerAccount.block();
   if(window.snookerAccount.switchUser(u))return;
   if(unsubscribe){unsubscribe();unsubscribe=null}
+  if(unsubscribeSharedRoster){unsubscribeSharedRoster();unsubscribeSharedRoster=null;}
   initialized=false;pending=localStorage.getItem(singlePendingKey)==='1';clearTimeout(writeTimer);
   tournamentReady=false;pendingTournament=null;tournamentRevision=-1;latestTournament=null;
   pendingTable=null;lastTable=null;rosterCloud=null;rosterQueue=[];
@@ -367,6 +371,7 @@ function connectApproved(u){
   try{pendingTournament=JSON.parse(localStorage.getItem(tournamentPendingKey));}catch{pendingTournament=null;}
   try{rosterQueue=JSON.parse(localStorage.getItem(rosterQueueKey))??[];}catch{rosterQueue=[];}
   msg('⏳ Verbinde Live-Synchronisierung …');
+  if(window.ClubSport.pool)unsubscribeSharedRoster=onSnapshot(rosterDoc(),snap=>{if(permitted()&&!snap.metadata.hasPendingWrites&&!snap.metadata.fromCache){receiveRoster(snap.data()?.tournamentRoster);flushRoster();}},err=>tournamentConnection('Namensliste: '+(err.code||err.message)));
   let first=true;
   unsubscribe=onSnapshot(cloudDoc(),{includeMetadataChanges:true},snap=>{
     if(!permitted())return;
@@ -387,7 +392,7 @@ function connectApproved(u){
       }
       applyTournamentSnapshot(data?.tournamentSync??data?.tournamentState??null,data?.tournamentRevision??0);
       receiveTable(data?.tournamentTable);
-      receiveRoster(data?.tournamentRoster);
+      if(!window.ClubSport.pool)receiveRoster(data?.tournamentRoster);
       flushRoster();
     }
     if(snap.metadata.hasPendingWrites || snap.metadata.fromCache)return;

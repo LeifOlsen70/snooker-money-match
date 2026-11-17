@@ -13,13 +13,27 @@
   const uid = guest ? null : raw.getItem(activeKey);
   const prefix = account => 'snooker-account-v1:' + account + (window.ClubSport?.pool ? ':pool:' : ':');
   const storagePrefix = uid ? prefix(uid) : (window.ClubSport?.pool?'pool-guest-v1:':'snooker-guest-v1:');
+  const sharedPrefix=uid?'snooker-account-v1:'+uid+':':'snooker-guest-v1:';
+  const sharedKeys=new Set(['snookerSwissPlayerNamesV1','snookerSwissRosterPendingV1']);
+  const migrationKey=sharedPrefix+'sharedRosterMigratedV1';
+  if(!raw.getItem(migrationKey)){
+    const poolPrefix=uid?'snooker-account-v1:'+uid+':pool:':'pool-guest-v1:';
+    let before=[];try{before=JSON.parse(raw.getItem(sharedPrefix+'snookerSwissPlayerNamesV1'))??[];}catch{}
+    const names=new Map();
+    for(const source of [sharedPrefix,poolPrefix]){try{for(const name of JSON.parse(raw.getItem(source+'snookerSwissPlayerNamesV1'))??[])if(typeof name==='string'&&name.trim()){const k=name.trim().toLocaleLowerCase('de');if(!names.has(k))names.set(k,name.trim());}}catch{}}
+    const after=[...names.values()].sort((a,b)=>a.localeCompare(b,'de'));
+    raw.setItem(sharedPrefix+'snookerSwissPlayerNamesV1',JSON.stringify(after));
+    let queue=[];for(const source of [sharedPrefix,poolPrefix]){try{queue.push(...(JSON.parse(raw.getItem(source+'snookerSwissRosterPendingV1'))??[]));}catch{}}
+    if(JSON.stringify(before)!==JSON.stringify(after))queue.push({before,after});
+    raw.setItem(sharedPrefix+'snookerSwissRosterPendingV1',JSON.stringify(queue));
+    raw.setItem(migrationKey,'1');
+  }
+  const storageKey=key=>(sharedKeys.has(key)?sharedPrefix:storagePrefix)+key;
   window.snookerStorage = Object.freeze({
     uid,
-    getItem(key) { return raw.getItem(storagePrefix + key); },
-    setItem(key, value) {
-      raw.setItem(storagePrefix + key, value);
-    },
-    removeItem(key) { raw.removeItem(storagePrefix + key); }
+    getItem(key) { return raw.getItem(storageKey(key)); },
+    setItem(key, value) {raw.setItem(storageKey(key), value);},
+    removeItem(key) {raw.removeItem(storageKey(key));}
   });
 
   const e = id => document.getElementById(id);

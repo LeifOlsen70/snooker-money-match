@@ -9,8 +9,17 @@ service cloud.firestore {
     function normalAccount() {
       return signedIn() && request.auth.token.firebase.sign_in_provider != 'anonymous';
     }
+    // Gespeicherte Namen: Nutzer dürfen ergänzen; nur Admin darf ändern/löschen.
+    function keepsSavedNames() {
+      return !('tournamentRoster' in resource.data)
+        || (('tournamentRoster' in request.resource.data)
+          && request.resource.data.tournamentRoster.names is list
+          && request.resource.data.tournamentRoster.names.hasAll(resource.data.tournamentRoster.names));
+    }
     match /privateSnooker/{userId} {
-      allow read, write: if approved() && request.auth.uid == userId;
+      allow read, create: if approved() && request.auth.uid == userId;
+      allow update: if approved() && request.auth.uid == userId && (isAdmin() || keepsSavedNames());
+      allow delete: if approved() && request.auth.uid == userId && (isAdmin() || !('tournamentRoster' in resource.data));
     }
     match /privateSnooker/{userId}/sports/pool {
       allow read, write: if approved() && request.auth.uid == userId;

@@ -1041,7 +1041,7 @@
             </label>
           </div>
           ${isPool?window.ClubSport.fields():''}
-          <section class="tournamentRoster" aria-label="Gespeicherte Spieler">
+          <section class="tournamentRoster" aria-label="Gespeicherte Spieler" hidden>
             <h3>Spieler auswählen</h3>
             <p class="small">Namen antippen, um sie für dieses Turnier auszuwählen oder abzuwählen. Zum Bearbeiten oder Löschen auf ⋯ tippen oder die Zeile nach links wischen.</p>
             <div id="savedTournamentPlayers" class="tournamentPlayerChoices"></div>
@@ -1121,8 +1121,8 @@
             <button type="button" class="tournamentPlayerMore" aria-label="Aktionen für ${esc(name)}" aria-expanded="false">⋯</button>
           </div>
           <div class="tournamentPlayerActions" hidden>
-            <button type="button" data-edit-player="${i}">Bearbeiten</button>
-            <button type="button" class="tournamentPlayerDelete" data-delete-player="${i}">Löschen</button>
+            <button type="button" data-edit-player="${i}" ${window.ClubPlayerPicker.isAdmin?'':'hidden'}>Bearbeiten</button>
+            <button type="button" class="tournamentPlayerDelete" data-delete-player="${i}" ${window.ClubPlayerPicker.isAdmin?'':'hidden'}>Löschen</button>
           </div>
         </div>`;
       }).join('') || '<p class="small">Noch keine Spieler gespeichert.</p>';
@@ -1165,9 +1165,10 @@
         $('tournamentPlayerMessage').textContent = ''; renderPlayerList();
       });
       $('savedTournamentPlayers').querySelectorAll('[data-edit-player]').forEach(button => button.onclick = () => {
-        editPlayer(playerNames[Number(button.dataset.editPlayer)], inputs);
+        if(window.ClubPlayerPicker.isAdmin)editPlayer(playerNames[Number(button.dataset.editPlayer)], inputs);
       });
       $('savedTournamentPlayers').querySelectorAll('[data-delete-player]').forEach(button => button.onclick = () => {
+        if(!window.ClubPlayerPicker.isAdmin)return;
         const index = Number(button.dataset.deletePlayer), name = playerNames[index];
         if (!confirm(`${name} aus der gespeicherten Spielerliste löschen? Bereits gespielte Turniere bleiben erhalten.`)) return;
         savePlayerNames(playerNames.filter((_, i) => i !== index));
@@ -1208,6 +1209,7 @@
         partnerTarget=null;renderPlayerList();
         $('tournamentPlayerMessage').textContent='Teampartner getauscht.';
       });
+      names.querySelectorAll('input').forEach(input=>window.ClubPlayerPicker.bind(input));
       renderPlayerList();
     }
     refreshPlayerList = renderPlayerList;
