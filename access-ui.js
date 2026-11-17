@@ -45,8 +45,15 @@ function showPending(status,email){
 function hidePending(){if(pending.open)pending.close()}
 function showAdmin(){adminButton.hidden=false;updateButton.hidden=false}
 function updateCount(count){adminCount.textContent=String(count);adminCount.hidden=count===0;adminButton.setAttribute('aria-label',`Benutzerfreigaben, ${count} offene Anfragen`)}
+function requestDate(value){
+  try{
+    const date=typeof value?.toDate==='function'?value.toDate():value&&typeof value==='object'&&typeof (value.seconds??value._seconds)==='number'?new Date((value.seconds??value._seconds)*1000):typeof value==='number'?new Date(value):null;
+    return date&&Number.isFinite(date.getTime())?new Intl.DateTimeFormat('de-DE',{timeZone:'Europe/Berlin',day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}).format(date)+' Uhr':'Zeitpunkt nicht gespeichert';
+  }catch{return 'Zeitpunkt nicht gespeichert';}
+}
 function render(list,change,remove){updateCount(list.filter(a=>a.status==='pending').length);rows.replaceChildren(); if(!list.length){rows.append(el('p','Noch keine Anfragen.'));return}
   for(const a of list){const row=el('div',undefined,'accessRow');const name=el('div');name.append(el('strong',a.email||a.uid),el('p',a.status==='approved'?'Freigegeben':a.status==='rejected'?'Abgelehnt':'Wartet auf Freigabe'));
+    name.append(el('p','Anfrage: '+requestDate(a.createdAt),'accessRequestDate'));
     const actions=el('div',undefined,'accessActions');
     if(a.status!=='approved'){const ok=el('button','Freigeben');ok.onclick=()=>change(a.uid,'approved');actions.append(ok)}
     if(a.status!=='rejected'){const no=el('button','Sperren');no.onclick=()=>change(a.uid,'rejected');actions.append(no)}
