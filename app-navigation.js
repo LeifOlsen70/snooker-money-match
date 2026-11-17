@@ -26,6 +26,7 @@
   const leaveTable=document.createElement('button');leaveTable.type='button';leaveTable.textContent='Tisch verlassen';leaveTable.onclick=()=>{closeMenu();document.querySelector('#tableMode [data-table-leave]')?.click()};
   const dismissTable=document.createElement('button');dismissTable.type='button';dismissTable.textContent='Tischgerät abmelden';dismissTable.onclick=()=>{closeMenu();window.snookerDismissTable()};
   menu.append(fallbackLogin,fallbackJoin,leaveTable,dismissTable);document.body.append(menu);
+  window.KaiAudio?.mount(menu);
   const menuToggle=document.getElementById('appMenuToggle');
   function closeMenu(){if(menu.open)menu.close();menuToggle.setAttribute('aria-expanded','false')}
   function openMenu(){
@@ -89,6 +90,7 @@
   }
   function update() {
     queued=false;
+    window.KaiAudio?.update();
     const single = document.getElementById('singleMode');
     const tournament = document.getElementById('tournamentMode');
     const tableDevice=body.classList.contains('tableDeviceMode');
