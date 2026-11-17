@@ -6,6 +6,7 @@
   panel.id = 'appRulesPanel';
   panel.hidden = true;
   panel.innerHTML = '<iframe title="Allgemeine Infos & Regeln" data-src="infos.html?embedded=1"></iframe>';
+  if(window.ClubSport?.pool)panel.querySelector('iframe').dataset.src='pool-infos.html?embedded=1';
   app.append(panel);
   const utility=document.createElement('section');utility.className='appUtilityNav';utility.setAttribute('aria-label','Menü und Verlauf');
   utility.innerHTML='<div class="appMenuRow"><button type="button" id="appMenuToggle" aria-label="Menü öffnen" aria-haspopup="dialog" aria-expanded="false">☰</button></div><div class="appHistoryToolbar"><button type="button" id="appUndo" disabled>↶ Zurück</button><button type="button" id="appRefresh">↻ Aktualisieren</button><button type="button" id="appRedo" disabled>Vor ↷</button></div><p id="appRefreshStatus" role="status" hidden></p>';
@@ -19,7 +20,7 @@
     if(document.body.classList.contains('tableDeviceMode')){window.snookerMonitors.tableHome();return;}
     const source=document.getElementById(isVisible(document.getElementById('singleMode'))?'singleHome':'tournamentHome');source?.click();
   };
-  menu.append(home,accountBar);
+  const sportHome=document.createElement('button');sportHome.type='button';sportHome.textContent='Snooker / Poolbillard wählen';sportHome.onclick=()=>location.href='index.html';menu.append(home,sportHome,accountBar);
   const fallbackLogin=document.createElement('button');fallbackLogin.type='button';fallbackLogin.textContent='Anmelden / Registrieren';fallbackLogin.onclick=()=>{closeMenu();window.snookerAccount.request('single',true)};
   const fallbackJoin=document.createElement('button');fallbackJoin.type='button';fallbackJoin.textContent='Mit Tischcode beitreten';fallbackJoin.onclick=()=>{closeMenu();document.getElementById('tableDeviceSetup').click()};
   const leaveTable=document.createElement('button');leaveTable.type='button';leaveTable.textContent='Tisch verlassen';leaveTable.onclick=()=>{closeMenu();document.querySelector('#tableMode [data-table-leave]')?.click()};
@@ -37,6 +38,7 @@
   menu.addEventListener('click',event=>{if(event.target===menu){const r=menu.getBoundingClientRect();if(event.clientX<r.left||event.clientX>r.right||event.clientY<r.top||event.clientY>r.bottom)closeMenu()}else if(event.target.closest('button'))closeMenu()},true);
   const byId=id=>document.getElementById(id);
   function historySource(direction){
+    if(window.ClubSport?.pool&&isVisible(byId('singleMode')))return byId(direction<0?'poolSingleUndo':'poolSingleRedo');
     if(body.classList.contains('tableDeviceMode'))return document.querySelector('#tableMode [data-monitor-'+(direction<0?'undo':'redo')+']');
     if(isVisible(byId('tournamentMode')))return byId(direction<0?'tournamentUndo':'tournamentRedo');
     if(isVisible(byId('singleMode')))return byId(direction<0?'scorerUndo':'scorerRedo');
@@ -45,6 +47,7 @@
   function updateHistoryButtons(){for(const [id,direction] of [['appUndo',-1],['appRedo',1]]){const source=historySource(direction),disabled=!source||source.disabled;if(byId(id).disabled!==disabled)byId(id).disabled=disabled}}
   byId('appUndo').onclick=()=>{const source=historySource(-1);if(source&&!source.disabled)source.click();queueMicrotask(updateHistoryButtons)};
   byId('appRedo').onclick=()=>{const source=historySource(1);if(source&&!source.disabled)source.click();queueMicrotask(updateHistoryButtons)};
+  if(window.ClubSport?.pool){const brand=app.querySelector('.clubBrand');brand.querySelector('img').src='pool-logo.png';brand.querySelector('img').alt='Poolbillard';brand.setAttribute('aria-label','Poolbillard');document.querySelector('.homeInfoChoice').href='pool-infos.html';}
   byId('appRefresh').onclick=async()=>{
     const button=byId('appRefresh'),note=byId('appRefreshStatus');button.disabled=true;note.hidden=false;note.textContent='Aktualisierung läuft …';
     try{if(!window.snookerRefresh)throw Error('Verbindung wird noch vorbereitet.');note.textContent=await window.snookerRefresh()}

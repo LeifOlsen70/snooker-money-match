@@ -12,24 +12,29 @@ service cloud.firestore {
     match /privateSnooker/{userId} {
       allow read, write: if approved() && request.auth.uid == userId;
     }
+    match /privateSnooker/{userId}/sports/pool {
+      allow read, write: if approved() && request.auth.uid == userId;
+    }
     // Four-digit pairing codes; a generation binds every member to this reservation.
     match /snookerTableInvites/{token} {
-      function boardPath(owner,slot) {
-        return /databases/$(database)/documents/snookerTableBoards/$(owner)/tables/$(string(slot));
+      function boardPath(owner,slot,pool) {
+        return pool ? /databases/$(database)/documents/snookerTableBoards/$(owner)/poolTables/$(string(slot))
+          : /databases/$(database)/documents/snookerTableBoards/$(owner)/tables/$(string(slot));
       }
       function ownedRecord() {
         let data = request.resource.data;
-        let board = getAfter(boardPath(data.owner,data.slot)).data;
+        let board = getAfter(boardPath(data.owner,data.slot,('sport' in data) && data.sport == 'pool')).data;
         return approved() && normalAccount() && data.owner == request.auth.uid
           && token.matches('^[0-9]{4}$')
-          && data.keys().hasOnly(['owner','slot','tournamentKey','generation'])
+          && (!('sport' in data) || data.sport == 'pool')
+          && data.keys().hasOnly(['owner','slot','tournamentKey','generation','sport'])
           && data.slot is int && data.slot >= 1 && data.slot <= 6
           && data.generation is string && data.generation.matches('^[a-f0-9]{32}$')
           && board.joinToken == token && board.joinGeneration == data.generation
           && board.tournamentKey == data.tournamentKey;
       }
       function claim() {
-        let board = get(boardPath(resource.data.owner,resource.data.slot)).data;
+        let board = get(boardPath(resource.data.owner,resource.data.slot,('sport' in resource.data) && resource.data.sport == 'pool')).data;
         return signedIn() && token.matches('^[0-9]{4}$')
           && !('claimedBy' in resource.data)
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['claimedBy'])
@@ -42,7 +47,9 @@ service cloud.firestore {
         return signedIn() && resource.data.claimedBy == request.auth.uid
           && !('claimedBy' in request.resource.data)
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['claimedBy'])
-          && !existsAfter(/databases/$(database)/documents/snookerTableBoards/$(resource.data.owner)/tables/$(string(resource.data.slot))/members/$(request.auth.uid));
+          && ((('sport' in resource.data) && resource.data.sport == 'pool')
+            ? !existsAfter(/databases/$(database)/documents/snookerTableBoards/$(resource.data.owner)/poolTables/$(string(resource.data.slot))/members/$(request.auth.uid))
+            : !existsAfter(/databases/$(database)/documents/snookerTableBoards/$(resource.data.owner)/tables/$(string(resource.data.slot))/members/$(request.auth.uid)));
       }
       allow get: if signedIn();
       allow list: if false;
@@ -87,6 +94,56 @@ service cloud.firestore {
             && request.resource.data.generation == board.joinGeneration
             && invite.generation == board.joinGeneration
             && board.joinOpen == true && board.joinToken == token
+            && !('sport' in invite)
+            && invite.owner == organizer && string(invite.slot) == slot
+            && invite.tournamentKey == board.tournamentKey
+            && getAfter(/databases/$(database)/documents/snookerTableInvites/$(token)).data.claimedBy == request.auth.uid;
+        }
+        allow get: if signedIn() && (request.auth.uid == member || request.auth.uid == organizer);
+        allow list: if normalAccount() && request.auth.uid == organizer;
+        allow create, update: if signedIn() && request.auth.uid == member && validJoin();
+        allow delete: if signedIn() && (request.auth.uid == member || request.auth.uid == organizer);
+      }
+    }
+
+    match /snookerTableBoards/{organizer}/poolTables/{slot} {
+      function isOwner() { return approved() && normalAccount() && request.auth.uid == organizer; }
+      function isMember() {
+        return signedIn()
+          && exists(/databases/$(database)/documents/snookerTableBoards/$(organizer)/poolTables/$(slot)/members/$(request.auth.uid))
+          && get(/databases/$(database)/documents/snookerTableBoards/$(organizer)/poolTables/$(slot)/members/$(request.auth.uid)).data.token == resource.data.joinToken
+          && get(/databases/$(database)/documents/snookerTableBoards/$(organizer)/poolTables/$(slot)/members/$(request.auth.uid)).data.generation == resource.data.joinGeneration
+          && exists(/databases/$(database)/documents/snookerTableInvites/$(resource.data.joinToken))
+          && get(/databases/$(database)/documents/snookerTableInvites/$(resource.data.joinToken)).data.claimedBy == request.auth.uid
+          && get(/databases/$(database)/documents/snookerTableInvites/$(resource.data.joinToken)).data.generation == resource.data.joinGeneration;
+      }
+      function validScoreState() {
+        let state = request.resource.data.state;
+        return state.keys().hasAll(['events','cursor','revision'])
+          && state.keys().hasOnly(['events','cursor','revision'])
+          && state.events is list && state.events.size() <= 2000
+          && state.cursor is int && state.cursor >= 0 && state.cursor <= state.events.size()
+          && state.revision is int && state.revision == resource.data.state.revision + 1;
+      }
+      allow get: if isOwner() || isMember();
+      allow list: if isOwner();
+      allow create, delete: if isOwner();
+      allow update: if isOwner() || (isMember()
+        && resource.data.enabled == true && resource.data.joinOpen == true
+        && resource.data.assignment != null
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['state'])
+        && validScoreState());
+      match /members/{member} {
+        function validJoin() {
+          let token = request.resource.data.token;
+          let board = get(/databases/$(database)/documents/snookerTableBoards/$(organizer)/poolTables/$(slot)).data;
+          let invite = get(/databases/$(database)/documents/snookerTableInvites/$(token)).data;
+          return token is string && token.matches('^[0-9]{4}$')
+            && request.resource.data.keys().hasOnly(['token','generation'])
+            && request.resource.data.generation == board.joinGeneration
+            && invite.generation == board.joinGeneration
+            && board.joinOpen == true && board.joinToken == token
+            && ('sport' in invite) && invite.sport == 'pool'
             && invite.owner == organizer && string(invite.slot) == slot
             && invite.tournamentKey == board.tournamentKey
             && getAfter(/databases/$(database)/documents/snookerTableInvites/$(token)).data.claimedBy == request.auth.uid;

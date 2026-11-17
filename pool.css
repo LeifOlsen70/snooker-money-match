@@ -1,0 +1,21 @@
+html.poolTheme{background:#04170f}.poolTheme body{background:radial-gradient(ellipse at 50% 0,#185a39 0,#082b1c 45%,#03140d 100%);color:#fff4d8}
+.poolTheme .clubBrand img{object-fit:cover;max-height:180px;aspect-ratio:3/1;width:100%}
+.poolTheme .card,.poolTheme #modeStart,.poolTheme .tournamentDialog,.poolTheme #appUtilityMenu,.poolTheme .scorerEntry{background:#0b271c!important;color:#fff4d8!important;border-color:#bc9c56}
+.poolTheme .secondary,.poolTheme .appTabStrip button,.poolTheme #appMenuToggle,.poolTheme .appHistoryToolbar button{background:#1a4733;color:#fff4d8;border-color:#a68b53}
+.poolTheme .primary,.poolTheme .appTabStrip button.primary,.poolTheme button.active{background:linear-gradient(#f3d985,#b48b38)!important;color:#10271b!important}
+.poolTheme .monitorCard,.poolTheme .monitorRow,.poolTheme .monitorScoreButton,.poolTheme .monitorPlayerColumn,.poolTheme .scoreBox{background:linear-gradient(135deg,#164e34,#071e15)!important;color:#fff4d8;border-color:#bc9c56}
+.poolTheme .appHistoryToolbar,.poolTheme .tournamentHistory,.poolTheme .appTabStrip,.poolTheme .tournamentStandingsHeader{background:#071f15!important}
+.poolTheme input,.poolTheme select,.poolTheme .tournamentPlayerFace{background:#163d2c!important;color:#fff4d8!important;border-color:#a98d55}
+.poolTheme .tournamentDialog button,.poolTheme .monitorFrameWinner{background:#22543d;color:#fff4d8;border-color:#ae9255}
+.poolTheme .monitorKeypad button{background:#f3eddb;color:#102d20}
+.poolTheme .tournamentRoster,.poolTheme .tournamentMatch{border-color:#5a8065}
+.poolSettings{border:1px solid #b99a55;padding:15px;border-radius:14px;margin:16px 0}.poolSettings p{font-size:.9rem;color:#d1dfd2}
+.poolDisciplineOption{border-top:1px solid #537159;padding:10px 0;display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:center}.poolDisciplineOption input[type=checkbox]{width:22px;height:22px;vertical-align:middle;margin:0 5px 0 0;accent-color:#d6b15a}.poolDisciplineOption label{margin:0}
+.poolHistory{margin:14px 0;border:1px solid #587d64;border-radius:10px;padding:12px;overflow:auto}.poolHistory section{border-top:1px solid #52715d;padding:8px 0}.poolHistory table{width:100%;border-collapse:collapse}.poolHistory td,.poolHistory th{padding:8px;border-bottom:1px solid #52715d;text-align:left}.poolHistory h4{margin:10px 0}
+.poolScoreFullscreen .clubBrand,.poolScoreFullscreen .appUtilityNav,.poolScoreFullscreen #poolSingleSettings,.poolScoreFullscreen #singleHome{display:none!important}.poolScoreFullscreen #poolSingleBoard{min-height:92dvh;display:grid;align-content:center}.poolScoreFullscreen .app{max-width:none}
+.poolTheme #singleMode.poolSingleActive > :not(#poolSinglePanel):not(#singleHome){display:none!important}
+@media(max-width:420px){.poolDisciplineOption{grid-template-columns:1fr}.poolTheme .monitorName{font-size:20px}}
+
+[data-exit-full]{display:none}.poolScoreFullscreen [data-exit-full]{display:block;position:sticky;top:0;z-index:10}.poolTheme .tournamentMatch>.poolHistory{grid-column:1/-1}
+
+.poolTheme body.snookerFullscreenTournament #tournamentMode,.poolTheme body.monitorOverviewFullscreen #tournamentMonitors,.poolTheme body.tableMonitorFullscreen #tableMode{background:#031a11!important}

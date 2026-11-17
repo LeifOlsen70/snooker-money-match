@@ -1,7 +1,9 @@
 export function createTableSync({auth,db,doc,getDoc,getDocFromServer,onSnapshot,runTransaction}){
   const model=window.SnookerTableScore;
+  const tableCollection=window.ClubSport?.tableCollection??'tables';
+  const pool=window.ClubSport?.pool===true;
   let role=null,user=null,stops=[],cache=new Map(),organizer=null,queue=Promise.resolve(),syncCount=0,session=0;
-  const ref=slot=>doc(db,'snookerTableBoards',organizer,'tables',String(slot));
+  const ref=slot=>doc(db,'snookerTableBoards',organizer,tableCollection,String(slot));
   // Firestore forbids arrays directly inside arrays. Keep the model/JSON format
   // unchanged; only manual-result break lists use a map on the wire.
   function encodeState(state){return {...state,events:state.events.map(event=>event.type==='manual'?{...event,breaks:{player0:event.breaks[0],player1:event.breaks[1]}}:event)}}
@@ -36,7 +38,7 @@ export function createTableSync({auth,db,doc,getDoc,getDocFromServer,onSnapshot,
   async function reserveTransaction(work){for(let attempt=0;attempt<40;attempt++){try{return await runTransaction(db,work)}catch(err){if(err.code!=='table-code-collision')throw err}}throw Error('Kein freier Tischcode gefunden. Bitte erneut versuchen.')}
   function tournamentKey(data){return (data.freeTournament?'free:':'club:')+String(data.started)}
   function assignment(data,round,index,match){
-    return {id:[data.freeTournament?'free':'club',data.started,round,index,match.startedAt].join(':'),tournament:String(data.started),frameTimeLimitMinutes:data.frameTimeLimitMinutes??0,round,index,names:match.players.map(id=>data.players[id]),players:[...match.players],rules:data.framesPerMatch!=null?{framesPerMatch:data.framesPerMatch}:{target:data.target}};
+    return window.ClubSport?.assignment?window.ClubSport.assignment(data,round,index,match):{id:[data.freeTournament?'free':'club',data.started,round,index,match.startedAt].join(':'),tournament:String(data.started),frameTimeLimitMinutes:data.frameTimeLimitMinutes??0,round,index,names:match.players.map(id=>data.players[id]),players:[...match.players],rules:data.framesPerMatch!=null?{framesPerMatch:data.framesPerMatch}:{target:data.target}};
   }
   function sync(data,{before=null,replace=false,monitorSource=false}={}){
     if(role!=='owner'||!active()||!data)return Promise.resolve();
@@ -64,10 +66,10 @@ export function createTableSync({auth,db,doc,getDoc,getDocFromServer,onSnapshot,
           if(activeSlot&&newTournament&&(await tx.get(inviteRef)).data())throw Object.assign(Error('Code bereits vergeben.'),{code:'table-code-collision'});
           const oldRef=existing?.joinToken&&existing.joinToken!==joinToken?doc(db,'snookerTableInvites',existing.joinToken):null;
           const oldInvite=oldRef?(await tx.get(oldRef)).data():null;
-          const shared={schema:3,tableNumber:slot,tournamentKey:key,joinToken,joinGeneration,joinOpen:activeSlot&&!snapshot.ended};
+          const shared={schema:4,tableNumber:slot,tournamentKey:key,joinToken,joinGeneration,joinOpen:activeSlot&&!snapshot.ended};
           if(token!==session||!active())throw Error('Anmeldung wurde gewechselt.');
           if(oldInvite?.owner===organizer&&oldInvite.slot===slot)tx.delete(oldRef);
-          if(activeSlot&&newTournament)tx.set(inviteRef,{owner:organizer,slot,tournamentKey:key,generation:joinGeneration});
+          if(activeSlot&&newTournament)tx.set(inviteRef,{owner:organizer,slot,tournamentKey:key,generation:joinGeneration,...(pool?{sport:'pool'}:{})});
           if(!selected){
             const next={...shared,assignment:null,enabled:false,state:model.initial((existing?.state?.revision??0)+1)};
             if(newTournament||existing?.joinToken!==joinToken||existing?.assignment||existing?.enabled||existing?.joinOpen!==shared.joinOpen)tx.set(ref(slot),encodeBoard(next));
@@ -136,7 +138,7 @@ export function createTableSync({auth,db,doc,getDoc,getDocFromServer,onSnapshot,
       if(!board?.joinOpen||!/^\d{4}$/.test(board.joinToken??''))throw Error('Tischcodes zuerst aktualisieren.');
       const generation=randomGeneration(),next={...board,joinGeneration:generation};
       tx.set(ref(slot),encodeBoard(next));
-      tx.set(doc(db,'snookerTableInvites',board.joinToken),{owner:organizer,slot,tournamentKey:board.tournamentKey,generation});
+      tx.set(doc(db,'snookerTableInvites',board.joinToken),{owner:organizer,slot,tournamentKey:board.tournamentKey,generation,...(pool?{sport:'pool'}:{})});
       return {...next,slot};
     });
     if(token===session&&active()){cache.set(slot,saved);notify()}

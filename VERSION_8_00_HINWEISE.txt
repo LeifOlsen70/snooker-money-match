@@ -1,0 +1,1 @@
+8.00 – Gemeinsamer Einstieg Snooker / Poolbillard, grünes Pooldesign, getrennte Spielstände und Tischbereiche, Mehrfachauswahl 8/9/10-Ball und 14/1, Frame-Gesamtergebnis, Disziplin-/Frame-Historie, unabhängige Pool-Tabellen und Elo. Neue Firebase-Regeln erforderlich. Siehe README.txt.

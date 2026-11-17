@@ -1,8 +1,8 @@
 {
   "id": "./",
-  "name": "Snooker Money Match",
-  "short_name": "Snooker Match",
-  "description": "Snooker Match-, Break- und Geldabrechnung",
+  "name": "Billard & Snooker Club",
+  "short_name": "Billard Club",
+  "description": "Billard Club-, Break- und Geldabrechnung",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",

@@ -1,2 +1,2 @@
-Version 7.78
+Version 8.00
 Menü: Tischgerät abmelden, mit Auswahl und Bestätigung. Nur Turnierersteller. Bestehende Verbindung wird serverseitig entzogen, Spielstand und zufälliger vierstelliger Code bleiben erhalten. Ein anderes Gerät kann anschließend beitreten. Firestore-Regeln unverändert gegenüber 7.77.

@@ -1,19 +1,27 @@
-const CACHE_NAME = 'v7-78-dismiss-table';
+const CACHE_NAME = 'v8-00-club-sports';
 const APP_SHELL = [
   './',
   './index.html',
+  './app.html',
+  './app.html?sport=pool',
+  './app.html?sport=snooker',
+  './sports.js?v=8.00',
+  './pool-single.js?v=8.00',
+  './pool.css?v=8.00',
+  './pool-logo.png',
+  './pool-infos.html',
   './infos.html',
-  './app-navigation.js?v=7.78',
-  './account-access.js?v=7.78',
-  './access-ui.js?v=7.78',
-  './table-access.js?v=7.78',
-  './table-score.js?v=7.78',
-  './table-sync.js?v=7.78',
-  './table-monitor.js?v=7.78',
-  './firebase-sync.js?v=7.78',
-  './pdf-export.js?v=7.78',
-  './tournament.js?v=7.78',
-  './tournament.css?v=7.78',
+  './app-navigation.js?v=8.00',
+  './account-access.js?v=8.00',
+  './access-ui.js?v=8.00',
+  './table-access.js?v=8.00',
+  './table-score.js?v=8.00',
+  './table-sync.js?v=8.00',
+  './table-monitor.js?v=8.00',
+  './firebase-sync.js?v=8.00',
+  './pdf-export.js?v=8.00',
+  './tournament.js?v=8.00',
+  './tournament.css?v=8.00',
   './manifest.webmanifest',
   './icon-192.png',
   './icon-512.png',
@@ -46,8 +54,8 @@ self.addEventListener('fetch', event => {
   // For app navigation: use the newest online copy when possible,
   // otherwise fall back to the locally cached app.
   if (request.mode === 'navigate') {
-    const navigationFile = new URL(request.url).pathname === new URL('./infos.html', self.registration.scope).pathname
-      ? './infos.html' : './index.html';
+    const path=new URL(request.url).pathname;
+    const navigationFile=path.endsWith('/app.html')?'./app.html'+new URL(request.url).search:path.endsWith('/pool-infos.html')?'./pool-infos.html':path.endsWith('/infos.html')?'./infos.html':'./index.html';
     event.respondWith(
       fetch(request, {cache: 'no-cache'})
         .then(response => {
@@ -59,7 +67,7 @@ self.addEventListener('fetch', event => {
         })
         .catch(async () => {
           return (await caches.match(navigationFile)) ||
-                 (await caches.match('./')) ||
+                 (path.endsWith('/app.html')?await caches.match('./app.html'):await caches.match('./index.html')) ||
                  Response.error();
         })
     );

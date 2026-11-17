@@ -11,8 +11,8 @@
   const guestKey = 'snooker-local-mode-v1';
   const guest = raw.getItem(guestKey) === '1';
   const uid = guest ? null : raw.getItem(activeKey);
-  const prefix = account => 'snooker-account-v1:' + account + ':';
-  const storagePrefix = uid ? prefix(uid) : 'snooker-guest-v1:';
+  const prefix = account => 'snooker-account-v1:' + account + (window.ClubSport?.pool ? ':pool:' : ':');
+  const storagePrefix = uid ? prefix(uid) : (window.ClubSport?.pool?'pool-guest-v1:':'snooker-guest-v1:');
   window.snookerStorage = Object.freeze({
     uid,
     getItem(key) { return raw.getItem(storagePrefix + key); },
@@ -82,7 +82,7 @@
     const next = account?.uid || null;
     if (next === uid) return false;
     ready = false;
-    if (next === legacyOwner && !raw.getItem(prefix(next) + 'legacy-migrated')) {
+    if (!window.ClubSport?.pool && next === legacyOwner && !raw.getItem(prefix(next) + 'legacy-migrated')) {
       for (const key of keys) {
         const value = raw.getItem(key);
         if (value !== null && raw.getItem(prefix(next) + key) === null) raw.setItem(prefix(next) + key, value);
@@ -125,7 +125,7 @@
       if (guest && result?.user) {
         const account = result.user;
         // Use the same migration path when the old owner logs in from guest mode.
-        if (account.uid === legacyOwner && !raw.getItem(prefix(account.uid) + 'legacy-migrated')) {
+        if (!window.ClubSport?.pool && account.uid === legacyOwner && !raw.getItem(prefix(account.uid) + 'legacy-migrated')) {
           for (const key of keys) {
             const value = raw.getItem(key);
             if (value !== null && raw.getItem(prefix(account.uid) + key) === null) raw.setItem(prefix(account.uid) + key,value);

@@ -1,6 +1,8 @@
 (() => {
   'use strict';
   const localStorage = window.snookerStorage;
+  const isPool=window.ClubSport?.pool===true;
+  const matchRules=data=>window.ClubSport?.rules?window.ClubSport.rules(data):(data.framesPerMatch!=null?{framesPerMatch:data.framesPerMatch}:{target:data.target});
 
   const key = 'snookerSwissTournamentV1';
   const panel = $('tournamentMode');
@@ -134,7 +136,7 @@
     if (!filename) return false;
     if (!filename.toLowerCase().endsWith('.json')) filename += '.json';
     data.filename = filename;
-    return (await shareJsonFile({app:'Snooker Swiss Tournament', version:1, tournament:data}, filename, 'Snooker-Turnier speichern')) !== false;
+    return (await shareJsonFile({app:'Snooker Swiss Tournament', version:1, tournament:data}, filename, isPool?'Pool-Turnier speichern':'Snooker-Turnier speichern')) !== false;
   }
   async function finishTournament() {
     if (openMatch !== null && !confirm('Ergebniseingabe ohne Speichern verlassen?')) return;
@@ -255,12 +257,12 @@
   // A match.result remains reserved for a completed match, so standings and
   // pairings are never awarded points for merely starting a frame.
   function liveMatchSummary(match, data = tournament) {
-    if (match.result) return {frames:match.result.frames, breaks:match.result.breaks, complete:true};
+    if (match.result && !isPool) return {frames:match.result.frames, breaks:match.result.breaks, complete:true};
     const state=match.scoreMonitor?.state;
     if (!state) return null;
     try {
       return window.SnookerTableScore.derive(state,
-        data.framesPerMatch != null ? {framesPerMatch:data.framesPerMatch} : {target:data.target});
+        matchRules(data));
     } catch { return null; }
   }
   function playerBreaks(data, id) {
@@ -271,7 +273,7 @@
       const summary=liveMatchSummary(match,data);
       if (summary) result.push(...(summary.breaks?.[index]??[]));
     }
-    return result.filter(value => Number.isInteger(value) && value>=20 && value<=155);
+    return result.filter(value => Number.isInteger(value) && value>=20 && value<=(isPool?9999:155));
   }
   // Only confirmed results and assigned byes count toward the standings.
   function standings(rounds = tournament.rounds, data = tournament) {
@@ -997,7 +999,7 @@
         <form id="tournamentSetup">
           <div class="tournamentFields tournamentSetupFields">
             <label>Datum<input name="playDate" type="date" required value="${localDateValue(Date.now())}"></label>
-            <label>Spieleranzahl
+            <label>${isPool?'Anzahl Spieler / Teams':'Spieleranzahl'}
               <select name="count">${Array.from({length:11}, (_, i) =>
                 `<option ${i === 2 ? 'selected' : ''}>${i + 2}</option>`).join('')}</select>
             </label>
@@ -1011,7 +1013,7 @@
             <label id="tournamentEndTime" class="hidden">Endzeit
               <input name="endAt" type="time" value="${localTime(Date.now()+3*3600000)}">
             </label>
-            <label>Frames pro Match
+            <label ${isPool?'hidden':''}>Frames pro Match
               <select name="framesPerMatch">${options(50, 2)}</select>
             </label>
             <label>Punkte pro Freilos
@@ -1029,6 +1031,7 @@
               <span class="small">0 = keine Warnung. Neustart der Warnzeit nach jedem Frame.</span>
             </label>
           </div>
+          ${isPool?window.ClubSport.fields():''}
           <section class="tournamentRoster" aria-label="Gespeicherte Spieler">
             <h3>Spieler auswählen</h3>
             <p class="small">Namen antippen, um sie für dieses Turnier auszuwählen oder abzuwählen. Zum Bearbeiten oder Löschen auf ⋯ tippen oder die Zeile nach links wischen.</p>
@@ -1045,6 +1048,7 @@
       </div>`;
 
     const form = $('tournamentSetup');
+    if(isPool)window.ClubSport.bindFields(form);
     const names = $('tournamentNames');
     const drafts = [];
     let suppressPickUntil = 0;
@@ -1209,6 +1213,8 @@
         $('tournamentSetupError').textContent = 'Bitte für jeden Spieler einen eindeutigen Namen eingeben.';
         return;
       }
+      let poolConfig={};
+      if(isPool){try{poolConfig=window.ClubSport.read(form);if(poolConfig.poolMode==='double'&&players.some(n=>n.split('&').filter(x=>x.trim()).length!==2))throw Error('Bei Doppel jedes Team mit zwei Namen eintragen: Name & Name.');}catch(err){$('tournamentSetupError').textContent=err.message;return;}}
       const playDate = form.elements.playDate.value;
       const timed = form.elements.duration.value === 'endless';
       const endAt = !timed ? null : playDate === localDateValue(Date.now())
@@ -1227,6 +1233,8 @@
       const parkedTournament = changeType ? unpairedTournament(tournament) : tournament?.parkedTournament;
       const parkedAt = changeType ? Date.now() : tournament?.parkedAt;
       tournament = {
+        ...poolConfig,
+        ...(isPool?{poolArchive:archivePool(previous)}:{}),
         players,
         freeTournament,
         parkedTournament,
@@ -1238,7 +1246,7 @@
         seasonStarted: freeTournament ? undefined : previous?.seasonStarted,
         seasonArchive: freeTournament ? undefined : previous?.seasonArchive,
         limit: form.elements.duration.value === 'endless' ? null : Number(form.elements.rounds.value),
-        framesPerMatch: Number(form.elements.framesPerMatch.value),
+        framesPerMatch: isPool?poolConfig.poolRules.framesPerMatch:Number(form.elements.framesPerMatch.value),
         byePoints: Number(form.elements.byePoints.value),
         tables: Number(form.elements.tables.value),
         frameTimeLimitMinutes,
@@ -1269,6 +1277,7 @@
       <h4>${names.join(' – ')}</h4>
       <p class="tournamentStatus">${status}${match.result ? ` · ${match.result.frames.join(':')}` : live && match.table ? ` · Frames ${live.frames.join(':')}` : ''}</p>
       ${renderMatchTime(match, index)}
+      ${isPool&&live?window.ClubSport.history(live,match.players.map(id=>tournament.players[id])):''}
       ${live ? live.breaks.map((breaks, i) =>
         breaks.length ? `<p class="small"><strong>${names[i]}</strong> · Breaks: ${breaks.join(', ')}</p>` : ''
       ).join('') : ''}
@@ -1283,6 +1292,7 @@
 
   function openResultDialog(match, index) {
     if (openMatch !== null || tournament.ended || (!match.table && !match.result)) return;
+    if(isPool){const [r,m]=index.split(':').map(Number);window.snookerMonitors.openMatch(tournament,r,m,match);return;}
     openMatch = index;
     const names = match.players.map(id => esc(tournament.players[id]));
     const frames = [...(match.result?.frames ?? [0, 0])];
@@ -1371,6 +1381,17 @@
     dialog.showModal();
   }
 
+  function poolArchiveEntry(data){return {started:data.started,playDate:data.playDate,players:clone(data.players),poolRules:clone(data.poolRules),rounds:clone(data.rounds)}}
+  function archivePool(previous){
+    const list=clone(previous?.poolArchive??[]);
+    if(previous?.poolRules&&previous.rounds.some(r=>r.matches.some(m=>m.scoreMonitor||m.result))&&!list.some(d=>d.started===previous.started))list.push(poolArchiveEntry(previous));
+    return list;
+  }
+  function renderPoolArchive(data){
+    const days=[...(data.poolArchive??[]),poolArchiveEntry(data)].sort((a,b)=>b.started-a.started);
+    return '<section class="card"><h2>Spielhistorie</h2>'+days.map(day=>`<details open><summary>${esc(day.playDate??new Date(day.started).toLocaleDateString('de-DE'))}</summary>${day.rounds.map((r,i)=>`<section><h3>Runde ${i+1}</h3>${r.matches.map(m=>{let value;try{value=m.scoreMonitor?window.SnookerTableScore.derive(m.scoreMonitor.state,day.poolRules):null}catch{}return `<article><h4>${m.players.map(id=>esc(day.players[id])).join(' – ')} · ${value?value.frames.join(':'):'noch offen'}</h4>${value?window.ClubSport.history(value,m.players.map(id=>day.players[id])):'<p>Noch keine Eingabe.</p>'}</article>`}).join('')}</section>`).join('')}</details>`).join('')+'</section>';
+  }
+
   function renderStandings(data = tournament) {
     const rows = standings(data.rounds, data);
     const tableRows = rows.map(row => {
@@ -1406,7 +1427,7 @@
     if(!tournament)return;
     for(const button of panel.querySelectorAll('[data-edit]')){
       const [r,m]=button.dataset.edit.split(':').map(Number),match=tournament.rounds[r]?.matches[m];if(!match)continue;
-      const rules=tournament.framesPerMatch!=null?{framesPerMatch:tournament.framesPerMatch}:{target:tournament.target};
+      const rules=matchRules(tournament);
       const warning=window.SnookerTableScore.frameWarning(match.scoreMonitor?.state,rules,match.startedAt,tournament.frameTimeLimitMinutes,now,Boolean(tournament.ended||match.result));
       button.classList.toggle('frameLimitExceeded',warning.overdue);
       const text=warning.overdue?'⚠ Spielzeit überschritten':(match.result?'Ergebnis korrigieren':'Ergebnis eintragen');
@@ -1423,22 +1444,25 @@
   }
 
   function validBackup(data, allowParked = true) {
+    if(isPool !== (data?.sport==='pool'))return false;
+    if(isPool){try{window.SnookerTableScore.validPoolRules(data.poolRules);if(data.framesPerMatch!==data.poolRules.framesPerMatch)return false;}catch{return false;}}
     const integer = (value, min, max) => Number.isInteger(value) && value >= min && value <= max;
     try{for(const round of data?.rounds??[])for(const match of round.matches??[]){
       if(match.scoreMonitor){
         if(typeof match.scoreMonitor.assignmentId!=='string'||match.scoreMonitor.assignmentId.length>400)return false;
-        const state=match.scoreMonitor.state,rules=data.framesPerMatch!=null?{framesPerMatch:data.framesPerMatch}:{target:data.target};
+        const state=match.scoreMonitor.state,rules=matchRules(data);
         window.SnookerTableScore.derive(state,rules);
         window.SnookerTableScore.derive({...state,cursor:state.events.length},rules);
       }
     }}catch{return false;}
+    if(isPool){try{for(const day of data.poolArchive??[]){if(!Array.isArray(day.players)||!Array.isArray(day.rounds))return false;window.SnookerTableScore.validPoolRules(day.poolRules);for(const round of day.rounds)for(const match of round.matches)if(match.scoreMonitor){const st=match.scoreMonitor.state;window.SnookerTableScore.derive(st,day.poolRules);window.SnookerTableScore.derive({...st,cursor:st.events.length},day.poolRules);}}}catch{return false;}}
     const timestamp = value => value == null || (Number.isFinite(value) && value >= 0);
     if (!data || !Array.isArray(data.players) || !integer(data.players.length, 2, 12)
       || !data.players.every(name => typeof name === 'string' && name.trim())
       || !integer(data.tables, 1, 6)
       || (data.frameTimeLimitMinutes!=null&&!integer(data.frameTimeLimitMinutes,0,1440))
       || (data.framesPerMatch == null ? !integer(data.target, 1, 50)
-        : !integer(data.framesPerMatch, 1, 50) || ![0, 0.5, 1].includes(data.byePoints))
+        : !integer(data.framesPerMatch, 1, isPool?200:50) || ![0, 0.5, 1].includes(data.byePoints))
       || !Array.isArray(data.rounds) || !data.rounds.length
       || !(data.limit === null || integer(data.limit, data.rounds.length, 999))
       || (data.playDate != null && (typeof data.playDate !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(data.playDate)))
@@ -1452,7 +1476,7 @@
       day.rows.every(row => row && typeof row.name === 'string' && row.name.trim() &&
         Number.isFinite(row.points) && row.points >= 0 &&
         (row.place == null || integer(row.place,1,12)) &&
-        (row.highestBreak == null || integer(row.highestBreak,0,155)));
+        (row.highestBreak == null || integer(row.highestBreak,0,isPool?9999:155)));
     if (data.overallDays != null && (!Array.isArray(data.overallDays) || !data.overallDays.every(validDay))) return false;
     if (data.yearDays != null && (!Array.isArray(data.yearDays) || !data.yearDays.every(validDay))) return false;
     if (data.deletedDays != null && (!Array.isArray(data.deletedDays) ||
@@ -1462,7 +1486,7 @@
         (season.days == null || (Array.isArray(season.days) && season.days.every(validDay))) &&
         Array.isArray(season.rows) && season.rows.every(row => row && typeof row.name === 'string' &&
           Number.isFinite(row.points) && Number.isInteger(row.place) && Number.isInteger(row.appearances) &&
-          (row.highestBreak == null || integer(row.highestBreak,0,155))))))) return false;
+          (row.highestBreak == null || integer(row.highestBreak,0,isPool?9999:155))))))) return false;
     if ((data.freeTournament != null && typeof data.freeTournament !== 'boolean') ||
       !timestamp(data.parkedAt) || (data.parkedTournament != null &&
         (!allowParked || Boolean(data.freeTournament) === Boolean(data.parkedTournament.freeTournament) ||
@@ -1487,9 +1511,10 @@
         players.push(...match.players);
         if (match.result === null) continue;
         const result = match.result;
+        if(isPool){if(!match.scoreMonitor)return false;const v=window.SnookerTableScore.derive(match.scoreMonitor.state,data.poolRules);if(!v.complete||JSON.stringify(v.frames)!==JSON.stringify(result.frames)||JSON.stringify(v.breaks)!==JSON.stringify(result.breaks))return false;}
         if (!result || !Array.isArray(result.frames) || !validMatchFrames(result.frames, data)
           || !Array.isArray(result.breaks) || result.breaks.length !== 2
-          || !result.breaks.every(list => Array.isArray(list) && list.every(value => integer(value, 20, 155)))) return false;
+          || !result.breaks.every(list => Array.isArray(list) && list.every(value => integer(value, 20, isPool?9999:155)))) return false;
       }
       return new Set(players).size === players.length;
     });
@@ -1743,12 +1768,15 @@
           aria-pressed="${view === 'overall'}">${tournament.freeTournament ? 'Gesamt' : 'Tabelle Saison'}</button>
         <button type="button" id="tournamentDaysView" class="${view === 'days' ? 'primary' : 'secondary'}"
           aria-pressed="${view === 'days'}">${tournament.freeTournament ? 'Spieltage' : 'Spieltage &amp; Elo'}</button>
+        ${isPool?`<button type="button" id="poolHistoryView" class="${view==='poolHistory'?'primary':'secondary'}" aria-pressed="${view==='poolHistory'}">Spielhistorie</button>`:''}
       </nav>`);
     $('tournamentMonitorsView').onclick=()=>showTournamentView('monitors');
     $('tournamentRoundsView').onclick = () => showTournamentView('rounds');
     $('tournamentStandingsView').onclick = () => showTournamentView('standings');
     $('tournamentOverallView').onclick = () => showTournamentView('overall');
     if ($('tournamentDaysView')) $('tournamentDaysView').onclick = () => showTournamentView('days');
+    if(isPool)$('poolHistoryView').onclick=()=>showTournamentView('poolHistory');
+    if(view==='poolHistory'){panel.insertAdjacentHTML('beforeend',renderPoolArchive(tournament));return;}
     if(view==='monitors'){const container=document.createElement('div');container.id='tournamentMonitors';panel.append(container);window.snookerMonitors?.renderOverview(container,tournament);return;}
     if (view === 'standings' || view === 'overall' || view === 'days') {
       renderLiveStatus();
@@ -1874,7 +1902,7 @@ window.snookerTournamentBridge=Object.freeze({
       const summary=window.SnookerTableScore.derive(board.state,a.rules);
       match.scoreMonitor={assignmentId:a.id,state:clone(board.state)};
       if(summary.complete){
-        match.result={frames:summary.frames,breaks:summary.breaks};match.monitorResult=true;
+        match.result={frames:summary.frames,breaks:summary.breaks,...(isPool?{disciplines:clone(summary.disciplines)}:{})};match.monitorResult=true;
         match.finishedAt=summary.finishedAt;
         if(!tournament.freeTournament)match.eloAt=summary.finishedAt;
       }else if(match.monitorResult||board.forceResult){match.result=null;delete match.finishedAt;delete match.eloAt;delete match.monitorResult;}
