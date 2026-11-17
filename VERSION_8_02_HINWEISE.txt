@@ -1,0 +1,1 @@
+8.02 – Pool-Anzeigen: Punkte erreicht – Sieger bestätigen in Signalfarbe, weiterhin Punkteingabe möglich. 14/1-Historie mit Punkte-Endständen und einer HB-Zeile, ohne vollständige Break-Liste. 8/9/10-Ball-Historie nur mit Disziplinergebnis, ohne Frame-Tabelle. Alle Protokolldaten bleiben gespeichert. Keine Firebase-Regeländerung.
