@@ -1008,7 +1008,7 @@
         <form id="tournamentSetup">
           <div class="tournamentFields tournamentSetupFields">
             <label>Datum<input name="playDate" type="date" required value="${localDateValue(Date.now())}"></label>
-            <label>${isPool?'Anzahl Spieler / Teams':'Spieleranzahl'}
+            <label><span id="tournamentCountLabel">Spieleranzahl</span>
               <select name="count">${Array.from({length:11}, (_, i) =>
                 `<option ${i === 2 ? 'selected' : ''}>${i + 2}</option>`).join('')}</select>
             </label>
@@ -1061,6 +1061,8 @@
     const names = $('tournamentNames');
     const drafts = [];
     let suppressPickUntil = 0;
+    let partnerTarget = null;
+    const isDouble=()=>isPool&&form.elements.poolMode.value==='double';
     function editPlayer(name, inputs) {
       const dialog = document.createElement('dialog');
       dialog.className = 'tournamentDialog';
@@ -1110,6 +1112,7 @@
       const inputs = Array.from(names.querySelectorAll('input'));
       const selected = new Set(inputs.map(input => input.value.trim().toLocaleLowerCase('de')));
       $('savedTournamentPlayers').innerHTML = playerNames.map((name,i) => {
+        if(isDouble()&&name.includes('&'))return '';
         const active = selected.has(name.toLocaleLowerCase('de'));
         return `<div class="tournamentPlayerRow">
           <div class="tournamentPlayerFace">
@@ -1154,9 +1157,9 @@
         const existing = inputs.find(input => input.value.trim().toLocaleLowerCase('de') === name.toLocaleLowerCase('de'));
         if (existing) existing.value = '';
         else {
-          const empty = inputs.find(input => !input.value.trim());
+          const empty = isDouble()&&partnerTarget&&inputs.includes(partnerTarget)?partnerTarget:inputs.find(input => !input.value.trim());
           if (!empty) { $('tournamentPlayerMessage').textContent = 'Alle Plätze belegt. Bitte die Spieleranzahl erhöhen oder einen Namen abwählen.'; return; }
-          empty.value = name;
+          empty.value = name; partnerTarget=null;
         }
         $('tournamentPlayerMessage').textContent = ''; renderPlayerList();
       });
@@ -1174,22 +1177,27 @@
     $('addTournamentPlayer').onclick = () => {
       const input = $('newTournamentPlayerName'), name = input.value.trim();
       if (!name) { $('tournamentPlayerMessage').textContent = 'Bitte einen Namen eingeben.'; return; }
+      if(isDouble()&&name.includes('&')){$('tournamentPlayerMessage').textContent='Bitte nur einen einzelnen Spielernamen eingeben.';return;}
       rememberPlayers([name]); input.value = ''; renderPlayerList();
-      const slot = Array.from(names.querySelectorAll('input')).find(input => !input.value.trim());
+      const slot = isDouble()&&partnerTarget&&Array.from(names.querySelectorAll('input')).includes(partnerTarget)?partnerTarget:Array.from(names.querySelectorAll('input')).find(input => !input.value.trim());
       const alreadySelected = Array.from(names.querySelectorAll('input')).some(input => input.value.trim().toLocaleLowerCase('de') === name.toLocaleLowerCase('de'));
       if (slot && !alreadySelected) slot.value = playerNames.find(saved => saved.toLocaleLowerCase('de') === name.toLocaleLowerCase('de'));
-      $('tournamentPlayerMessage').textContent = 'Spieler gespeichert.'; renderPlayerList();
+      partnerTarget=null; $('tournamentPlayerMessage').textContent = 'Spieler gespeichert.'; renderPlayerList();
     };
     $('newTournamentPlayerName').onkeydown = event => {
       if (event.key === 'Enter') { event.preventDefault(); $('addTournamentPlayer').click(); }
     };
     function renderNames() {
       names.querySelectorAll('input').forEach((input, i) => { drafts[i] = input.value; });
-      names.innerHTML = Array.from({length:Number(form.elements.count.value)}, (_, i) =>
-        `<label>Spieler ${i + 1}<input name="player" maxlength="60" required value="${esc(drafts[i] || '')}"></label>`
+      partnerTarget=null;
+      $('tournamentCountLabel').textContent=isDouble()?'Anzahl Teams':'Spieleranzahl';
+      names.innerHTML = Array.from({length:Number(form.elements.count.value)}, (_, i) => isDouble()
+        ? `<section class="poolTeamSetup"><h3>Team ${i+1}</h3>${[0,1].map(j=>`<label>Teampartner ${j+1}<input name="player" maxlength="60" required placeholder="Aus Liste wählen oder neuen Namen eingeben" value="${esc(drafts[i*2+j] || '')}"></label>`).join('')}</section>`
+        : `<label>Spieler ${i + 1}<input name="player" maxlength="60" required value="${esc(drafts[i] || '')}"></label>`
       ).join('');
       names.querySelectorAll('input').forEach(input => {
-        input.onchange = () => { rememberPlayers([input.value]); renderPlayerList(); };
+        input.onfocus=()=>{partnerTarget=input;};
+        input.onchange = () => { if(!isDouble()||!input.value.includes('&'))rememberPlayers([input.value]); renderPlayerList(); };
         input.oninput = renderPlayerList;
       });
       renderPlayerList();
@@ -1197,6 +1205,7 @@
     refreshPlayerList = renderPlayerList;
     renderNames();
     form.elements.count.onchange = renderNames;
+    if(isPool)form.elements.poolMode.onchange=renderNames;
     form.elements.duration.onchange = () => {
       const endless = form.elements.duration.value === 'endless';
       $('tournamentRoundCount').classList.toggle('hidden', endless);
@@ -1217,13 +1226,14 @@
     };
     form.onsubmit = event => {
       event.preventDefault();
-      const players = new FormData(form).getAll('player').map(name => name.trim());
-      if (players.some(name => !name) || new Set(players.map(name => name.toLocaleLowerCase('de'))).size !== players.length) {
+      const individualNames = new FormData(form).getAll('player').map(name => name.trim());
+      const players=isDouble()?Array.from({length:individualNames.length/2},(_,i)=>individualNames.slice(i*2,i*2+2).join(' & ')):individualNames;
+      if (individualNames.some(name => !name || (isDouble()&&name.includes('&'))) || new Set(individualNames.map(name => name.toLocaleLowerCase('de'))).size !== individualNames.length) {
         $('tournamentSetupError').textContent = 'Bitte für jeden Spieler einen eindeutigen Namen eingeben.';
         return;
       }
       let poolConfig={};
-      if(isPool){try{poolConfig=window.ClubSport.read(form);if(poolConfig.poolMode==='double'&&players.some(n=>n.split('&').filter(x=>x.trim()).length!==2))throw Error('Bei Doppel jedes Team mit zwei Namen eintragen: Name & Name.');}catch(err){$('tournamentSetupError').textContent=err.message;return;}}
+      if(isPool){try{poolConfig=window.ClubSport.read(form);}catch(err){$('tournamentSetupError').textContent=err.message;return;}}
       const playDate = form.elements.playDate.value;
       const timed = form.elements.duration.value === 'endless';
       const endAt = !timed ? null : playDate === localDateValue(Date.now())
@@ -1237,7 +1247,7 @@
       const freeTournament = draftFreeTournament ?? Boolean(tournament?.freeTournament);
       const previous = tournamentOfType(freeTournament);
       if (previous && !confirm('Das bisherige Turnier dieser Turnierart wird ersetzt. Fortfahren?')) return;
-      rememberPlayers(players);
+      rememberPlayers(individualNames);
       const changeType = Boolean(tournament) && Boolean(tournament.freeTournament) !== freeTournament;
       const parkedTournament = changeType ? unpairedTournament(tournament) : tournament?.parkedTournament;
       const parkedAt = changeType ? Date.now() : tournament?.parkedAt;

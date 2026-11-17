@@ -27,3 +27,6 @@ html.poolTheme{background:#04170f}.poolTheme body{background:radial-gradient(ell
 .poolTheme .poolTargetReached{background:#ffe044!important;color:#251400!important;border:3px solid #ff8b19;border-left-width:8px;border-radius:12px;padding:14px 16px;margin:16px 0;font-size:clamp(18px,4.5vw,25px);font-weight:900;line-height:1.35;box-shadow:0 0 0 2px #201307,0 4px 18px #0007}
 
 .poolTheme .poolFinishedMatch{background:#102f22;border-color:#638468!important}.poolFinishedMatch strong{color:#f2d17c}.poolFinishedMatch .tournamentStatus{font-weight:700}
+
+.poolTeamSetup { padding: 14px; border: 1px solid var(--gold, #b9a362); border-radius: 14px; display: grid; gap: 12px; }
+.poolTeamSetup h3 { margin: 0; }
