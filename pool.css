@@ -19,3 +19,6 @@ html.poolTheme{background:#04170f}.poolTheme body{background:radial-gradient(ell
 [data-exit-full]{display:none}.poolScoreFullscreen [data-exit-full]{display:block;position:sticky;top:0;z-index:10}.poolTheme .tournamentMatch>.poolHistory{grid-column:1/-1}
 
 .poolTheme body.snookerFullscreenTournament #tournamentMode,.poolTheme body.monitorOverviewFullscreen #tournamentMonitors,.poolTheme body.tableMonitorFullscreen #tableMode{background:#031a11!important}
+
+.poolProgressBadges{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}.poolProgressBadges span{border:1px solid #9b8c4d;background:#193e2c;padding:8px 12px;border-radius:20px;font-weight:700}
+.poolDirectorSummary p{font-size:.9rem}.poolDisciplineSection{border:1px solid #607b59;border-radius:12px;padding:12px;margin:12px 0}.poolDisciplineSection>summary{font-weight:800;font-size:1.1rem;color:#f4d58b}.poolDisciplineSection small{display:block;margin-top:7px;font-size:.8rem;color:#cfddca}.poolGroupLabel{color:#9de0ad;margin:14px 0 5px}.poolMatchDiscipline{font-size:.8rem;color:#d9c784;margin:0!important}.poolRunningRow{border:1px solid #a58d4e;border-radius:12px;margin:12px 0;padding:14px;background:#103c29}.poolRunningRow h3{font-size:1.05rem;color:#edce7a}.poolRunningRow p{margin:6px 0}.poolRunningRow button{margin-top:8px!important}

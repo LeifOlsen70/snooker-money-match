@@ -1,0 +1,1 @@
+8.01 – Neue Pool-Turniere: jeder gegen jeden je Disziplin, gleitender Disziplin-/Rundenwechsel, Übersicht nach Runde und Disziplin, Pausieren, Gesamtwertung erst nach allen Disziplinen einer Paarung. Alte Pool-Turniere behalten den alten Ablauf. Snooker / Einzel unverändert. Firebase-Regeln identisch zu 8.00.

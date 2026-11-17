@@ -89,7 +89,7 @@ export function createTableSync({auth,db,doc,getDoc,getDocFromServer,onSnapshot,
               state={...(match.scoreMonitor?.state??model.initial()),revision:state.revision+1};model.derive(state,a.rules);
             }
           }
-          const next={...shared,assignment:a,enabled,state};
+          const next={...shared,assignment:a,enabled,state,...(window.PoolPlanner?.is(snapshot)?{progressionLocked:window.PoolPlanner.locked(snapshot,match)}:{})};
           if(!same(existing,next))tx.set(ref(slot),encodeBoard(next));
           return next;
         });
@@ -122,6 +122,7 @@ export function createTableSync({auth,db,doc,getDoc,getDocFromServer,onSnapshot,
       if(!board?.enabled||board.assignment?.id!==id)throw Error('Die Tischzuordnung wurde geändert oder das Turnier beendet.');
       if(board.state.revision!==revision)throw Error('Der Spielstand wurde inzwischen geändert. Bitte prüfen und erneut eingeben.');
       if(action.type==='manual'&&role!=='owner')throw Error('Nur die Turnierleitung darf Ergebnisse direkt korrigieren.');
+      if(action.type==='undo'&&board.progressionLocked&&model.derive(board.state,board.assignment.rules).complete)throw Error('Eine Folgebegegnung wurde bereits gestartet. Dieses abgeschlossene Ergebnis kann nicht mehr zurückgenommen werden.');
       const state=model.command(board.state,board.assignment.rules,{...action,at:Date.now()});
       tx.update(ref(slot),{state:encodeState(state)});
       return {...board,state,slot};
