@@ -1048,7 +1048,7 @@
             <div class="tournamentRosterAdd"><label>Neuer Spieler<input id="newTournamentPlayerName" type="text" maxlength="60" placeholder="Name"></label><button type="button" class="secondary" id="addTournamentPlayer">Hinzufügen</button></div>
             <p id="tournamentPlayerMessage" class="small" role="status"></p>
           </section>
-          <div id="tournamentNames" class="tournamentFields"></div>
+          <p class="small" id="partnerDragHint" hidden>Namen kurz antippen zum Ändern. Zum Tauschen länger halten und auf einen anderen Partnerplatz ziehen.</p><div id="tournamentNames" class="tournamentFields"></div>
           <p class="tournamentStatus" id="tournamentSetupError" role="alert"></p>
           <button class="primary">Turnier starten</button>
           ${draftFreeTournament === true && tournamentOfType(true) ? '<button type="button" class="secondary" id="resumeFreeTournament">Gespeichertes freies Turnier öffnen</button>' : ''}
@@ -1062,6 +1062,7 @@
     const drafts = [];
     let suppressPickUntil = 0;
     let partnerTarget = null;
+    let unbindPartnerDrag=()=>{};
     const isDouble=()=>isPool&&form.elements.poolMode.value==='double';
     function editPlayer(name, inputs) {
       const dialog = document.createElement('dialog');
@@ -1188,9 +1189,11 @@
       if (event.key === 'Enter') { event.preventDefault(); $('addTournamentPlayer').click(); }
     };
     function renderNames() {
+      unbindPartnerDrag();
       names.querySelectorAll('input').forEach((input, i) => { drafts[i] = input.value; });
       partnerTarget=null;
       $('tournamentCountLabel').textContent=isDouble()?'Anzahl Teams':'Spieleranzahl';
+      $('partnerDragHint').hidden=!isDouble();
       names.innerHTML = Array.from({length:Number(form.elements.count.value)}, (_, i) => isDouble()
         ? `<section class="poolTeamSetup"><h3>Team ${i+1}</h3>${[0,1].map(j=>`<label>Teampartner ${j+1}<input name="player" maxlength="60" required placeholder="Aus Liste wählen oder neuen Namen eingeben" value="${esc(drafts[i*2+j] || '')}"></label>`).join('')}</section>`
         : `<label>Spieler ${i + 1}<input name="player" maxlength="60" required value="${esc(drafts[i] || '')}"></label>`
@@ -1199,6 +1202,11 @@
         input.onfocus=()=>{partnerTarget=input;};
         input.onchange = () => { if(!isDouble()||!input.value.includes('&'))rememberPlayers([input.value]); renderPlayerList(); };
         input.oninput = renderPlayerList;
+      });
+      if(isDouble())unbindPartnerDrag=window.ClubPartnerDrag.bind(names,()=>{
+        names.querySelectorAll('input').forEach((input,i)=>{drafts[i]=input.value;});
+        partnerTarget=null;renderPlayerList();
+        $('tournamentPlayerMessage').textContent='Teampartner getauscht.';
       });
       renderPlayerList();
     }
