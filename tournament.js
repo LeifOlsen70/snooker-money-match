@@ -7,6 +7,9 @@
   const key = 'snookerSwissTournamentV1';
   const panel = $('tournamentMode');
   let tournament = null;
+  const poolFoldState=new Map();
+  function rememberPoolFolds(){for(const item of panel.querySelectorAll('[data-pool-fold]'))poolFoldState.set(item.dataset.poolFold,item.open);}
+  function restorePoolFolds(){for(const item of panel.querySelectorAll('[data-pool-fold]'))if(poolFoldState.has(item.dataset.poolFold))item.open=poolFoldState.get(item.dataset.poolFold);}
   let openMatch = null;
   let monitorApplying = false;
   let historyBusy=false;
@@ -1750,11 +1753,12 @@
         const finished=entries.filter(x=>x.match.result),live=entries.filter(x=>x.match.table&&!x.match.result),available=entries.filter(x=>planner.ready(data,x.match)),waiting=entries.filter(x=>!x.match.result&&!x.match.table&&!planner.ready(data,x.match));
         const render=({match,m})=>renderMatch(match,`${r}:${m}`,free,planner.blocked(data,match));
         const visibleFinished=finished.map(({match,m})=>`<article class="tournamentMatch poolFinishedMatch"><h4>${match.players.map(id=>esc(data.players[id])).join(' – ')}</h4><p class="poolMatchDiscipline">${esc(d.label)}</p><p class="tournamentStatus">Fertig · <strong>${match.result.frames.join(':')}</strong></p>${renderMatchTime(match,r+':'+m)}${!data.ended?`<button type="button" class="secondary tournamentCorrect" data-edit="${r}:${m}">Ergebnis korrigieren</button>`:''}</article>`).join('');
-        return `<details class="poolDisciplineSection" ${live.length||available.length||finished.length?'open':''}><summary>Runde ${r+1} · ${esc(d.label)} <small>${finished.length}/${entries.length} beendet · ${available.length} bereit · ${entries.filter(x=>x.match.paused).length} pausiert</small></summary>${visibleFinished}${live.length?'<h4 class="poolGroupLabel">Am Tisch</h4>'+live.map(render).join(''):''}${available.length?'<h4 class="poolGroupLabel">Startbereit</h4>'+available.map(render).join(''):''}${waiting.length?`<details><summary>Wartend / pausiert (${waiting.length})</summary>${waiting.map(render).join('')}</details>`:''}${finished.length?`<details><summary>Abgeschlossen (${finished.length})</summary>${finished.map(render).join('')}</details>`:''}</details>`;
+        return `<details data-pool-fold="${data.started}:r${r}:d${d.id}" class="poolDisciplineSection" ${live.length||available.length||finished.length?'open':''}><summary>Runde ${r+1} · ${esc(d.label)} <small>${finished.length}/${entries.length} beendet · ${available.length} bereit · ${entries.filter(x=>x.match.paused).length} pausiert</small></summary>${visibleFinished}${live.length?'<h4 class="poolGroupLabel">Am Tisch</h4>'+live.map(render).join(''):''}${available.length?'<h4 class="poolGroupLabel">Startbereit</h4>'+available.map(render).join(''):''}${waiting.length?`<details data-pool-fold="${data.started}:r${r}:d${d.id}:waiting"><summary>Wartend / pausiert (${waiting.length})</summary>${waiting.map(render).join('')}</details>`:''}${finished.length?`<details data-pool-fold="${data.started}:r${r}:d${d.id}:finished"><summary>Abgeschlossen (${finished.length})</summary>${finished.map(render).join('')}</details>`:''}</details>`;
       }).join('');
-      return complete?`<details class="card poolRoundComplete" open><summary>Runde ${r+1} · abgeschlossen (${done}/${round.matches.length})</summary>${body}</details>`:`<section class="card poolRound"><h2>Runde ${r+1}${data.limit===null?'':' / '+data.limit} · ${done}/${round.matches.length} Begegnungen beendet</h2>${body}</section>`;
+      return complete?`<details data-pool-fold="${data.started}:r${r}" class="card poolRoundComplete" open><summary>Runde ${r+1} · abgeschlossen (${done}/${round.matches.length})</summary>${body}</details>`:`<section class="card poolRound"><h2>Runde ${r+1}${data.limit===null?'':' / '+data.limit} · ${done}/${round.matches.length} Begegnungen beendet</h2>${body}</section>`;
     });
     panel.insertAdjacentHTML('beforeend',cards.reverse().join(''));
+    restorePoolFolds();
     function at(index){const [r,m]=index.split(':').map(Number);return data.rounds[r]?.matches[m]}
     panel.querySelectorAll('[data-start]').forEach(button=>button.onclick=()=>{const match=at(button.dataset.start),table=Number(button.dataset.table);if(!match||!planner.ready(data,match)||!availableTables().includes(table)){renderTournament();return;}match.table=table;match.startedAt=Date.now();saveTournament();});
     panel.querySelectorAll('[data-pause]').forEach(button=>button.onclick=()=>{const match=at(button.dataset.pause);if(!match||data.ended||match.result||match.table)return;match.paused=!match.paused;saveTournament();});
@@ -1767,6 +1771,7 @@
   }
 
   function renderTournament() {
+    if(isPool)rememberPoolFolds();
     refreshPlayerList = null;
     applyRemoteTournament();
     panel.innerHTML = '<button type="button" id="tournamentHome" class="secondary tournamentTop">← Startseite</button>';

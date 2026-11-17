@@ -160,6 +160,10 @@
     const board=list.find(b=>b.slot===detailSlot);if(!board?.assignment){closeDetail();return}
     detail.innerHTML='<button type="button" data-detail-close>← Zur Übersicht</button>'+card(board);
     detail.querySelector('[data-detail-close]').onclick=closeDetail;bind(detail,[board]);
+    if(window.snookerTableSync?.role==='owner'&&!boards.some(b=>b.assignment?.id===board.assignment.id)){
+      for(const button of detail.querySelectorAll('button'))if(!button.hasAttribute('data-detail-close'))button.disabled=true;
+      const notice=document.createElement('p');notice.setAttribute('role','status');notice.textContent='Tischverbindung wird vorbereitet. Die Eingabe wird nach der Synchronisierung freigegeben.';detail.prepend(notice);
+    }
   }
   detail.oncancel=e=>{e.preventDefault();closeDetail()};detail.addEventListener('click',e=>{if(e.target===detail)closeDetail()});
   function renderOverview(container,data){
@@ -221,7 +225,7 @@
   }
   window.snookerMonitors=Object.freeze({activateTable,renderOverview,reconcile,
     renderSingle(container,board){container.innerHTML=card(board);bind(container,[board]);updateFrameWarnings()},
-    openMatch(data,r,m,match){const board=forMatch(data,r,m,match);const current=boards.find(b=>b.slot===board.slot);if(current&&current.assignment?.id!==board.assignment.id){status('Dieser Tisch zeigt bereits eine andere Partie. Die alte Spielhistorie bleibt einsehbar.');alert('Diese Partie ist archiviert. Korrekturen nur vor dem nächsten Tischmatch durchführen.');return;}detailSlot=board.slot;detail.innerHTML='<button type="button" data-detail-close>← Zur Übersicht</button>'+card(board);detail.querySelector('[data-detail-close]').onclick=closeDetail;bind(detail,[board]);if(!detail.open)detail.showModal();},
+    openMatch(data,r,m,match){const board=forMatch(data,r,m,match);const current=boards.find(b=>b.slot===board.slot);if(match.result&&current&&current.assignment?.id!==board.assignment.id){status('Dieser Tisch zeigt bereits eine andere Partie. Die alte Spielhistorie bleibt einsehbar.');alert('Diese Partie ist archiviert. Korrekturen nur vor dem nächsten Tischmatch durchführen.');return;}detailSlot=board.slot;renderDetail([board]);if(!detail.open)detail.showModal();},
     canStep(direction){return historyBoards(direction).length>0},
     async step(direction){
       if(window.snookerTableSync?.role==='owner')await window.snookerTableSync.idle();
