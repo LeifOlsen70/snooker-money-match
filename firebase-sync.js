@@ -1,7 +1,7 @@
 import {initializeApp} from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js';
 import {getAuth,signInAnonymously,signInWithEmailAndPassword,createUserWithEmailAndPassword,sendPasswordResetEmail,setPersistence,browserLocalPersistence,inMemoryPersistence,signOut,onAuthStateChanged} from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-auth.js';
 import {getFirestore,doc,getDoc,setDoc,onSnapshot,runTransaction,collection,getDocs,getDocsFromServer,getDocFromServer,updateDoc,serverTimestamp} from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore.js';
-import {createTableSync} from './table-sync.js?v=8.16';
+import {createTableSync} from './table-sync.js?v=8.17';
 const config={apiKey:'AIzaSyBgmv1v5APpPReJ4olWCusUhhGGevcvRcE',authDomain:'snooker-money-match.firebaseapp.com',projectId:'snooker-money-match',storageBucket:'snooker-money-match.firebasestorage.app',messagingSenderId:'423302158497',appId:'1:423302158497:web:706c1fec068959b7bbb8e0'};
 const localStorage = window.snookerStorage;
 const app=initializeApp(config),auth=getAuth(app),db=getFirestore(app),e=id=>document.getElementById(id),msg=t=>e('fbStatus').textContent=t;
@@ -66,7 +66,7 @@ window.snookerTableBackend={
         tx.set(memberRef,{token,generation:current.generation});
       });
     }catch(err){
-      if(err.code==='permission-denied')throw Error('Tischzugriff abgelehnt. Bitte die neuen Firebase-Regeln für Version 8.16 veröffentlichen.');
+      if(err.code==='permission-denied')throw Error('Tischzugriff abgelehnt. Bitte die neuen Firebase-Regeln für Version 8.17 veröffentlichen.');
       throw err;
     }
     window.localStorage.setItem(deviceKey,JSON.stringify({owner:invite.owner,slot:invite.slot,token,generation:invite.generation}));
@@ -85,6 +85,12 @@ window.snookerTableBackend={
     window.localStorage.removeItem(deviceKey);await signOut(deviceAuth);window.location.reload();
   },
   async reset(slot){if(!permitted())throw Error('Als Spielleiter anmelden.');return await tableSync.reset(slot)},
+  async connections(){
+    if(!permitted())throw Error('Als Spielleiter anmelden.');
+    const bridge=window.snookerTournamentBridge,data=('tournamentCurrent' in bridge?bridge.tournamentCurrent:bridge.current);
+    if(!data)return [];
+    return await tableSync.connections(data);
+  },
   async availableCodes(){
     if(!permitted()||window.snookerAccount.guest)throw Error('Zur sicheren Anzeige der Tischcodes als Spielleiter anmelden. Sonst den erhaltenen Code eingeben.');
     // Load the organizer's active tournament from the cloud even when the user
