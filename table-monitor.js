@@ -165,8 +165,13 @@
     if(service?.role!=='owner'||!service.sync)return;
     const expected=assignment(data,r,m,match).id;
     try{
-      await service.sync(data);
-      await service.refresh?.(match.table);
+      if(service.prepareScore)await service.prepareScore(data,r,m);
+      else{
+        const result=await service.sync(data,{slots:[match.table]});
+        const failure=result?.errors?.find(item=>item.slot===match.table||item.slot==null);
+        if(failure)throw Error(failure.message);
+        await service.refresh?.(match.table);
+      }
       if(service.role!=='owner')return;
       if(Array.isArray(service.boards))boards=service.boards;
       const latest=bridge.current,live=latest?.rounds?.[r]?.matches?.[m];
@@ -176,11 +181,11 @@
   function renderDetail(list){
     if(detailSlot===null)return;
     const board=list.find(b=>b.slot===detailSlot);if(!board?.assignment){closeDetail();return}
-    detail.innerHTML='<button type="button" data-detail-close>← Zur Übersicht</button>'+card(board);
+    detail.innerHTML='<button type="button" data-detail-close>← Zur Übersicht</button><p data-monitor-message role="status">'+escape(message)+'</p>'+card(board);
     detail.querySelector('[data-detail-close]').onclick=closeDetail;bind(detail,[board]);
     if(window.snookerTableSync?.role==='owner'&&!boards.some(b=>b.assignment?.id===board.assignment.id&&b.enabled)){
       for(const button of detail.querySelectorAll('button'))if(!button.hasAttribute('data-detail-close'))button.disabled=true;
-      const notice=document.createElement('p');notice.setAttribute('role','status');notice.textContent='Tischverbindung wird vorbereitet. Die Eingabe wird nach der Synchronisierung freigegeben.';detail.prepend(notice);
+      const notice=document.createElement('p');notice.setAttribute('role','status');notice.textContent=window.snookerTableSync.syncError?.(board.slot)||'Tischverbindung wird vorbereitet. Die Eingabe wird nach der Synchronisierung freigegeben.';detail.prepend(notice);
       const retry=document.createElement('button');retry.type='button';retry.textContent='Tischverbindung erneut laden';retry.onclick=()=>{const data=bridge.current;if(data)prepareMatch(data,board.assignment.round,board.assignment.index);};detail.prepend(retry);
     }
   }
