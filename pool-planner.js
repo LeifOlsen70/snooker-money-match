@@ -6,7 +6,7 @@
   if(!is(data)||!match)return data.poolRules;
   const d=data.poolRules.disciplines.find(d=>d.id===match.disciplineId);
   if(!d)throw Error('Ungültige Disziplinzuordnung.');
-  return {sport:'pool',framesPerMatch:d.frames,disciplines:[{...d}]};
+  return {sport:'pool',framesPerMatch:d.frames,disciplines:[{...d}],...(data.poolRules.bestOf===true&&d.id!=='14'?{bestOf:true}:{})};
  }
  function round(data){
   const count=data.players.length,n=count+count%2,ring=Array.from({length:n},(_,i)=>i<count?i:null),pairs=[];

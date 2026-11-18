@@ -3,7 +3,11 @@
   'use strict';
   const copy=value=>JSON.parse(JSON.stringify(value));
   function initial(revision=0){return {events:[],cursor:0,revision}}
-  function complete(frames,rules){return rules.framesPerMatch!=null?frames[0]+frames[1]===rules.framesPerMatch:Math.max(...frames)===rules.target}
+  function complete(frames,rules){
+    if(rules.framesPerMatch==null)return Math.max(...frames)===rules.target;
+    const total=frames[0]+frames[1],max=rules.framesPerMatch;
+    return rules.bestOf===true?total<=max&&Math.max(...frames)<=Math.floor(max/2)+1&&(total===max||Math.max(...frames)>max/2):total===max;
+  }
   function derive(state,rules){
     if(rules?.sport==='pool')return derivePool(state,rules);
     if(!state||!Array.isArray(state.events)||state.events.length>2000||!Number.isInteger(state.cursor)||state.cursor<0||state.cursor>state.events.length||!Number.isInteger(state.revision)||state.revision<0)throw Error('Ungültiger Tischspielstand.');
@@ -42,6 +46,7 @@
   }
   function validPoolRules(rules){
     const ids=['8','9','10','14'];
+    if(rules?.bestOf!=null&&typeof rules.bestOf!=='boolean')throw Error('Ungültige Best-of-Regel.');
     if(rules?.sport!=='pool'||!Array.isArray(rules.disciplines)||!rules.disciplines.length||rules.disciplines.length>4)throw Error('Ungültige Pool-Disziplinen.');
     let previous=-1,total=0;
     for(const d of rules.disciplines){const index=ids.indexOf(d.id);if(index<=previous||!Number.isInteger(d.frames)||d.frames<1||d.frames>50||(d.id==='14'&&(!Number.isInteger(d.targetPoints)||d.targetPoints<1||d.targetPoints>9999)))throw Error('Ungültige Disziplin oder Zielpunktzahl.');previous=index;total+=d.frames;}
@@ -72,7 +77,7 @@
         if(event.pendingPoints)points(event.pendingPoints.player,event.pendingPoints.value);
         current.frames[event.player]++;value.frames[event.player]++;
         current.frameHistory.push({winner:event.player,scores:[...value.scores],breaks:copy(frameBreaks),at:event.at});frameBreaks=[[],[]];
-        if(current.frames[0]+current.frames[1]===configured.frames)value.disciplineIndex++;
+        if(complete(current.frames,{framesPerMatch:configured.frames,bestOf:rules.bestOf===true&&configured.id!=='14'}))value.disciplineIndex++;
         value.complete=value.disciplineIndex===rules.disciplines.length;
         if(value.complete)value.finishedAt=event.at;else value.scores=[0,0];
       }else if(event.type==='finish'){

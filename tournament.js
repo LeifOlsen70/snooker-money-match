@@ -52,7 +52,8 @@
   function validMatchFrames(frames, rules) {
     const max = rules.framesPerMatch ?? rules.target;
     if (frames.length !== 2 || !frames.every(value => Number.isInteger(value) && value >= 0 && value <= max)) return false;
-    if (rules.framesPerMatch != null) return frames[0] + frames[1] === max;
+    if(rules.bestOf===true&&Math.max(...frames)>Math.floor(max/2)+1)return false;
+    if (rules.framesPerMatch != null) return frames[0]+frames[1]<=max && (frames[0]+frames[1]===max || rules.bestOf===true&&Math.max(...frames)>max/2);
     return Math.max(...frames) === max && frames[0] !== frames[1];
   }
 
@@ -1022,8 +1023,8 @@
             <label id="tournamentEndTime" class="hidden">Endzeit
               <input name="endAt" type="time" value="${localTime(Date.now()+3*3600000)}">
             </label>
-            <label ${isPool?'hidden style="display:none!important"':''}>Frames pro Match
-              <select name="framesPerMatch">${options(50, 2)}</select>
+            <label ${isPool?'hidden style="display:none!important"':''}>Best of
+              <select name="framesPerMatch">${Array.from({length:50},(_,i)=>`<option value="${i+1}" ${i===1?'selected':''}>BO ${i+1}</option>`).join('')}</select>
             </label>
             <label>Punkte pro Freilos
               <select name="byePoints">
@@ -1263,6 +1264,7 @@
       const parkedAt = changeType ? Date.now() : tournament?.parkedAt;
       tournament = {
         ...poolConfig,
+        ...(!isPool?{bestOf:true}:{}),
         ...(isPool&&poolConfig.poolOrder!=='pair'?{poolSchedule:window.PoolPlanner.KIND}:{}),
         ...(isPool?{poolArchive:archivePool(previous)}:{}),
         players,
@@ -1477,6 +1479,7 @@
 
   function validBackup(data, allowParked = true) {
     if(isPool !== (data?.sport==='pool'))return false;
+    if(data?.bestOf!=null&&typeof data.bestOf!=='boolean')return false;
     if(isPool&&data.poolOrder!=null&&!['discipline','pair'].includes(data.poolOrder))return false;
     if(isPool){try{window.SnookerTableScore.validPoolRules(data.poolRules);if(data.framesPerMatch!==data.poolRules.framesPerMatch)return false;}catch{return false;}}
     const integer = (value, min, max) => Number.isInteger(value) && value >= min && value <= max;
@@ -1884,7 +1887,7 @@
       <div class="card tournamentOverview">
         <h2>${esc(tournamentTitle(tournament))}</h2>
         ${isPool?'<p>Spielablauf: <strong>Paarungsweise</strong> · Jede Paarung spielt alle gewählten Disziplinen nacheinander.</p>':''}
-        <p>${mode} · ${tournament.framesPerMatch == null ? `First to ${tournament.target}` : `${tournament.framesPerMatch} Frames pro Match · Freilos: ${formatPoints(tournament.byePoints)} Pkt.`} · ${tournament.tables} Tisch(e)</p>
+        <p>${mode} · ${tournament.framesPerMatch == null ? `First to ${tournament.target}` : `${isPool?tournament.poolRules.disciplines.map(d=>d.label+' '+(tournament.poolRules.bestOf&&d.id!=='14'?'BO '+d.frames:d.frames+' Spiele')).join(' · '):tournament.bestOf?'BO '+tournament.framesPerMatch:tournament.framesPerMatch+' Frames pro Match'} · Freilos: ${formatPoints(tournament.byePoints)} Pkt.`} · ${tournament.tables} Tisch(e)</p>
         <p class="tournamentStatus">${tournament.ended ? 'Turnier beendet' : openRounds.length
           ? `${openRounds.length === 1 ? 'Laufende Runde' : 'Laufende Runden'} · ${openRounds.join(', ')}`
           : `Runde ${number} abgeschlossen`}</p>
