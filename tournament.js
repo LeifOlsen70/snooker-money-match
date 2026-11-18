@@ -1022,7 +1022,7 @@
             <label id="tournamentEndTime" class="hidden">Endzeit
               <input name="endAt" type="time" value="${localTime(Date.now()+3*3600000)}">
             </label>
-            <label ${isPool?'hidden':''}>Frames pro Match
+            <label ${isPool?'hidden style="display:none!important"':''}>Frames pro Match
               <select name="framesPerMatch">${options(50, 2)}</select>
             </label>
             <label>Punkte pro Freilos
@@ -1324,7 +1324,7 @@
 
   function openResultDialog(match, index) {
     if (openMatch !== null || tournament.ended || (!match.table && !match.result)) return;
-    if(isPool){const [r,m]=index.split(':').map(Number);window.snookerMonitors.openMatch(tournament,r,m,match);return;}
+    if(window.snookerMonitors){const [r,m]=index.split(':').map(Number);window.snookerMonitors.openMatch(tournament,r,m,match);return;}
     openMatch = index;
     const names = match.players.map(id => esc(tournament.players[id]));
     const frames = [...(match.result?.frames ?? [0, 0])];
@@ -1547,7 +1547,9 @@
         if (match.result === null) continue;
         const result = match.result;
         if(isPool){if(!match.scoreMonitor)return false;const v=window.SnookerTableScore.derive(match.scoreMonitor.state,data.poolRules);if(!v.complete||JSON.stringify(v.frames)!==JSON.stringify(result.frames)||JSON.stringify(v.breaks)!==JSON.stringify(result.breaks))return false;}
-        if (!result || !Array.isArray(result.frames) || !validMatchFrames(result.frames, data)
+        let earlyResult=false;
+        if(match.scoreMonitor){try{const summary=window.SnookerTableScore.derive(match.scoreMonitor.state,matchRules(data,match));earlyResult=summary.complete&&JSON.stringify(summary.frames)===JSON.stringify(result.frames)&&JSON.stringify(summary.breaks)===JSON.stringify(result.breaks);}catch{return false;}}
+        if (!result || !Array.isArray(result.frames) || (!validMatchFrames(result.frames, data)&&!earlyResult)
           || !Array.isArray(result.breaks) || result.breaks.length !== 2
           || !result.breaks.every(list => Array.isArray(list) && list.every(value => integer(value, 20, isPool?9999:155)))) return false;
       }

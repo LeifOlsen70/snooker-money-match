@@ -33,6 +33,9 @@
         value.complete=complete(value.frames,rules);
         if(value.complete)value.finishedAt=event.at;
         else value.scores=[0,0];
+      }else if(event.type==='finish'){
+        if(value.frames[event.player]<=value.frames[1-event.player])throw Error('Zuerst den letzten Frame-Sieger eintragen. Match-Sieger muss nach Frames führen.');
+        value.complete=true;value.finishedAt=event.at;value.earlyFinished=true;
       }else throw Error('Unbekannte Punkteaktion.');
     }
     return value;
@@ -72,6 +75,11 @@
         if(current.frames[0]+current.frames[1]===configured.frames)value.disciplineIndex++;
         value.complete=value.disciplineIndex===rules.disciplines.length;
         if(value.complete)value.finishedAt=event.at;else value.scores=[0,0];
+      }else if(event.type==='finish'){
+        if(current.frames[event.player]<=current.frames[1-event.player])throw Error('Zuerst den letzten Frame-Sieger eintragen. Match-Sieger muss in dieser Disziplin nach Frames führen.');
+        current.earlyFinished=true;value.earlyFinished=true;value.disciplineIndex++;frameBreaks=[[],[]];
+        value.complete=value.disciplineIndex===rules.disciplines.length;
+        if(value.complete)value.finishedAt=event.at;else value.scores=[0,0];
       }else throw Error('Ungültige Pool-Aktion. Ergebnisse über das Zählwerk korrigieren.');
     }
     value.currentDiscipline=rules.disciplines[Math.min(value.disciplineIndex,rules.disciplines.length-1)];
@@ -98,7 +106,7 @@
     if(derive(current,rules).complete)return {overdue:false,startedAt:null,limit};
     let start=startedAt;
     let muted=false;
-    for(const event of current.events.slice(0,current.cursor)){if(event.type==='frame'){start=event.at;muted=false}else if(event.type==='warningOff')muted=true;}
+    for(const event of current.events.slice(0,current.cursor)){if(event.type==='frame'||event.type==='finish'){start=event.at;muted=false}else if(event.type==='warningOff')muted=true;}
     if(muted)return {overdue:false,startedAt:null,limit};
     return {overdue:now-start>limit*60000,startedAt:start,limit};
   }
