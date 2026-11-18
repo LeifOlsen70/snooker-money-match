@@ -1,4 +1,4 @@
-BILLARD & SNOOKER CLUB – VERSION 8.12
+BILLARD & SNOOKER CLUB – VERSION 8.13
 
 INSTALLATION / UPDATE
 1. Die bisherige App / vorhandene Daten bei Bedarf als JSON sichern.
@@ -6,7 +6,7 @@ INSTALLATION / UPDATE
    https://console.firebase.google.com/project/snooker-money-match/firestore/databases/-default-/security/rules
    Die Ergänzung erlaubt den eigenen Pool-Speicher und getrennte Pool-Tischgeräte. Bestehende Snooker- und Pool-Gruppenrechte bleiben bestehen.
 3. Alle Dateien dieses ZIPs zusammen in das bestehende App-Verzeichnis hochladen. index.html ist jetzt die gemeinsame Startseite. app.html enthält die gemeinsame App.
-4. App neu öffnen / bei Bedarf im Browser neu laden. Version 8.12 kontrollieren. Auch Tischgeräte aktualisieren.
+4. App neu öffnen / bei Bedarf im Browser neu laden. Version 8.13 kontrollieren. Auch Tischgeräte aktualisieren.
 
 EINSTIEG
 Die erste Seite bietet Snooker / Poolbillard. Snooker verwendet die vorhandenen Kontodaten und Spielstände ohne Datenmigration. Pool ist ein neuer, separater Spielbereich und übernimmt keine alten Spielabende der bisherigen separaten Pool-App.
@@ -60,16 +60,18 @@ NEU 8.04: Laufende Pool-Begegnungen mit Ergebnis eintragen direkt im Abschnitt d
 
 NEU 8.05: Reihenfolge je Pool-Runde/Disziplin: fertige Begegnungen, laufende Begegnungen, startbereite Begegnungen. Startbuttons zeigen weiterhin nur tatsächlich freie Tische; bei belegten Tischen ist kein Start möglich.
 
-NEU 8.12: Klappzustände bleiben während der App-Nutzung bei Aktualisierungen erhalten. Keine Änderung an den Firebase-Regeln.
+NEU 8.13: Klappzustände bleiben während der App-Nutzung bei Aktualisierungen erhalten. Keine Änderung an den Firebase-Regeln.
 
-NEU 8.12: Doppelturnier mit zwei einzelnen Teampartnern pro Team. Nur Einzelnamen werden in der Spielerliste gespeichert.
+NEU 8.13: Doppelturnier mit zwei einzelnen Teampartnern pro Team. Nur Einzelnamen werden in der Spielerliste gespeichert.
 
-NEU 8.12: In der Doppel-Teamaufstellung Namen kurz antippen zum Bearbeiten; länger halten und auf einen anderen Partnerplatz ziehen zum Tauschen.
+NEU 8.13: In der Doppel-Teamaufstellung Namen kurz antippen zum Bearbeiten; länger halten und auf einen anderen Partnerplatz ziehen zum Tauschen.
 
-NEU 8.12: Partnertausch auch bei Einzel → Doppel. Freigabeanfragen mit gespeichertem Datum und Uhrzeit.
+NEU 8.13: Partnertausch auch bei Einzel → Doppel. Freigabeanfragen mit gespeichertem Datum und Uhrzeit.
 
-NEU 8.12: Namens-Popup für alle Spielarten, eine gemeinsame Namensliste je Konto für beide Sportarten. Nur der Admin darf gespeicherte Namen ändern/löschen. WICHTIG: Die mitgelieferte firestore.rules erneut veröffentlichen.
+NEU 8.13: Namens-Popup für alle Spielarten, eine gemeinsame Namensliste je Konto für beide Sportarten. Nur der Admin darf gespeicherte Namen ändern/löschen. WICHTIG: Die mitgelieferte firestore.rules erneut veröffentlichen.
 
-NEU 8.12: Kai-Audios in Snooker Einzel, zunächst stumm. Schalter nur für Admin im Dreistrichemenü. Keine neuen Firebase-Regeln gegenüber 8.10.
+NEU 8.13: Kai-Audios in Snooker Einzel, zunächst stumm. Schalter nur für Admin im Dreistrichemenü. Keine neuen Firebase-Regeln gegenüber 8.10.
 
-NEU 8.12: Kai-Sprüche nur beim Wechsel der Audio-Stufe, keine Wiederholung bei aufeinanderfolgenden Eingaben derselben Stufe.
+NEU 8.13: Kai-Sprüche nur beim Wechsel der Audio-Stufe, keine Wiederholung bei aufeinanderfolgenden Eingaben derselben Stufe.
+
+NEU 8.13: Pool-Turniere mit Auswahl Spielablauf: Disziplinweise oder Paarungsweise. Nur bei neuen Turnieren wählen; bestehende Turniere laufen wie gespeichert weiter. Keine Änderung an Firebase-Regeln oder Audios.

@@ -1040,7 +1040,7 @@
               <span class="small">0 = keine Warnung. Neustart der Warnzeit nach jedem Frame.</span>
             </label>
           </div>
-          ${isPool?window.ClubSport.fields():''}
+          ${isPool?window.ClubSport.fields({tournament:true}):''}
           <section class="tournamentRoster" aria-label="Gespeicherte Spieler" hidden>
             <h3>Spieler auswählen</h3>
             <p class="small">Namen antippen, um sie für dieses Turnier auszuwählen oder abzuwählen. Zum Bearbeiten oder Löschen auf ⋯ tippen oder die Zeile nach links wischen.</p>
@@ -1263,7 +1263,7 @@
       const parkedAt = changeType ? Date.now() : tournament?.parkedAt;
       tournament = {
         ...poolConfig,
-        ...(isPool?{poolSchedule:window.PoolPlanner.KIND}:{}),
+        ...(isPool&&poolConfig.poolOrder!=='pair'?{poolSchedule:window.PoolPlanner.KIND}:{}),
         ...(isPool?{poolArchive:archivePool(previous)}:{}),
         players,
         freeTournament,
@@ -1477,6 +1477,7 @@
 
   function validBackup(data, allowParked = true) {
     if(isPool !== (data?.sport==='pool'))return false;
+    if(isPool&&data.poolOrder!=null&&!['discipline','pair'].includes(data.poolOrder))return false;
     if(isPool){try{window.SnookerTableScore.validPoolRules(data.poolRules);if(data.framesPerMatch!==data.poolRules.framesPerMatch)return false;}catch{return false;}}
     const integer = (value, min, max) => Number.isInteger(value) && value >= min && value <= max;
     try{for(const round of data?.rounds??[])for(const match of round.matches??[]){
@@ -1764,7 +1765,7 @@
   function renderPoolRounds(){
     const planner=window.PoolPlanner,free=availableTables(),data=tournament;
     const canNext=planner.next(data),all=data.rounds.flatMap(r=>r.matches),running=all.filter(m=>m.table&&!m.result),ready=all.filter(m=>planner.ready(data,m));
-    panel.insertAdjacentHTML('beforeend',`<section class="card poolDirectorSummary"><h2>${esc(tournamentTitle(data))}</h2><p>${data.players.length} ${data.poolMode==='double'?'Teams':'Spieler'} · ${data.tables} Tische · ${data.poolRules.disciplines.map(d=>esc(d.label)).join(' → ')}</p><div class="poolProgressBadges"><span>${running.length} läuft</span><span>${ready.length} startbereit</span><span>${free.length} Tische frei</span></div><p>Eine Runde = alle Paarungen in allen gewählten Disziplinen. Spieler können gleitend zur nächsten Disziplin wechseln.</p>${canNext?'<button type="button" id="nextTournamentRound" class="primary">Neue Runde starten</button>':''}${data.ended?'<button type="button" id="newTournament" class="primary">Neues Turnier</button>':''}${data.limit===null?`<p>Endzeit ${data.endAt?endLabel():'offen'} · ${data.finishLastRound?'Laufende Runden zu Ende spielen':''}</p>${!data.ended?'<button type="button" id="changeEndTime">Endzeit ändern</button>':''}`:''}</section>`);
+    panel.insertAdjacentHTML('beforeend',`<section class="card poolDirectorSummary"><h2>${esc(tournamentTitle(data))}</h2><p>${data.players.length} ${data.poolMode==='double'?'Teams':'Spieler'} · ${data.tables} Tische · ${data.poolRules.disciplines.map(d=>esc(d.label)).join(' → ')}</p><div class="poolProgressBadges"><span>${running.length} läuft</span><span>${ready.length} startbereit</span><span>${free.length} Tische frei</span></div><p>Spielablauf: <strong>Disziplinweise</strong></p><p>Eine Runde = alle Paarungen in allen gewählten Disziplinen. Spieler können gleitend zur nächsten Disziplin wechseln.</p>${canNext?'<button type="button" id="nextTournamentRound" class="primary">Neue Runde starten</button>':''}${data.ended?'<button type="button" id="newTournament" class="primary">Neues Turnier</button>':''}${data.limit===null?`<p>Endzeit ${data.endAt?endLabel():'offen'} · ${data.finishLastRound?'Laufende Runden zu Ende spielen':''}</p>${!data.ended?'<button type="button" id="changeEndTime">Endzeit ändern</button>':''}`:''}</section>`);
     renderBackupControls();renderLiveStatus();
     const cards=data.rounds.map((round,r)=>{
       const done=round.matches.filter(m=>m.result).length,complete=done===round.matches.length;
@@ -1874,12 +1875,13 @@
         if (!match.result) match.players.forEach(id => previousPlayers.add(id));
       }
       return roundComplete && roundIndex < number - 1
-        ? `<details class="card tournamentRound" ${openMatch?.startsWith(`${roundIndex}:`) ? 'open' : ''}><summary>${title} · abgeschlossen</summary>${content}</details>`
+        ? `<details class="card tournamentRound" ${isPool?`data-pool-fold="${tournament.started}:r${roundIndex}"`:''} ${openMatch?.startsWith(`${roundIndex}:`) ? 'open' : ''}><summary>${title} · abgeschlossen</summary>${content}</details>`
         : `<div class="card tournamentRound"><h3>${title}${roundComplete ? ' · abgeschlossen' : tournament.ended ? '' : ' · läuft'}</h3>${roundIndex === number - 1 ? `${replacement ? '<button type="button" class="secondary" id="repairTournamentRound">Paarungen neu erstellen</button>' : ''}${nextRound ? `<button type="button" class="primary" id="nextTournamentRound">${complete ? 'Nächste Runde starten' : 'Neue Runde starten'}</button>` : ''}` : ''}${content}</div>`;
     });
     panel.insertAdjacentHTML('beforeend', `
       <div class="card tournamentOverview">
         <h2>${esc(tournamentTitle(tournament))}</h2>
+        ${isPool?'<p>Spielablauf: <strong>Paarungsweise</strong> · Jede Paarung spielt alle gewählten Disziplinen nacheinander.</p>':''}
         <p>${mode} · ${tournament.framesPerMatch == null ? `First to ${tournament.target}` : `${tournament.framesPerMatch} Frames pro Match · Freilos: ${formatPoints(tournament.byePoints)} Pkt.`} · ${tournament.tables} Tisch(e)</p>
         <p class="tournamentStatus">${tournament.ended ? 'Turnier beendet' : openRounds.length
           ? `${openRounds.length === 1 ? 'Laufende Runde' : 'Laufende Runden'} · ${openRounds.join(', ')}`
@@ -1894,6 +1896,7 @@
     renderBackupControls();
     renderLiveStatus();
     panel.insertAdjacentHTML('beforeend', roundCards.reverse().join(''));
+    if(isPool)restorePoolFolds();
     updateClocks();refreshHistory();
     panel.querySelectorAll('[data-warning-off]').forEach(button=>button.onclick=()=>window.snookerMonitors.silence(button.dataset.warningOff));
 
