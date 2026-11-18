@@ -1,25 +1,30 @@
-8.18 – Disziplinwechsel mit Ergebnis-Popup
+8.19 – Pool-Spielabend und Snooker-Einzel mit Best of
+Pool-Spielabend (Einzel und Doppel): Neue Spiele wählen BO1 bis BO50 für 8-/9-/10-Ball. 14/1 behält eine feste Spieleanzahl und Zielpunkte. Antippen eines Spielerfelds vergibt unmittelbar einen Frame; die zusätzlichen Frame-Sieger-Buttons entfallen bei 8-/9-/10-Ball. Bei 14/1 bleiben Punkte und Frame-Abschluss erhalten. Match-Sieger erlaubt das vorzeitige Beenden einer Disziplin mit dem erreichten Frame-Stand. Disziplinwechsel zeigt Ergebnis und nächsten Disziplinnamen; am Ende des Spielabends erscheint der Gesamtstand mit „Bestätigen“. Keine Rückfrage nach jedem einzelnen Frame.
+Snooker-Einzel: Neue Matches wählen BO1 bis BO50. BO5 endet bei drei Gewinnframes; gerade Werte erlauben Unentschieden. Bei Unentschieden fällt keine Siegprämie an, Breakprämien bleiben bestehen. Archiv und automatische Fortsetzung mit denselben Einstellungen bleiben erhalten. Bestehende gespeicherte Spiele ohne BO-Einstellung behalten ihre bisherigen Regeln.
+Geprüft: Snooker BO1/2/4/5, Unentschieden und Prämien, altes First-to-Match, Pool Einzel/Doppel, direkte Eingabe, vorzeitiges Beenden, Zwischen-/Endpopup, Undo/Redo, Wiederladen, 14/1, Turniere und Synchronisierungsschutz. Prüfung in simulierten Ansichten und mit simuliertem Firebase-Transport, kein Live-Gerätetest. Firebase-Regeln, Audios und Icons unverändert.
+
+8.19 – Disziplinwechsel mit Ergebnis-Popup
 Bei Pool-Paarungen mit mehreren Disziplinen zeigt ein kleines Popup nach dem Disziplinabschluss die beendete Disziplin, die Namen, deren Disziplinergebnis und den Gesamtstand. „Weiter mit [nächster gewählter Disziplin]“ gibt die nächste Eingabe frei. Das funktioniert auch beim vorzeitigen Disziplinabschluss. Bei der letzten Disziplin gibt es keinen weiteren Disziplinwechsel. Neuaufbau, Undo/Redo und Wiederladen wiederholen bereits gesehene Hinweise nicht. Beim Wechsel auf eine andere Tischpartie wird ein veralteter Hinweis verworfen. Die Anzeige gilt für die geöffnete Eingabeansicht; die Ergebnisübertragung läuft weiter.
 Getestet: 8→9→10, Unentschieden, übersprungene Disziplinen mit 8→14/1, Eingabesicherung bis Bestätigung, vorzeitiges Beenden, Rückgängig/Wiederholen, Neuaufbau, erneutes Laden und empfangene Spielstandänderungen. Synchronisierungsschutz und Geräteabmeldung aus 8.17 erneut geprüft. Firebase-Regeln, Audios und Icons unverändert.
 
-8.18 – Schutz gegen veraltete Tischzuordnungen
+8.19 – Schutz gegen veraltete Tischzuordnungen
 Vor jeder Zuordnung liest die Tisch-Synchronisierung innerhalb derselben Transaktion den bestätigten Turnierstand. Eine ältere lokale Ansicht darf dadurch weder eine laufende Partie deaktivieren noch eine vorherige Zuordnung zurückholen. Neue Eingaben bleiben erhalten; auch Ersetzen muss den aktuellen Tischstand berücksichtigen. Die separate Vorbereitung der Ergebniseingabe prüft ebenfalls die bestätigte Partie und übernimmt deren Regeln und gespeicherte Eingaben.
-Reproduktion: zwei gleichzeitige Spielleiter-Sitzungen mit unterschiedlichen lokalen Ständen. In 8.16 deaktiviert die ältere Sitzung den aktiven Tisch; 8.18 verhindert dies sowie das Zurücksetzen von 1:0 und das Wiederherstellen einer alten Partie. Weitere Tests: zwei Runden/zwei Tische, BO5 8/9/10 paarungsweise, Snooker, 14/1 mit fester Spieleanzahl, Tischgeräte, Undo/Redo. Kein Test in der angemeldeten Firebase-Sitzung des Nutzers.
-Bitte alle verwendeten Spielleiter-Geräte/Browser auf 8.18 aktualisieren und ältere App-Tabs schließen. Bestehendes Turnier bleibt erhalten. Regeln und Audios unverändert. Neue gemeinsame Home-Bildschirm-Icons enthalten.
+Reproduktion: zwei gleichzeitige Spielleiter-Sitzungen mit unterschiedlichen lokalen Ständen. In 8.16 deaktiviert die ältere Sitzung den aktiven Tisch; 8.19 verhindert dies sowie das Zurücksetzen von 1:0 und das Wiederherstellen einer alten Partie. Weitere Tests: zwei Runden/zwei Tische, BO5 8/9/10 paarungsweise, Snooker, 14/1 mit fester Spieleanzahl, Tischgeräte, Undo/Redo. Kein Test in der angemeldeten Firebase-Sitzung des Nutzers.
+Bitte alle verwendeten Spielleiter-Geräte/Browser auf 8.19 aktualisieren und ältere App-Tabs schließen. Bestehendes Turnier bleibt erhalten. Regeln und Audios unverändert. Neue gemeinsame Home-Bildschirm-Icons enthalten.
 
 Tischgerät abmelden: Ab sofort werden nur gültig per Code angemeldete Geräte angezeigt (Code-Reservierung, Mitgliedschaft und Generation geprüft). Eingerichtete Tische allein gelten nicht als angemeldet. Ohne Geräte erscheint „Keine Tischgeräte angemeldet“. Die Abfrage erstellt oder erneuert keine Tischcodes. Nach erfolgreichem Abmelden verschwindet der Eintrag; Spielstand und Code bleiben erhalten. Getestet mit Neuanmeldung und veralteter Mitgliedschaft.
 
-8.18 – Schutz gegen veraltete Tischzuordnungen
+8.19 – Schutz gegen veraltete Tischzuordnungen
 Vor jeder Zuordnung liest die Tisch-Synchronisierung innerhalb derselben Transaktion den bestätigten Turnierstand. Eine ältere lokale Ansicht darf dadurch weder eine laufende Partie deaktivieren noch eine vorherige Zuordnung zurückholen. Neue Eingaben bleiben erhalten; auch Ersetzen muss den aktuellen Tischstand berücksichtigen. Die separate Vorbereitung der Ergebniseingabe prüft ebenfalls die bestätigte Partie und übernimmt deren Regeln und gespeicherte Eingaben.
-Reproduktion: zwei gleichzeitige Spielleiter-Sitzungen mit unterschiedlichen lokalen Ständen. In 8.16 deaktiviert die ältere Sitzung den aktiven Tisch; 8.18 verhindert dies sowie das Zurücksetzen von 1:0 und das Wiederherstellen einer alten Partie. Weitere Tests: zwei Runden/zwei Tische, BO5 8/9/10 paarungsweise, Snooker, 14/1 mit fester Spieleanzahl, Tischgeräte, Undo/Redo. Kein Test in der angemeldeten Firebase-Sitzung des Nutzers.
-Bitte alle verwendeten Spielleiter-Geräte/Browser auf 8.18 aktualisieren und ältere App-Tabs schließen. Bestehendes Turnier bleibt erhalten. Regeln und Audios unverändert. Neue gemeinsame Home-Bildschirm-Icons enthalten.
+Reproduktion: zwei gleichzeitige Spielleiter-Sitzungen mit unterschiedlichen lokalen Ständen. In 8.16 deaktiviert die ältere Sitzung den aktiven Tisch; 8.19 verhindert dies sowie das Zurücksetzen von 1:0 und das Wiederherstellen einer alten Partie. Weitere Tests: zwei Runden/zwei Tische, BO5 8/9/10 paarungsweise, Snooker, 14/1 mit fester Spieleanzahl, Tischgeräte, Undo/Redo. Kein Test in der angemeldeten Firebase-Sitzung des Nutzers.
+Bitte alle verwendeten Spielleiter-Geräte/Browser auf 8.19 aktualisieren und ältere App-Tabs schließen. Bestehendes Turnier bleibt erhalten. Regeln und Audios unverändert. Neue gemeinsame Home-Bildschirm-Icons enthalten.
 
-8.18 – Ergebniseingabe und Tischverbindung
+8.19 – Ergebniseingabe und Tischverbindung
 Die Turnierleitung bereitet den Spielstand separat von den Tischcodes vor. Fehler beim Anlegen oder Freigeben eines Codes blockieren damit die Ergebniseingabe nicht mehr. Dabei bleibt die Prüfung des gespeicherten Tischstands und seiner Revision erhalten. Bereits erfasste Punkte werden bei erneutem Öffnen übernommen. Fehler eines Tisches brechen die Vorbereitung der anderen Tische nicht mehr ab. Verbindungsfehler erscheinen direkt im Scorefenster statt nur außerhalb des Dialogs.
 Geprüft mit simuliert verweigertem Zugriff auf Tischcodes: zwei Tische, zwei Runden, paarungsweise 8/9/10-Ball BO5; außerdem Best-of, 14/1 mit fester Spieleanzahl, Snooker, Tischgeräte und Undo/Redo. Kein Test in Leifs angemeldeter Firebase-Sitzung möglich; die konkrete Ursache der Sperre dort ist noch nicht ausgelesen.
-Firebase-Regeln und Audios unverändert. Alle verwendeten Geräte auf 8.18 aktualisieren. Das laufende Turnier bleibt erhalten; kein neues Turnier erforderlich.
+Firebase-Regeln und Audios unverändert. Alle verwendeten Geräte auf 8.19 aktualisieren. Das laufende Turnier bleibt erhalten; kein neues Turnier erforderlich.
 
-BILLARD & SNOOKER CLUB – VERSION 8.18
+BILLARD & SNOOKER CLUB – VERSION 8.19
 
 INSTALLATION / UPDATE
 1. Die bisherige App / vorhandene Daten bei Bedarf als JSON sichern.
@@ -27,7 +32,7 @@ INSTALLATION / UPDATE
    https://console.firebase.google.com/project/snooker-money-match/firestore/databases/-default-/security/rules
    Die Ergänzung erlaubt den eigenen Pool-Speicher und getrennte Pool-Tischgeräte. Bestehende Snooker- und Pool-Gruppenrechte bleiben bestehen.
 3. Alle Dateien dieses ZIPs zusammen in das bestehende App-Verzeichnis hochladen. index.html ist jetzt die gemeinsame Startseite. app.html enthält die gemeinsame App.
-4. App neu öffnen / bei Bedarf im Browser neu laden. Version 8.18 kontrollieren. Auch Tischgeräte aktualisieren.
+4. App neu öffnen / bei Bedarf im Browser neu laden. Version 8.19 kontrollieren. Auch Tischgeräte aktualisieren.
 
 EINSTIEG
 Die erste Seite bietet Snooker / Poolbillard. Snooker verwendet die vorhandenen Kontodaten und Spielstände ohne Datenmigration. Pool ist ein neuer, separater Spielbereich und übernimmt keine alten Spielabende der bisherigen separaten Pool-App.
@@ -81,22 +86,22 @@ NEU 8.04: Laufende Pool-Begegnungen mit Ergebnis eintragen direkt im Abschnitt d
 
 NEU 8.05: Reihenfolge je Pool-Runde/Disziplin: fertige Begegnungen, laufende Begegnungen, startbereite Begegnungen. Startbuttons zeigen weiterhin nur tatsächlich freie Tische; bei belegten Tischen ist kein Start möglich.
 
-NEU 8.18: Klappzustände bleiben während der App-Nutzung bei Aktualisierungen erhalten. Keine Änderung an den Firebase-Regeln.
+NEU 8.19: Klappzustände bleiben während der App-Nutzung bei Aktualisierungen erhalten. Keine Änderung an den Firebase-Regeln.
 
-NEU 8.18: Doppelturnier mit zwei einzelnen Teampartnern pro Team. Nur Einzelnamen werden in der Spielerliste gespeichert.
+NEU 8.19: Doppelturnier mit zwei einzelnen Teampartnern pro Team. Nur Einzelnamen werden in der Spielerliste gespeichert.
 
-NEU 8.18: In der Doppel-Teamaufstellung Namen kurz antippen zum Bearbeiten; länger halten und auf einen anderen Partnerplatz ziehen zum Tauschen.
+NEU 8.19: In der Doppel-Teamaufstellung Namen kurz antippen zum Bearbeiten; länger halten und auf einen anderen Partnerplatz ziehen zum Tauschen.
 
-NEU 8.18: Partnertausch auch bei Einzel → Doppel. Freigabeanfragen mit gespeichertem Datum und Uhrzeit.
+NEU 8.19: Partnertausch auch bei Einzel → Doppel. Freigabeanfragen mit gespeichertem Datum und Uhrzeit.
 
-NEU 8.18: Namens-Popup für alle Spielarten, eine gemeinsame Namensliste je Konto für beide Sportarten. Nur der Admin darf gespeicherte Namen ändern/löschen. WICHTIG: Die mitgelieferte firestore.rules erneut veröffentlichen.
+NEU 8.19: Namens-Popup für alle Spielarten, eine gemeinsame Namensliste je Konto für beide Sportarten. Nur der Admin darf gespeicherte Namen ändern/löschen. WICHTIG: Die mitgelieferte firestore.rules erneut veröffentlichen.
 
-NEU 8.18: Kai-Audios in Snooker Einzel, zunächst stumm. Schalter nur für Admin im Dreistrichemenü. Keine neuen Firebase-Regeln gegenüber 8.10.
+NEU 8.19: Kai-Audios in Snooker Einzel, zunächst stumm. Schalter nur für Admin im Dreistrichemenü. Keine neuen Firebase-Regeln gegenüber 8.10.
 
-NEU 8.18: Kai-Sprüche nur beim Wechsel der Audio-Stufe, keine Wiederholung bei aufeinanderfolgenden Eingaben derselben Stufe.
+NEU 8.19: Kai-Sprüche nur beim Wechsel der Audio-Stufe, keine Wiederholung bei aufeinanderfolgenden Eingaben derselben Stufe.
 
-NEU 8.18: Pool-Turniere mit Auswahl Spielablauf: Disziplinweise oder Paarungsweise. Nur bei neuen Turnieren wählen; bestehende Turniere laufen wie gespeichert weiter. Keine Änderung an Firebase-Regeln oder Audios.
+NEU 8.19: Pool-Turniere mit Auswahl Spielablauf: Disziplinweise oder Paarungsweise. Nur bei neuen Turnieren wählen; bestehende Turniere laufen wie gespeichert weiter. Keine Änderung an Firebase-Regeln oder Audios.
 
-NEU 8.18: Turnier-Eingaben sofort ohne Rückfrage. Match-Sieger zum vorzeitigen Abschluss mit echtem Frame-Stand; letzten Frame vorher erfassen. Pool-Feldkorrektur. Tischgeräte mit aktualisieren. Keine neuen Firebase-Regeln; Audios unverändert.
+NEU 8.19: Turnier-Eingaben sofort ohne Rückfrage. Match-Sieger zum vorzeitigen Abschluss mit echtem Frame-Stand; letzten Frame vorher erfassen. Pool-Feldkorrektur. Tischgeräte mit aktualisieren. Keine neuen Firebase-Regeln; Audios unverändert.
 
-NEU 8.18: Neue Turniere mit Best of (Snooker / 8-, 9-, 10-Ball). 14/1 weiterhin feste Spielezahl. Zusätzliche Frame-Sieger-Buttons bei 8/9/10 entfallen, Eingabe über Namen. Aktive Neusynchronisierung bei blockiertem Tischzählwerk nach Rundenwechsel. Bestehende Turniere behalten ihren Ablauf. Alle Tischgeräte aktualisieren; keine neuen Firebase-Regeln oder Audios.
+NEU 8.19: Neue Turniere mit Best of (Snooker / 8-, 9-, 10-Ball). 14/1 weiterhin feste Spielezahl. Zusätzliche Frame-Sieger-Buttons bei 8/9/10 entfallen, Eingabe über Namen. Aktive Neusynchronisierung bei blockiertem Tischzählwerk nach Rundenwechsel. Bestehende Turniere behalten ihren Ablauf. Alle Tischgeräte aktualisieren; keine neuen Firebase-Regeln oder Audios.

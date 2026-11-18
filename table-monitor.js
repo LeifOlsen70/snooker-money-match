@@ -31,7 +31,7 @@
   function showDisciplineNotice(){
     if(disciplineDialog.open||!disciplineQueue.length)return;
     const item=disciplineQueue[0];
-    disciplineDialog.innerHTML='<h2>'+escape(item.label)+' beendet</h2><p class="small">Tisch '+item.slot+'</p><div class="poolDisciplineResult"><span>'+escape(item.names[0])+'</span><strong>'+item.frames.join(' : ')+'</strong><span>'+escape(item.names[1])+'</span></div><p>Gesamtergebnis: '+item.total.join(' : ')+'</p><button type="button" class="primary" data-next-discipline>Weiter mit '+escape(item.next)+'</button>';
+    disciplineDialog.innerHTML='<h2>'+escape(item.label)+' beendet</h2><p class="small">Tisch '+item.slot+'</p><div class="poolDisciplineResult"><span>'+escape(item.names[0])+'</span><strong>'+item.frames.join(' : ')+'</strong><span>'+escape(item.names[1])+'</span></div>'+(item.final?'<p>'+item.results.map(d=>escape(d.label)+' '+d.frames.join(' : ')).join('<br>')+'</p>':'<p>Gesamtergebnis: '+item.total.join(' : ')+'</p>')+'<button type="button" class="primary" data-next-discipline>'+(item.final?'Bestätigen':'Weiter mit '+escape(item.next))+'</button>';
     disciplineDialog.querySelector('[data-next-discipline]').onclick=()=>{disciplineQueue.shift();disciplineDialog.close();showDisciplineNotice()};
     disciplineDialog.showModal();
   }
@@ -42,18 +42,19 @@
       if(head!==disciplineQueue[0]&&disciplineDialog.open)disciplineDialog.close();
       queueMicrotask(showDisciplineNotice);
     }
-    if(board.assignment.rules.sport!=='pool'||board.assignment.rules.disciplines.length<2)return;
+    const single=board.assignment.id.startsWith('single:');
+    if(board.assignment.rules.sport!=='pool'||(!single&&board.assignment.rules.disciplines.length<2))return;
     const id=board.assignment.id,previous=disciplineStates.get(id),state=board.state;
     disciplineStates.set(id,{index:value.disciplineIndex,cursor:state.cursor,prefix:JSON.stringify(state.events.slice(0,state.cursor))});
     if(disciplineStates.size>200)disciplineStates.delete(disciplineStates.keys().next().value);
-    if(!previous||value.complete||value.disciplineIndex<=previous.index||state.cursor<=previous.cursor||JSON.stringify(state.events.slice(0,previous.cursor))!==previous.prefix)return;
+    if(!previous||(value.complete&&!single)||value.disciplineIndex<=previous.index||state.cursor<=previous.cursor||JSON.stringify(state.events.slice(0,previous.cursor))!==previous.prefix)return;
     const event=state.events[state.cursor-1];
     if(!['frame','finish'].includes(event?.type))return;
     const key=id+':'+state.cursor+':'+JSON.stringify(event);
     if(disciplineNotices.has(key))return;
     disciplineNotices.add(key);if(disciplineNotices.size>300)disciplineNotices.delete(disciplineNotices.values().next().value);
     const completed=value.disciplines[value.disciplineIndex-1];
-    disciplineQueue.push({id,slot:board.slot,names:board.assignment.names,label:completed.label,frames:completed.frames,total:value.frames,next:value.currentDiscipline.label});
+    disciplineQueue.push({id,slot:board.slot,names:board.assignment.names,label:value.complete?'Spielabend':completed.label,frames:value.complete?value.frames:completed.frames,total:value.frames,next:value.currentDiscipline.label,final:value.complete,results:value.disciplines});
     queueMicrotask(showDisciplineNotice);
   }
   function assignment(data,r,m,match){return window.ClubSport?.assignment?window.ClubSport.assignment(data,r,m,match):{id:[data.freeTournament?'free':'club',data.started,r,m,match.startedAt].join(':'),tournament:String(data.started),frameTimeLimitMinutes:data.frameTimeLimitMinutes??0,round:r,index:m,names:match.players.map(id=>data.players[id]),players:[...match.players],rules:data.framesPerMatch!=null?{framesPerMatch:data.framesPerMatch}:{target:data.target}}}
@@ -91,13 +92,12 @@
     if(!board._local&&!boards.some(b=>b.assignment?.id===board.assignment.id&&b.enabled)){
       status('Der Tisch wird noch verbunden. Bitte kurz warten.');return;
     }
-    if(board.assignment.id.startsWith('single:')&&!confirm(`Frame-Sieg für ${board.assignment.names[player]} bestätigen?`))return;
     send(board,{type:'frame',player,...(pendingPoints?{pendingPoints}:{})});
   }
   function finishButtons(board,value){
-    if(board.assignment.id.startsWith('single:')||value.complete)return '';
+    if(value.complete)return '';
     const frames=value.disciplineFrames??value.frames;
-    return '<div class="monitorActions monitorFinishActions">'+board.assignment.names.map((name,i)=>`<button type="button" class="monitorMatchWinner" data-monitor-finish="${i}" data-monitor-slot="${board.slot}" ${board.enabled&&frames[i]>frames[1-i]?'':'disabled'}>Match-Sieger: ${escape(name)}</button>`).join('')+'</div><p class="small">Vorzeitig beenden: Match-Sieger übernimmt den erreichten Frame-Stand.'+(value.currentDiscipline&&!board.assignment.disciplineId?' Danach folgt die nächste gewählte Disziplin.':'')+'</p>';
+    return '<div class="monitorActions monitorFinishActions">'+board.assignment.names.map((name,i)=>`<button type="button" class="monitorMatchWinner" data-monitor-finish="${i}" data-monitor-slot="${board.slot}" ${board.enabled&&frames[i]>frames[1-i]?'':'disabled'}>Match-Sieger: ${escape(name)}</button>`).join('')+'</div><p class="small">Vorzeitig beenden: Match-Sieger übernimmt den erreichten Frame-Stand.'+(value.currentDiscipline&&!board.assignment.disciplineId&&value.disciplineIndex<board.assignment.rules.disciplines.length-1?' Danach folgt die nächste gewählte Disziplin.':'')+'</p>';
   }
   function openPopup(board,player){
     if(disciplineDialog.open||!board.enabled)return;
@@ -132,7 +132,7 @@
   }
   function poolCard(board,value){
     const d=value.currentDiscipline,points=d.id==='14',current=value.disciplineFrames;
-    return `<article class="monitorCard frameLimitTarget"><h3>Tisch ${board.tableNumber}${board.assignment.poolRound?' · Runde '+board.assignment.poolRound:''} · ${escape(d.label)} · ${value.complete?(board.assignment.disciplineId?'Disziplin beendet':'Partie beendet'):'Frame '+(current[0]+current[1]+1)}</h3><p>${board.assignment.disciplineId?'Disziplinergebnis':'Gesamtergebnis'} <strong>${value.frames.join(' : ')}</strong> · ${points?'Ziel '+d.targetPoints+' Punkte':(board.assignment.rules.bestOf?'BO '+d.frames:d.frames+' Frames insgesamt')}</p>${value.targetReached?'<p role="status" class="poolTargetReached">Punkte erreicht – Sieger bestätigen</p>':''}<div class="monitorPlayers">${board.assignment.names.map((name,i)=>`<div class="monitorPlayerColumn"><button type="button" class="monitorScoreButton" data-monitor-player="${i}" data-monitor-slot="${board.slot}" ${board.enabled&&!value.complete?'':'disabled'}><span class="monitorName">${escape(name)}</span><strong class="monitorPoints">${points?value.scores[i]:current[i]}</strong><span>${points?'Punkte':'Frames · '+escape(d.label)}</span>${points?`<span>HB ${highestBreak(value.breaks[i])}</span>`:''}</button>${points||board.assignment.id.startsWith('single:')?`<button type="button" class="monitorFrameWinner" data-monitor-winner="${i}" data-monitor-slot="${board.slot}" ${board.enabled&&!value.complete?'':'disabled'}>Frame-Sieger: ${escape(name)}</button>`:''}${points&&!value.complete?`<button type="button" data-pool-foul="${i}" data-monitor-slot="${board.slot}" ${board.enabled?'':'disabled'}>Foul −1 Punkt</button><button type="button" data-pool-penalty="${i}" data-monitor-slot="${board.slot}" ${board.enabled?'':'disabled'}>Zusatzstrafe −15</button>`:''}</div>`).join('')}</div>${finishButtons(board,value)}<p class="small">${points?'Namen antippen für Punkte / Break.':'Namen antippen, um einen Frame zu vergeben.'}</p><div>${frameWarningMarkup(board)}<button type="button" data-monitor-warning-off="${board.slot}" hidden>Warnung aus</button></div><div class="monitorActions"><button type="button" data-monitor-undo="${board.slot}" ${board.state.cursor&&board.enabled?'':'disabled'}>↶ Zurück</button><button type="button" data-monitor-redo="${board.slot}" ${board.state.cursor<board.state.events.length&&board.enabled?'':'disabled'}>Vor ↷</button></div>${window.ClubSport.history(value,board.assignment.names)}</article>`;
+    return `<article class="monitorCard frameLimitTarget"><h3>Tisch ${board.tableNumber}${board.assignment.poolRound?' · Runde '+board.assignment.poolRound:''} · ${escape(d.label)} · ${value.complete?(board.assignment.disciplineId?'Disziplin beendet':'Partie beendet'):'Frame '+(current[0]+current[1]+1)}</h3><p>${board.assignment.disciplineId?'Disziplinergebnis':'Gesamtergebnis'} <strong>${value.frames.join(' : ')}</strong> · ${points?'Ziel '+d.targetPoints+' Punkte':(board.assignment.rules.bestOf?'BO '+d.frames:d.frames+' Frames insgesamt')}</p>${value.targetReached?'<p role="status" class="poolTargetReached">Punkte erreicht – Sieger bestätigen</p>':''}<div class="monitorPlayers">${board.assignment.names.map((name,i)=>`<div class="monitorPlayerColumn"><button type="button" class="monitorScoreButton" data-monitor-player="${i}" data-monitor-slot="${board.slot}" ${board.enabled&&!value.complete?'':'disabled'}><span class="monitorName">${escape(name)}</span><strong class="monitorPoints">${points?value.scores[i]:current[i]}</strong><span>${points?'Punkte':'Frames · '+escape(d.label)}</span>${points?`<span>HB ${highestBreak(value.breaks[i])}</span>`:''}</button>${points?`<button type="button" class="monitorFrameWinner" data-monitor-winner="${i}" data-monitor-slot="${board.slot}" ${board.enabled&&!value.complete?'':'disabled'}>Frame-Sieger: ${escape(name)}</button>`:''}${points&&!value.complete?`<button type="button" data-pool-foul="${i}" data-monitor-slot="${board.slot}" ${board.enabled?'':'disabled'}>Foul −1 Punkt</button><button type="button" data-pool-penalty="${i}" data-monitor-slot="${board.slot}" ${board.enabled?'':'disabled'}>Zusatzstrafe −15</button>`:''}</div>`).join('')}</div>${finishButtons(board,value)}<p class="small">${points?'Namen antippen für Punkte / Break.':'Namen antippen, um einen Frame zu vergeben.'}</p><div>${frameWarningMarkup(board)}<button type="button" data-monitor-warning-off="${board.slot}" hidden>Warnung aus</button></div><div class="monitorActions"><button type="button" data-monitor-undo="${board.slot}" ${board.state.cursor&&board.enabled?'':'disabled'}>↶ Zurück</button><button type="button" data-monitor-redo="${board.slot}" ${board.state.cursor<board.state.events.length&&board.enabled?'':'disabled'}>Vor ↷</button></div>${window.ClubSport.history(value,board.assignment.names)}</article>`;
   }
   const localWarningStorageKey='snooker-table-local-warning-v1';
   let localWarningMute='';
@@ -152,7 +152,7 @@
     return send(board,{type:'warningOff'});
   }
   function bind(container,list){
-    for(const [attribute,amount] of [['foul',1],['penalty',15]])container.querySelectorAll('[data-pool-'+attribute+']').forEach(b=>b.onclick=()=>{const board=list.find(x=>x.slot===Number(b.dataset.monitorSlot));if(board&&(!board.assignment.id.startsWith('single:')||confirm(amount+' Strafpunkt(e) abziehen?')))send(board,{type:'foul',player:Number(b.dataset[attribute==='foul'?'poolFoul':'poolPenalty']),value:amount})});
+    for(const [attribute,amount] of [['foul',1],['penalty',15]])container.querySelectorAll('[data-pool-'+attribute+']').forEach(b=>b.onclick=()=>{const board=list.find(x=>x.slot===Number(b.dataset.monitorSlot));if(board)send(board,{type:'foul',player:Number(b.dataset[attribute==='foul'?'poolFoul':'poolPenalty']),value:amount})});
     container.querySelectorAll('[data-monitor-warning-off]').forEach(b=>b.onclick=()=>{const board=list.find(x=>x.slot===Number(b.dataset.monitorWarningOff));if(board)muteWarning(board)});
     container.querySelectorAll('[data-monitor-player]').forEach(b=>b.onclick=()=>{const board=list.find(x=>x.slot===Number(b.dataset.monitorSlot));if(board)openPopup(board,Number(b.dataset.monitorPlayer))});
     container.querySelectorAll('[data-monitor-winner]').forEach(b=>b.onclick=()=>{const board=list.find(x=>x.slot===Number(b.dataset.monitorSlot));if(board)winner(board,Number(b.dataset.monitorWinner))});
