@@ -25,6 +25,37 @@
     else if(e.key==='Enter'&&e.target!==popup.querySelector('[data-close]')){e.preventDefault();document.getElementById('tableInputSubmit').click()}
   });
   function status(text){message=text;document.querySelectorAll('[data-monitor-message]').forEach(el=>el.textContent=text)}
+  const disciplineStates=new Map(),disciplineNotices=new Set(),disciplineQueue=[];
+  const disciplineDialog=document.createElement('dialog');disciplineDialog.id='poolDisciplineDialog';disciplineDialog.className='tournamentDialog poolDisciplineDialog';document.body.append(disciplineDialog);
+  disciplineDialog.oncancel=e=>e.preventDefault();
+  function showDisciplineNotice(){
+    if(disciplineDialog.open||!disciplineQueue.length)return;
+    const item=disciplineQueue[0];
+    disciplineDialog.innerHTML='<h2>'+escape(item.label)+' beendet</h2><p class="small">Tisch '+item.slot+'</p><div class="poolDisciplineResult"><span>'+escape(item.names[0])+'</span><strong>'+item.frames.join(' : ')+'</strong><span>'+escape(item.names[1])+'</span></div><p>Gesamtergebnis: '+item.total.join(' : ')+'</p><button type="button" class="primary" data-next-discipline>Weiter mit '+escape(item.next)+'</button>';
+    disciplineDialog.querySelector('[data-next-discipline]').onclick=()=>{disciplineQueue.shift();disciplineDialog.close();showDisciplineNotice()};
+    disciplineDialog.showModal();
+  }
+  function observeDiscipline(board,value){
+    if(disciplineQueue.some(item=>item.slot===board.slot&&item.id!==board.assignment.id)){
+      const head=disciplineQueue[0];
+      for(let i=disciplineQueue.length-1;i>=0;i--)if(disciplineQueue[i].slot===board.slot&&disciplineQueue[i].id!==board.assignment.id)disciplineQueue.splice(i,1);
+      if(head!==disciplineQueue[0]&&disciplineDialog.open)disciplineDialog.close();
+      queueMicrotask(showDisciplineNotice);
+    }
+    if(board.assignment.rules.sport!=='pool'||board.assignment.rules.disciplines.length<2)return;
+    const id=board.assignment.id,previous=disciplineStates.get(id),state=board.state;
+    disciplineStates.set(id,{index:value.disciplineIndex,cursor:state.cursor,prefix:JSON.stringify(state.events.slice(0,state.cursor))});
+    if(disciplineStates.size>200)disciplineStates.delete(disciplineStates.keys().next().value);
+    if(!previous||value.complete||value.disciplineIndex<=previous.index||state.cursor<=previous.cursor||JSON.stringify(state.events.slice(0,previous.cursor))!==previous.prefix)return;
+    const event=state.events[state.cursor-1];
+    if(!['frame','finish'].includes(event?.type))return;
+    const key=id+':'+state.cursor+':'+JSON.stringify(event);
+    if(disciplineNotices.has(key))return;
+    disciplineNotices.add(key);if(disciplineNotices.size>300)disciplineNotices.delete(disciplineNotices.values().next().value);
+    const completed=value.disciplines[value.disciplineIndex-1];
+    disciplineQueue.push({id,slot:board.slot,names:board.assignment.names,label:completed.label,frames:completed.frames,total:value.frames,next:value.currentDiscipline.label});
+    queueMicrotask(showDisciplineNotice);
+  }
   function assignment(data,r,m,match){return window.ClubSport?.assignment?window.ClubSport.assignment(data,r,m,match):{id:[data.freeTournament?'free':'club',data.started,r,m,match.startedAt].join(':'),tournament:String(data.started),frameTimeLimitMinutes:data.frameTimeLimitMinutes??0,round:r,index:m,names:match.players.map(id=>data.players[id]),players:[...match.players],rules:data.framesPerMatch!=null?{framesPerMatch:data.framesPerMatch}:{target:data.target}}}
   function forMatch(data,r,m,match){
     const a=assignment(data,r,m,match),remote=boards.find(board=>board.assignment?.id===a.id);
@@ -35,7 +66,7 @@
     return {startedAt:match.startedAt,stoppedAt:match.finishedAt??data.ended??null,slot:match.table,tableNumber:match.table,assignment:a,state,enabled:!data.ended,_local:window.snookerTableSync?.role!=='owner'};
   }
   async function send(board,action){
-    if(busy)return;busy=true;
+    if(busy||disciplineDialog.open)return;busy=true;
     popup.querySelectorAll('button').forEach(el=>el.disabled=true);
     try{
       if(board._local){
@@ -54,7 +85,7 @@
     finally{busy=false;popup.querySelectorAll('button').forEach(el=>el.disabled=false)}
   }
   function winner(board,player,pendingPoints=null){
-    if(busy||!board.enabled)return;
+    if(busy||disciplineDialog.open||!board.enabled)return;
     const value=model.derive(board.state,board.assignment.rules);
     if(value.complete)return;
     if(!board._local&&!boards.some(b=>b.assignment?.id===board.assignment.id&&b.enabled)){
@@ -69,7 +100,7 @@
     return '<div class="monitorActions monitorFinishActions">'+board.assignment.names.map((name,i)=>`<button type="button" class="monitorMatchWinner" data-monitor-finish="${i}" data-monitor-slot="${board.slot}" ${board.enabled&&frames[i]>frames[1-i]?'':'disabled'}>Match-Sieger: ${escape(name)}</button>`).join('')+'</div><p class="small">Vorzeitig beenden: Match-Sieger übernimmt den erreichten Frame-Stand.'+(value.currentDiscipline&&!board.assignment.disciplineId?' Danach folgt die nächste gewählte Disziplin.':'')+'</p>';
   }
   function openPopup(board,player){
-    if(!board.enabled)return;
+    if(disciplineDialog.open||!board.enabled)return;
     if(!board._local&&!boards.some(b=>b.assignment?.id===board.assignment.id&&b.enabled)) {status('Der Tisch wird noch verbunden. Bitte kurz warten.');return}
     const current=model.derive(board.state,board.assignment.rules);
     if(current.currentDiscipline&&current.currentDiscipline.id!=='14'){winner(board,player);return;}
@@ -91,6 +122,7 @@
   function card(board,compact=false){
     if(!board?.assignment)return `<article class="monitorCard"><h3>Tisch ${board?.slot??''}</h3><p>Warten auf eine gestartete Partie.</p></article>`;
     const value=model.derive(board.state,board.assignment.rules);
+    observeDiscipline(board,value);
     if(board.assignment.rules.sport==='pool')return poolCard(board,value);
     return `<article class="monitorCard frameLimitTarget ${compact?'monitorCompact':''}"><h3>Tisch ${board.tableNumber} · ${value.complete?'Partie beendet':'Frame '+(value.frames[0]+value.frames[1]+1)}</h3>
     <div class="monitorPlayers">${board.assignment.names.map((name,i)=>`<div class="monitorPlayerColumn"><button type="button" class="monitorScoreButton" data-monitor-player="${i}" data-monitor-slot="${board.slot}" ${board.enabled&&!value.complete?'':'disabled'}><span class="monitorName">${escape(name)}</span><strong class="monitorPoints">${value.scores[i]}</strong><span>Frames <b>${value.frames[i]}</b></span><span>HB: ${highestBreak(value.breaks[i])}</span></button><button type="button" class="monitorFrameWinner" data-monitor-winner="${i}" data-monitor-slot="${board.slot}" ${board.enabled&&!value.complete?'':'disabled'}>Frame-Sieger: ${escape(name)}</button></div>`).join('')}</div>
@@ -250,8 +282,9 @@
   window.snookerMonitors=Object.freeze({activateTable,renderOverview,reconcile,
     renderSingle(container,board){container.innerHTML=card(board);bind(container,[board]);updateFrameWarnings()},
     openMatch(data,r,m,match){const board=forMatch(data,r,m,match);const current=boards.find(b=>b.slot===board.slot);if(match.result&&current&&current.assignment?.id!==board.assignment.id){status('Dieser Tisch zeigt bereits eine andere Partie. Die alte Spielhistorie bleibt einsehbar.');alert('Diese Partie ist archiviert. Korrekturen nur vor dem nächsten Tischmatch durchführen.');return;}detailSlot=board.slot;renderDetail([board]);if(!detail.open)detail.showModal();if(!match.result&&!data.ended&&!boards.some(b=>b.assignment?.id===board.assignment.id&&b.enabled))void prepareMatch(data,r,m);},
-    canStep(direction){return historyBoards(direction).length>0},
+    canStep(direction){return !disciplineDialog.open&&historyBoards(direction).length>0},
     async step(direction){
+      if(disciplineDialog.open)throw Error('Bitte zuerst die nächste Disziplin bestätigen.');
       if(window.snookerTableSync?.role==='owner')await window.snookerTableSync.idle();
       const entry=historyBoards(direction)[0];if(!entry)throw Error('Keine Eingabe zum Zurücknehmen oder Wiederholen.');
       const board=entry.board,action={type:direction<0?'undo':'redo'};
