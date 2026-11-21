@@ -16,6 +16,7 @@
   let drafting = false;
   let archiveSelection = null;
   let draftFreeTournament = null;
+  let draftSystemChoice = null;
   let view = 'rounds';
   let fullscreen = false;
   let liveStatus = 'Für Live-Sync auf beiden Geräten mit demselben Konto anmelden.';
@@ -1017,7 +1018,7 @@
       <div class="card">
         <h2>${(draftFreeTournament ?? tournament?.freeTournament) ? 'Freies Turnier anlegen' : 'Club Liga Saison · Turnier anlegen'}</h2>
         <form id="tournamentSetup">
-          ${(draftFreeTournament??tournament?.freeTournament)?'<label>Turniermodus<select name="freeSystem"><option value="standard">Nach Teilnehmern / Zeit / Runden</option><option value="groups">Vierergruppen + K.-o.</option><option value="double">Doppel-K.-o.</option></select></label><label id="eliminationBO" hidden>Best of für die gesamte Begegnung<select name="eliminationBO">'+Array.from({length:25},(_,i)=>'<option value="'+(i*2+1)+'">BO '+(i*2+1)+'</option>').join('')+'</select></label><p id="eliminationHint" hidden>Nur ungerade BO. Pool: ein Spiel je Disziplin, dann nächste Disziplin; nach der letzten beginnt die Reihenfolge erneut. 14/1: Zielpunkte bleiben einstellbar.</p>':''}
+          ${(draftFreeTournament??tournament?.freeTournament)?'<div class="turnierModeSummary"><span>Turniermodus</span><button type="button" id="chooseTournamentSystem">Turniermodus wählen</button><p id="tournamentSystemSummary" class="small"></p></div><label hidden aria-hidden="true">Turniermodus<select name="freeSystem"><option value="standard">Nach Teilnehmern / Zeit / Runden</option><option value="groups">Vierergruppen + K.-o.</option><option value="double">Doppel-K.-o.</option></select></label><label id="eliminationBO" hidden>Best of für die gesamte Begegnung<select name="eliminationBO">'+Array.from({length:25},(_,i)=>'<option value="'+(i*2+1)+'">BO '+(i*2+1)+'</option>').join('')+'</select></label><p id="eliminationHint" hidden>Nur ungerade BO. Pool: ein Spiel je Disziplin, dann nächste Disziplin; nach der letzten beginnt die Reihenfolge erneut. 14/1: Zielpunkte bleiben einstellbar.</p>':''}
           <div class="tournamentFields tournamentSetupFields">
             <label>Datum<input name="playDate" type="date" required value="${localDateValue(Date.now())}"></label>
             <label><span id="tournamentCountLabel">Spieleranzahl</span>
@@ -1236,7 +1237,19 @@
       form.elements.endAt.required = endless;
     };
     if(form.elements.freeSystem){
+      const modes={standard:['Zeit / Runden','Alle sammeln Tabellenpunkte. Danach spielen Platz 1 gegen 2 das Finale und Platz 3 gegen 4 um Platz 3.'],groups:['Gruppen + K.-o.','Zuerst Gruppenphase. Die ersten zwei jeder Gruppe kommen weiter. Danach K. o., Finale und Spiel um Platz 3.'],double:['Doppel-K.-o.','Nach der ersten Niederlage geht es in die Verliererrunde. Bei den letzten vier folgen Überkreuz-Halbfinals, Finale und Spiel um Platz 3.']};
+      const chooseSystem=()=>{
+        document.getElementById('tournamentSystemDialog')?.remove();
+        const dialog=document.createElement('dialog');dialog.id='tournamentSystemDialog';dialog.className='tournamentDialog tournamentSystemDialog';
+        dialog.innerHTML='<h2>Turniermodus wählen</h2><p>Wie möchtet ihr spielen?</p><div class="tournamentSystemOptions">'+Object.entries(modes).map(([id,[title,help]])=>'<button type="button" data-system-choice="'+id+'"'+(form.elements.freeSystem.value===id?' aria-pressed="true"':' aria-pressed="false"')+'><strong>'+esc(title)+'</strong><span>'+esc(help)+'</span></button>').join('')+'</div><button type="button" data-system-close>Zurück</button>';
+        document.body.append(dialog);const close=()=>{dialog.close();dialog.remove();$('chooseTournamentSystem')?.focus();};
+        dialog.querySelectorAll('[data-system-choice]').forEach(button=>button.onclick=()=>{draftSystemChoice=button.dataset.systemChoice;form.elements.freeSystem.value=draftSystemChoice;form.elements.freeSystem.onchange();close();});
+        dialog.querySelector('[data-system-close]').onclick=close;dialog.oncancel=event=>{event.preventDefault();close();};dialog.showModal();
+      };
+      $('chooseTournamentSystem').onclick=chooseSystem;
+      if(draftSystemChoice)form.elements.freeSystem.value=draftSystemChoice;
       form.elements.freeSystem.onchange=()=>{
+        const mode=modes[form.elements.freeSystem.value];$('chooseTournamentSystem').textContent=mode[0]+' · ändern';$('tournamentSystemSummary').textContent=mode[1];
         const knockout=form.elements.freeSystem.value!=='standard';
         $('eliminationBO').hidden=!knockout;$('eliminationBO').style.display=knockout?'':'none';$('eliminationHint').hidden=!knockout;
         for(const name of ['duration','rounds','endAt','framesPerMatch','byePoints','poolOrder']){const el=form.elements[name];if(el){const hide=knockout||(isPool&&name==='framesPerMatch');el.closest('label').hidden=hide;el.closest('label').style.display=hide?'none':'';el.disabled=knockout;}}
@@ -1244,6 +1257,7 @@
         if(!knockout)form.elements.duration.onchange();
       };
       form.elements.freeSystem.onchange();
+      if(!draftSystemChoice)chooseSystem();
     }
     if ($('cancelTournamentSetup')) $('cancelTournamentSetup').onclick = () => {
       const fromHome = draftFreeTournament !== null;
@@ -1684,7 +1698,7 @@
         draftFreeTournament = null;
         drafting = false;
         saveTournament(false, true);
-        drafting = true;
+        drafting = true;draftSystemChoice=null;
         renderTournament();
       } catch (error) {
         errorOutput.textContent = 'Die Datei konnte nicht geladen werden. Bitte eine gültige Club-Liga-Sicherung (.json) auswählen.';
@@ -1815,19 +1829,55 @@
     panel.querySelectorAll('[data-edit]').forEach(button=>button.onclick=()=>openResultDialog(at(button.dataset.edit),button.dataset.edit));
     panel.querySelectorAll('[data-warning-off]').forEach(button=>button.onclick=()=>window.snookerMonitors.silence(button.dataset.warningOff));
     if($('nextTournamentRound'))$('nextTournamentRound').onclick=()=>{const next=planner.next(data);if(!next){renderTournament();return;}data.rounds.push(next);saveTournament();};
-    if($('newTournament'))$('newTournament').onclick=()=>{if(data.freeTournament){draftFreeTournament=null;drafting=true;renderTournament();}else askClubFileBeforeNewTournament();};
+    if($('newTournament'))$('newTournament').onclick=()=>{if(data.freeTournament){draftFreeTournament=null;drafting=true;draftSystemChoice=null;renderTournament();}else askClubFileBeforeNewTournament();};
     if($('changeEndTime'))$('changeEndTime').onclick=editEndTime;
     renderPlacementAction();updateClocks();refreshHistory();
   }
 
+  function renderTournamentTree(data){
+    const rounds=data.rounds.map((round,r)=>({round,r})).filter(({round})=>round.matches.some(m=>m.bracket||m.decider));
+    const label=m=>({upper:'Gewinnerrunde',lower:'Verliererrunde',semi:'Halbfinale',final:'Finale · Platz 1 / 2',bronze:'Kleines Finale · Platz 3 / 4',ko:'K.-o.'}[m.bracket]??'Entscheidung');
+    const seen=new Map(),links=[];
+    const columns=rounds.map(({round,r})=>{
+      const matches=round.matches.map((m,i)=>{
+        const key='treeMatch'+r+'_'+i;
+        const source=m.players.map(id=>seen.get(id));
+        source.forEach(from=>{if(from&&from.key!==key)links.push({from:from.key,to:key,loss:from.loss});});
+        let frames=m.result?.frames;
+        if(!frames&&m.scoreMonitor)try{frames=window.SnookerTableScore.derive(m.scoreMonitor.state,matchRules(data,m)).frames;}catch{}
+        const winner=frames&&m.result?(frames[0]>frames[1]?0:1):null;
+        const names=m.players.map((id,n)=>'<div class="treePlayer'+(winner===n?' treeWinner':'')+'"><span>'+esc(data.players[id])+'</span><strong>'+(frames?frames[n]:'–')+'</strong></div>').join('');
+        const state=m.result?'Beendet':m.table?'Läuft · Tisch '+m.table:m.paused?'Pausiert':'Wartet auf Start';
+        const origins=source.map((from,n)=>from?esc(data.players[m.players[n]])+': '+(from.loss?'Verlierer':'Sieger')+' aus '+esc(from.title):'').filter(Boolean);
+        m.players.forEach((id,n)=>{if(m.result)seen.set(id,{key,loss:winner!==n,title:label(m)+' · Spiel '+(i+1)})});
+        return '<article id="'+key+'" class="treeMatch'+(m.table&&!m.result?' treeLive':'')+'"><h4>'+esc(label(m))+' · '+(i+1)+'</h4>'+names+'<p class="treeState">'+esc(state)+'</p>'+(origins.length?'<details class="treeOrigin"><summary>Woher kommen die Spieler?</summary><p>'+origins.join('<br>')+'</p></details>':'')+'</article>';
+      }).join('');
+      const byes=(round.slots??[]).filter(x=>x[1]==null).map(x=>esc(data.players[x[0]]));
+      return '<section class="treeColumn"><h3>'+esc(round.label??'Runde '+(r+1))+'</h3><div class="treeColumnMatches">'+matches+'</div>'+(byes.length?'<p class="small">Freilos · weiter: '+byes.join(', ')+'</p>':'')+(round.resting?.length?'<p class="small">Wartet in dieser Phase: '+round.resting.map(id=>esc(data.players[id])).join(', ')+'</p>':'')+'</section>';
+    }).join('');
+    panel.insertAdjacentHTML('beforeend','<section class="card"><h2>Turnierbaum</h2><p>Von links nach rechts bis zum Finale. Auf dem Handy seitlich wischen. Durchgezogene Linien: Siegerweg; gestrichelte Linien: Weg nach einer Niederlage.</p><p>Spiele starten und Ergebnisse eingeben: <button type="button" id="treeToGames">Zu den Begegnungen</button></p>'+(!rounds.length?'<p>Zuerst wird die Gruppenphase gespielt. Der K.-o.-Baum erscheint, sobald die Gruppenergebnisse bestätigt sind.</p>':'')+'<div class="treeScroll" tabindex="0" role="region" aria-label="Turnierbaum, seitlich scrollbar"><div id="tournamentTreeCanvas" class="treeCanvas">'+columns+'</div></div>'+(!data.ended?'<p class="small">Weitere Paarungen erscheinen nach Bestätigung der aktuellen Phase unter „Turnierverlauf“.</p>':'')+'</section>');
+    $('treeToGames').onclick=()=>{view='rounds';renderTournament()};
+    const draw=()=>{
+      const canvas=$('tournamentTreeCanvas');if(!canvas||typeof canvas.getBoundingClientRect!=='function')return;
+      canvas.querySelector('svg')?.remove();const box=canvas.getBoundingClientRect();
+      const paths=links.map(link=>{const a=$(link.from),b=$(link.to);if(!a||!b)return '';const from=a.getBoundingClientRect(),to=b.getBoundingClientRect(),x1=from.right-box.left,y1=from.top+from.height/2-box.top,x2=to.left-box.left,y2=to.top+to.height/2-box.top;if(x2<=x1)return '';const mid=(x1+x2)/2;return '<path d="M '+x1+' '+y1+' C '+mid+' '+y1+', '+mid+' '+y2+', '+x2+' '+y2+'" class="'+(link.loss?'treeLossPath':'')+'"/>';}).join('');
+      canvas.insertAdjacentHTML('afterbegin','<svg class="treeConnections" aria-hidden="true" width="'+canvas.scrollWidth+'" height="'+canvas.scrollHeight+'" viewBox="0 0 '+canvas.scrollWidth+' '+canvas.scrollHeight+'">'+paths+'</svg>');
+    };
+    window.requestAnimationFrame?window.requestAnimationFrame(draw):draw();
+    if(window.ResizeObserver){const canvas=$('tournamentTreeCanvas');const observer=new window.ResizeObserver(()=>{if(!canvas.isConnected)observer.disconnect();else draw();});observer.observe($('tournamentTreeCanvas'));}
+  }
+
   function renderElimination(){
     const data=tournament,e=data.elimination,engine=window.ClubElimination;
-    panel.insertAdjacentHTML('beforeend',`<section class="card"><h2>${e.mode==='groups'?'Gruppenphase + K.-o.':e.mode==='placement'?'Platzierungsfinals':'Doppel-K.-o.'}</h2><p>BO ${e.bo} pro Begegnung · ${data.players.length} ${data.poolMode==='double'?'Teams':'Spieler'} · ${data.tables} Tisch(e)</p>${isPool?'<p>'+data.poolRules.disciplines.map(d=>esc(d.label)).join(' → ')+' · ein Spiel je Frame, Reihenfolge wird wiederholt.</p>':''}<div class="tournamentActions"><button type="button" id="eliminationRounds">Turnierverlauf</button><button type="button" id="eliminationMonitors">Score Monitor</button></div>${data.ended?'<h3>Turniersieger: '+(e.champion==null?'Turnier vorzeitig beendet':esc(data.players[e.champion]))+'</h3><button type="button" id="eliminationNew">Neues Turnier</button>':''}</section>`);
+    panel.insertAdjacentHTML('beforeend',`<section class="card"><h2>${e.mode==='groups'?'Gruppenphase + K.-o.':e.mode==='placement'?'Platzierungsfinals':'Doppel-K.-o.'}</h2><p>BO ${e.bo} pro Begegnung · ${data.players.length} ${data.poolMode==='double'?'Teams':'Spieler'} · ${data.tables} Tisch(e)</p>${isPool?'<p>'+data.poolRules.disciplines.map(d=>esc(d.label)).join(' → ')+' · ein Spiel je Frame, Reihenfolge wird wiederholt.</p>':''}<div class="tournamentActions"><button type="button" id="eliminationRounds">Turnierverlauf</button><button type="button" id="eliminationTree">Turnierbaum</button><button type="button" id="eliminationMonitors">Tischmonitore</button></div>${data.ended?'<h3>Turniersieger: '+(e.champion==null?'Turnier vorzeitig beendet':esc(data.players[e.champion]))+'</h3><button type="button" id="eliminationNew">Neues Turnier</button>':''}</section>`);
     $('eliminationRounds').onclick=()=>{view='rounds';renderTournament()};$('eliminationMonitors').onclick=()=>{view='monitors';renderTournament()};
-    if($('eliminationNew'))$('eliminationNew').onclick=()=>{drafting=true;renderTournament()};
+    $('eliminationTree').onclick=()=>{view='tree';renderTournament()};
+    for(const [id,current] of [['eliminationRounds','rounds'],['eliminationTree','tree'],['eliminationMonitors','monitors']]){$(id).classList.toggle('primary',view===current);$(id).setAttribute('aria-pressed',String(view===current));}
+    if($('eliminationNew'))$('eliminationNew').onclick=()=>{drafting=true;draftSystemChoice=null;renderTournament()};
     if(e.mode==='placement'){const rows=standings(data.rounds.slice(0,e.qualificationRounds),data);panel.insertAdjacentHTML('beforeend','<section class="card"><h3>Tabelle nach der Qualifikation</h3><p>'+rows.map(r=>r.place+'. '+esc(data.players[r.id])+' · '+formatPoints(r.points)+' Pkt.').join('<br>')+'</p></section>');}
     if(e.placements)panel.insertAdjacentHTML('beforeend','<section class="card"><h3>Endplatzierung</h3><ol>'+e.placements.map(id=>'<li>'+esc(data.players[id])+'</li>').join('')+'</ol></section>');
-    if(view==='monitors'){
+    if(view==='tree'){renderTournamentTree(data);}
+    else if(view==='monitors'){
       panel.insertAdjacentHTML('beforeend','<div id="tournamentMonitors"></div>');window.snookerMonitors?.renderOverview($('tournamentMonitors'),data);
     }else{
       if(e.groups)for(let g=0;g<e.groups.length;g++){
@@ -2000,7 +2050,7 @@
       // Free tournament remains unchanged. The Club Liga asks for the latest season backup.
       if (tournament.freeTournament) {
         draftFreeTournament = null;
-        drafting = true;
+        drafting = true;draftSystemChoice=null;
         renderTournament();
       } else {
         askClubFileBeforeNewTournament();

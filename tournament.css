@@ -390,7 +390,7 @@ body.monitorOverviewFullscreen .pageFooter {display:none!important}
  .monitorKeypad button {min-height:42px}
 }
 
-/* v8.22: approval counter and refresh control */
+/* v8.23: approval counter and refresh control */
 .accessPendingCount {display:inline-flex;align-items:center;justify-content:center;min-width:23px;height:23px;padding:0 5px;box-sizing:border-box;border-radius:999px;background:#eac374;color:#25142d;border:1px solid #f7e0a1;font-weight:900;font-size:14px;margin-left:8px;vertical-align:middle}
 .accessPendingCount[hidden] {display:none!important}
 .pageFooter .accessRefreshButton {grid-column:1;grid-row:auto;background:#433052;border:1px solid #b69269;color:#f6e9d1}
@@ -477,3 +477,9 @@ body.tableMonitorFullscreen #tableMode [data-table-refresh] {display:block}
 .tournamentFields{align-items:start!important}.tournamentFields>label{display:flex!important;flex-direction:column;justify-content:flex-start!important;align-self:start;gap:6px}.tournamentFields>label>input,.tournamentFields>label>select{margin-top:0!important}
 
 #tournamentSetup label[hidden]{display:none!important}
+
+/* Clear tournament choices and a dedicated, horizontally scrollable bracket. */
+.turnierModeSummary{margin:12px 0 20px}.turnierModeSummary>span{display:block;font-weight:bold;margin-bottom:6px}.turnierModeSummary>button{width:100%;text-align:left;font-weight:bold}.turnierModeSummary p{margin:8px 0}
+.tournamentSystemDialog{width:min(620px,calc(100vw - 32px));max-height:90dvh;overflow:auto;box-sizing:border-box}.tournamentSystemOptions{display:grid;gap:12px;margin:18px 0}.tournamentSystemOptions button{display:block;width:100%;text-align:left;padding:18px;white-space:normal}.tournamentSystemOptions strong{display:block;font-size:1.2em;margin-bottom:8px}.tournamentSystemOptions span{display:block;font-weight:normal;line-height:1.4}.tournamentSystemOptions button[aria-pressed=true]{border:2px solid #efd17b}
+.treeScroll{overflow:auto;max-width:100%;padding:8px 0 20px;overscroll-behavior-x:contain}.treeCanvas{position:relative;display:flex;align-items:stretch;gap:52px;width:max-content;min-width:100%;isolation:isolate}.treeColumn{position:relative;display:flex;flex-direction:column;width:270px;flex-shrink:0}.treeColumn>h3{font-size:1.05em;margin:0 0 14px;min-height:2.6em}.treeColumnMatches{display:flex;flex:1;flex-direction:column;justify-content:space-around;gap:18px}.treeMatch{position:relative;z-index:1;border:1px solid #a28a66;border-radius:14px;background:#21172d;color:#fff2d6;overflow:hidden;box-shadow:0 2px 6px #0003}.poolTheme .treeMatch{background:#103a29}.treeMatch h4{margin:0;padding:9px 12px;font-size:.9em;background:#ffffff0c}.treePlayer{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 12px;border-top:1px solid #ffffff25}.treePlayer>span{overflow-wrap:anywhere}.treePlayer>strong{font-variant-numeric:tabular-nums}.treeWinner{background:#cba64d30;font-weight:bold}.treeState{margin:0!important;padding:8px 12px;font-size:.85em;color:#eee5cb}.treeLive{border:2px solid #82caed}.treeOrigin{padding:6px 12px;font-size:.8em}.treeOrigin summary{cursor:pointer}.treeConnections{position:absolute;inset:0;z-index:0;pointer-events:none;overflow:visible}.treeConnections path{fill:none;stroke:#cdb875;stroke-width:2}.treeConnections .treeLossPath{stroke-dasharray:6 5;stroke:#bfa2d6}
+@media(max-width:600px){.treeColumn{width:250px}.treeCanvas{gap:36px}.tournamentSystemDialog{padding:18px}.tournamentSystemOptions button{padding:14px}}
