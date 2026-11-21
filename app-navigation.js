@@ -166,7 +166,7 @@
     queueMicrotask(update);
   }
   document.addEventListener('touchstart',e=>{
-    swipeStart=e.touches.length===1&&!e.target.closest('input,textarea,select,dialog')?{x:e.touches[0].clientX,y:e.touches[0].clientY}:null;
+    swipeStart=e.touches.length===1&&!e.target.closest('input,textarea,select,dialog,.treeScroll,[data-no-page-swipe]')?{x:e.touches[0].clientX,y:e.touches[0].clientY}:null;
   },{passive:true});
   document.addEventListener('touchcancel',()=>swipeStart=null,{passive:true});
   document.addEventListener('touchend',e=>{

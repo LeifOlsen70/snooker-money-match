@@ -112,7 +112,7 @@
    if(d.elimination.mode==='placement'){const e=d.elimination;if(!Number.isInteger(e.qualificationRounds)||e.qualificationRounds<1||e.qualificationRounds>=d.rounds.length||!Array.isArray(e.seeds)||e.seeds.flatMap(g=>g.ids??[]).length!==d.players.length||new Set(e.seeds.flatMap(g=>g.ids??[])).size!==d.players.length)return false;}
    if(d.elimination.placements&&(!Array.isArray(d.elimination.placements)||new Set(d.elimination.placements).size!==d.elimination.placements.length||d.elimination.placements.some(i=>!Number.isInteger(i)||i<0||i>=d.players.length)))return false;
    const busyPlayers=new Set(),busyTables=new Set();
-   for(const r of d.rounds){if(!Array.isArray(r.matches)||!r.matches.length||r.matches.length>66)return false;
+   for(const r of d.rounds){if(!Array.isArray(r.matches)||!r.matches.length||r.matches.length>120)return false;
     if(r.slots&&(!Array.isArray(r.slots)||r.slots.some(s=>!Array.isArray(s)||s.length!==2||!Number.isInteger(s[0])||s[0]<0||s[0]>=d.players.length||!(s[1]===null||Number.isInteger(s[1])&&s[1]>=0&&s[1]<d.players.length))))return false;
     for(const m of r.matches){if(!Array.isArray(m.players)||m.players.length!==2||m.players[0]===m.players[1]||m.players.some(i=>!Number.isInteger(i)||i<0||i>=d.players.length)||!(m.table===null||Number.isInteger(m.table)&&m.table>=1&&m.table<=d.tables))return false;
     if(m.group!=null&&(!Number.isInteger(m.group)||!d.elimination.groups?.[m.group]||m.players.some(id=>!d.elimination.groups[m.group].includes(id))))return false;
