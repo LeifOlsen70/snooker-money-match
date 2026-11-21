@@ -390,7 +390,7 @@ body.monitorOverviewFullscreen .pageFooter {display:none!important}
  .monitorKeypad button {min-height:42px}
 }
 
-/* v8.25: approval counter and refresh control */
+/* v8.27: approval counter and refresh control */
 .accessPendingCount {display:inline-flex;align-items:center;justify-content:center;min-width:23px;height:23px;padding:0 5px;box-sizing:border-box;border-radius:999px;background:#eac374;color:#25142d;border:1px solid #f7e0a1;font-weight:900;font-size:14px;margin-left:8px;vertical-align:middle}
 .accessPendingCount[hidden] {display:none!important}
 .pageFooter .accessRefreshButton {grid-column:1;grid-row:auto;background:#433052;border:1px solid #b69269;color:#f6e9d1}
@@ -487,3 +487,4 @@ body.tableMonitorFullscreen #tableMode [data-table-refresh] {display:block}
 .quickPair{padding:12px 0;border-top:1px solid #ffffff35}.quickPair>strong{display:block;margin-bottom:8px}.quickPair>div{display:flex;flex-wrap:wrap;gap:8px}.quickPair button{padding:10px 14px;font-size:1rem}
 #tournamentRecoveryDialog button{display:block;width:100%;text-align:left;white-space:normal;margin:10px 0}
 .treeForward{align-items:stretch}.treeForward>.treeStart{align-self:center}.treeForward .treeRight>.treeColumn{border-top:0;padding-top:0}
+.byeComparison{max-width:100%;overflow-x:auto}.byeComparison summary{cursor:pointer}.byeComparison table{min-width:500px}.byeComparison th,.byeComparison td{font-size:14px}

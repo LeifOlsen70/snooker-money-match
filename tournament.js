@@ -1851,6 +1851,15 @@
     const keys=[...groups.keys()].sort((a,b)=>a-b),ordered=[];let left=true;
     while(left){left=false;for(const key of keys){const entry=groups.get(key).shift();if(entry){ordered.push(entry);left=true;}}}return ordered;
   }
+  function byeExplanation(round,data,compact=false){
+    if(round.byeSelection?.method==='performance'){
+      const info=round.byeSelection;
+      const message='Freilose nach Siegquote, danach Frame-Differenz pro Spiel.'+(info.randomAtCutoff?' Bei Gleichstand um ein Freilos hat das Los entschieden.':'');
+      if(compact)return '<p class="small">'+message+'</p>';
+      return '<p class="small">'+message+' Eines je Turnierhälfte.</p><details class="byeComparison"><summary>Freilos-Wertung ansehen</summary><p class="small">Nur die drei Gruppensieger werden verglichen. Unterschiedliche Gruppengrößen werden über Quoten ausgeglichen. Entscheidungsspiele zählen hier nicht zusätzlich.</p><table class="tournamentTable"><thead><tr><th>Spieler / Team</th><th>Siege / Spiele</th><th>Siegquote</th><th>Frame-Δ / Spiel</th><th>Weiter</th></tr></thead><tbody>'+info.ranking.map((row,i)=>'<tr><td>'+esc(data.players[row.player])+'</td><td>'+row.wins+' / '+row.played+'</td><td>'+formatPoints(Math.round(row.wins/row.played*1000)/10)+' %</td><td>'+formatPoints(Math.round(row.diff/row.played*100)/100)+'</td><td>'+(i<2?'Freilos':'Viertelfinale')+'</td></tr>').join('')+'</tbody></table></details>';
+    }
+    return round.groupWinnerByeDraw?'<p class="small">Freilose unter den Gruppensiegern ausgelost.</p>':'';
+  }
   function engineGroupRows(data,g){return window.ClubElimination.groupRows(data,g).rows.map((row,i)=>'<div id="treeGroupPlayer'+row.id+'" class="treePlayer"><span>'+(i+1)+'. '+esc(data.players[row.id])+'</span><strong>'+row.wins+'</strong></div>').join('');}
   function renderTournamentTree(data){
     const rounds=data.rounds.map((round,r)=>({round,r})).filter(({round})=>round.matches.some(m=>m.bracket||m.decider));
@@ -1873,7 +1882,7 @@
         return '<article id="'+key+'" class="treeMatch'+(m.table&&!m.result?' treeLive':'')+'"><h4>'+esc(label(m))+' · '+(i+1)+'</h4>'+names+'<p class="treeState">'+esc(state)+'</p>'+(origins.length?'<details class="treeOrigin"><summary>Woher kommen die Spieler?</summary><p>'+origins.join('<br>')+'</p></details>':'')+'</article>';
       }).join('');
       const byes=(round.slots??[]).filter(x=>x[1]==null).map(x=>esc(data.players[x[0]]));
-      return {round,html:'<section class="treeColumn"><h3>'+esc(round.slots?.length===4?'Viertelfinale':round.slots?.length===8?'Achtelfinale':round.label??'Runde '+(r+1))+'</h3><div class="treeColumnMatches">'+matches+'</div>'+(byes.length?'<p class="small">Freilos · weiter: '+byes.join(', ')+'</p>':'')+(round.resting?.length?'<p class="small">Wartet in dieser Phase: '+round.resting.map(id=>esc(data.players[id])).join(', ')+'</p>':'')+'</section>'};
+      return {round,html:'<section class="treeColumn"><h3>'+esc(round.slots?.length===4?'Viertelfinale':round.slots?.length===8?'Achtelfinale':round.label??'Runde '+(r+1))+'</h3><div class="treeColumnMatches">'+matches+'</div>'+byeExplanation(round,data,true)+(byes.length?'<p class="small">Freilos · weiter: '+byes.join(', ')+'</p>':'')+(round.resting?.length?'<p class="small">Wartet in dieser Phase: '+round.resting.map(id=>esc(data.players[id])).join(', ')+'</p>':'')+'</section>'};
     });
     const lowerColumns=columns.filter(x=>x.round.matches.every(m=>m.bracket==='lower')),upperColumns=columns.filter(x=>!x.round.medal&&!x.round.matches.every(m=>m.bracket==='lower'));
     const pending=(title)=>'<section class="treeColumn treePending"><h3>'+title+'</h3><p>Paarungen noch offen</p><p class="small">Wird nach den Ergebnissen der vorherigen Ebenen gefüllt.</p></section>';
@@ -1932,7 +1941,7 @@
         const entries=round.matches.map((m,i)=>({m,i}));
         const category=m=>m.result?0:m.table?1:current&&engine.ready(data,m)?2:3;
         const ordered=[0,1,2,3].flatMap(level=>alternateGroups(entries.filter(x=>category(x.m)===level)));
-        panel.insertAdjacentHTML('beforeend',`<details class="card" data-pool-fold="elim:${data.started}:${r}" ${current?'open':''}><summary><strong>${esc(round.label??'Runde '+(r+1))}</strong> · ${finished}/${round.matches.length} beendet</summary>${byes.length?'<p>Freilos · weiter: '+byes.map(esc).join(', ')+'</p>':''}${round.resting?.length?'<p>Wartet auf nächste Runde: '+round.resting.map(id=>esc(data.players[id])).join(', ')+'</p>':''}${ordered.map(({m,i})=>'<div data-match-category="'+category(m)+'" data-game-group="'+(m.group??'')+'">'+(m.group!=null?'<p>Gruppe '+String.fromCharCode(65+m.group)+'</p>':m.bracket?'<p>'+({upper:'Gewinnerrunde',lower:'Verliererrunde',final:'Finale · Platz 1 / 2',bronze:'Kleines Finale · Platz 3 / 4',semi:'Halbfinale',ko:'K.-o.'}[m.bracket]??'')+'</p>':'')+renderMatch(m,r+':'+i,current?availableTables():[],!current||!engine.ready(data,m))+'</div>').join('')}</details>`);
+        panel.insertAdjacentHTML('beforeend',`<details class="card" data-pool-fold="elim:${data.started}:${r}" ${current?'open':''}><summary><strong>${esc(round.label??'Runde '+(r+1))}</strong> · ${finished}/${round.matches.length} beendet</summary>${byeExplanation(round,data)}${byes.length?'<p>Freilos · weiter: '+byes.map(esc).join(', ')+'</p>':''}${round.resting?.length?'<p>Wartet auf nächste Runde: '+round.resting.map(id=>esc(data.players[id])).join(', ')+'</p>':''}${ordered.map(({m,i})=>'<div data-match-category="'+category(m)+'" data-game-group="'+(m.group??'')+'">'+(m.group!=null?'<p>Gruppe '+String.fromCharCode(65+m.group)+'</p>':m.bracket?'<p>'+({upper:'Gewinnerrunde',lower:'Verliererrunde',final:'Finale · Platz 1 / 2',bronze:'Kleines Finale · Platz 3 / 4',semi:'Halbfinale',ko:'K.-o.'}[m.bracket]??'')+'</p>':'')+renderMatch(m,r+':'+i,current?availableTables():[],!current||!engine.ready(data,m))+'</div>').join('')}</details>`);
       });
       if(!data.ended&&data.rounds.at(-1).matches.every(m=>m.result))panel.insertAdjacentHTML('beforeend','<button type="button" class="primary" id="eliminationNext">Ergebnisse bestätigen · nächste Phase / Sieger anzeigen</button>');
       if($('eliminationNext'))$('eliminationNext').onclick=()=>{if(engine.advance(data))saveTournament()};

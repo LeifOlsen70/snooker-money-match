@@ -26,12 +26,30 @@
   const compare=(a,b)=>b.wins-a.wins||b.diff-a.diff||b.direct-a.direct||b.tieWins-a.tieWins||b.tieDiff-a.tieDiff;
   rows.sort(compare);return {rows,compare};
  }
+ function slottedRound(slots,label,extra={}){
+  return {bye:null,label,slots,...extra,matches:slots.flatMap(([a,b],slot)=>b==null?[]:[match(a,b,{slot,bracket:'ko'})])};
+ }
+ function groupKnockout(d,ranked){
+  const first=ranked.map(rows=>rows[0].id),second=ranked.map(rows=>rows[1].id);
+  if(ranked.length===3){
+   // Compare rates rather than raw totals: groups may contain three or four players.
+   const scores=ranked.map((rows,group)=>{const row=rows[0];const played=d.rounds.flatMap(r=>r.matches).filter(m=>m.group===group&&!m.decider&&m.result&&m.players.includes(row.id)).length;return {group,player:row.id,wins:row.wins,diff:row.diff,played};});
+   const compare=(a,b)=>b.wins*a.played-a.wins*b.played||b.diff*a.played-a.diff*b.played;
+   scores.sort((a,b)=>compare(a,b)||a.group-b.group);
+   const tied=compare(scores[1],scores[2])===0;
+   if(tied){const boundary=scores[1],start=scores.findIndex(row=>compare(row,boundary)===0),tail=scores.slice(start),order=shuffled(tail.length);scores.splice(start,tail.length,...order.map(i=>tail[i]));}
+   const [a,b,c]=scores.map(row=>row.group);
+   return slottedRound([[first[a],null],[second[b],second[c]],[first[b],null],[first[c],second[a]]],'Viertelfinale · 6 Qualifizierte',{groupWinnerByeDraw:tied,byeSelection:{method:'performance',ranking:scores,randomAtCutoff:tied}});
+  }
+  if(ranked.length===4)return bracketRound([first[0],second[1],first[2],second[3],first[1],second[0],first[3],second[2]],'Viertelfinale');
+  return medalRound([first[0],second[1],first[1],second[0]],true,false);
+ }
  function bracketRound(ids,label){
   const slots=[];let size=2;while(size<ids.length)size*=2;
   const byes=size-ids.length;let pos=0;
   for(let i=0;i<byes;i++)slots.push([ids[pos++],null]);
   while(pos<ids.length)slots.push([ids[pos++],ids[pos++]]);
-  return {bye:null,label,slots,matches:slots.flatMap(([a,b],slot)=>b==null?[]:[match(a,b,{slot,bracket:'ko'})])};
+  return slottedRound(slots,label);
  }
  function medalRound(ids,semis=false,cross=true){
   return {bye:null,label:semis?(cross?'Überkreuz-Halbfinale':'Halbfinale'):'Finale und kleines Finale',medal:semis?'semis':'finals',matches:semis?[match(ids[0],ids[cross?3:1],{bracket:'semi'}),match(ids[cross?1:2],ids[cross?2:3],{bracket:'semi'})]:[match(ids[0],ids[1],{bracket:'final'}),...(ids.length>=4?[match(ids[2],ids[3],{bracket:'bronze'})]:[])]};
@@ -90,7 +108,9 @@
     const tied=rows.filter(x=>compare(x,rows[i])===0);if(tied.length>1&&!ties.some(t=>t.group===g&&t.ids.includes(rows[i].id)))ties.push({group:g,ids:tied.map(x=>x.id)});
    }return rows;});
    if(ties.length){d.rounds.push({bye:null,label:'Gruppen-Entscheidung · BO 1',matches:ties.flatMap(t=>rr(t.ids,{group:t.group,decider:true}))});return true;}
-   e.phase='bracket';const first=ranked.map(r=>r[0].id),second=ranked.map(r=>r[1].id),seed=[];
+   e.phase='bracket';
+   if(ranked.length>=2){d.rounds.push(groupKnockout(d,ranked));return true;}
+   const first=ranked.map(r=>r[0].id),second=ranked.map(r=>r[1].id),seed=[];
    for(let i=0;i<first.length;i++)seed.push(first[i],second[(i+1)%second.length]);
    if(seed.length===2&&ranked.length===1){seed.push(...ranked[0].slice(2,4).map(r=>r.id));if(seed.length===3)e.third=seed.pop();d.rounds.push(medalRound(seed));return true;}
    d.rounds.push(seed.length===4?medalRound(seed,true,false):seed.length===2?medalRound(seed):bracketRound(seed,'K.-o.-Phase'));return true;
