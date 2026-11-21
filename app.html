@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#0f5f37">
-  <meta name="application-version" content="8.20">
+  <meta name="application-version" content="8.22">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="Snooker Match">
@@ -331,7 +331,7 @@ body.snookerFullscreenScore #scorerPage.displayOnly{background:#090613!important
 .appInfoLink {display:inline-block;margin:0 0 14px;padding:10px 16px;border:1px solid #a98b49;border-radius:12px;color:#f3ecd7;background:#382045;text-decoration:none;font-weight:700}
 body.snookerFullscreenTournament .appInfoLink,body.snookerFullscreenScore .appInfoLink {display:none}
 
-/* v8.20: points fill the scoreboard; entry opens in a local modal. */
+/* v8.22: points fill the scoreboard; entry opens in a local modal. */
 #scorerPage:not(.displayOnly) .scorerGrid {
   flex:initial!important;
   min-height:clamp(320px,55dvh,650px);
@@ -372,10 +372,10 @@ body.snookerFullscreenTournament .appInfoLink,body.snookerFullscreenScore .appIn
 #accessAdminDialog .accessActions{display:flex;gap:8px;flex-wrap:wrap}
 #accessGateDialog button,#accessAdminDialog button{padding:11px;border-radius:8px;cursor:pointer}
 </style>
-  <link rel="stylesheet" href="tournament.css?v=8.20">
-<script src="pool-planner.js?v=8.20"></script><script src="sports.js?v=8.20"></script><link rel="stylesheet" href="pool.css?v=8.20"></head>
+  <link rel="stylesheet" href="tournament.css?v=8.22">
+<script src="pool-planner.js?v=8.22"></script><script src="sports.js?v=8.22"></script><link rel="stylesheet" href="pool.css?v=8.22"></head>
 <body class="modeHome">
-<div id="appVersionTag" aria-label="App-Version 8.20">v8.20</div>
+<div id="appVersionTag" aria-label="App-Version 8.22">v8.22</div>
 <div class="app">
   <h1 class="clubBrand" aria-label="Flensburger Snooker Club – Snooker Money Match"><img src="flensburger-snooker-club.png" alt="Flensburger Snooker Club" width="430" height="125"><span class="visuallyHidden">Snooker Money Match</span></h1><div id="offlineStatus" class="hidden" aria-live="polite"></div>
 
@@ -519,10 +519,11 @@ body.snookerFullscreenTournament .appInfoLink,body.snookerFullscreenScore .appIn
 <button type="button" id="accountGuest">Ohne Anmeldung fortfahren</button>
 <button type="button" id="accountCancel">Abbrechen</button>
 </div></form></dialog>
-<script src="table-score.js?v=8.20"></script>
-<script src="table-access.js?v=8.20"></script>
-<script src="account-access.js?v=8.20"></script><script src="player-picker.js?v=8.20"></script><script src="kai-audio.js?v=8.20"></script><link rel="stylesheet" href="player-picker.css?v=8.20">
-<script src="access-ui.js?v=8.20"></script>
+<script src="elimination.js?v=8.22"></script>
+<script src="table-score.js?v=8.22"></script>
+<script src="table-access.js?v=8.22"></script>
+<script src="account-access.js?v=8.22"></script><script src="player-picker.js?v=8.22"></script><script src="kai-audio.js?v=8.22"></script><link rel="stylesheet" href="player-picker.css?v=8.22">
+<script src="access-ui.js?v=8.22"></script>
 
 <script>
 const localStorage = window.snookerStorage;
@@ -1281,7 +1282,7 @@ if('serviceWorker' in navigator){
 }
 </script>
 <script>
-// v8.20: Give a meaningful error if an import or initialization blocks auth.
+// v8.22: Give a meaningful error if an import or initialization blocks auth.
 (function(){
   let ready=false;
   window.addEventListener('snooker-auth-handlers-ready',()=>{ready=true},{once:true});
@@ -1294,7 +1295,7 @@ if('serviceWorker' in navigator){
   });
 })();
 </script>
-<script type="module" src="firebase-sync.js?v=8.20" onerror="window.snookerAccount.connectionError('Firebase-Anmeldemodul konnte nicht geladen werden. Bitte Verbindung und Browser-Konsole prüfen.')"></script><script>
+<script type="module" src="firebase-sync.js?v=8.22" onerror="window.snookerAccount.connectionError('Firebase-Anmeldemodul konnte nicht geladen werden. Bitte Verbindung und Browser-Konsole prüfen.')"></script><script>
 // Geräteindividuelle Ansicht: nicht Teil des Matches und niemals Firebase-synchronisiert.
 (function(){
  const page=document.getElementById('scorerPage');
@@ -1312,10 +1313,10 @@ if('serviceWorker' in navigator){
  btn.addEventListener('click',()=>setDisplay(!page.classList.contains('displayOnly')));
 })();
 </script>
-<script src="pdf-export.js?v=8.20"></script>
-<script src="partner-drag.js?v=8.20"></script><script src="tournament.js?v=8.20"></script>
-<script src="pool-single.js?v=8.20"></script>
-<script src="table-monitor.js?v=8.20"></script>
-<script src="app-navigation.js?v=8.20"></script>
+<script src="pdf-export.js?v=8.22"></script>
+<script src="partner-drag.js?v=8.22"></script><script src="tournament.js?v=8.22"></script>
+<script src="pool-single.js?v=8.22"></script>
+<script src="table-monitor.js?v=8.22"></script>
+<script src="app-navigation.js?v=8.22"></script>
 </body>
 </html>

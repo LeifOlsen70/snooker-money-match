@@ -390,7 +390,7 @@ body.monitorOverviewFullscreen .pageFooter {display:none!important}
  .monitorKeypad button {min-height:42px}
 }
 
-/* v8.20: approval counter and refresh control */
+/* v8.22: approval counter and refresh control */
 .accessPendingCount {display:inline-flex;align-items:center;justify-content:center;min-width:23px;height:23px;padding:0 5px;box-sizing:border-box;border-radius:999px;background:#eac374;color:#25142d;border:1px solid #f7e0a1;font-weight:900;font-size:14px;margin-left:8px;vertical-align:middle}
 .accessPendingCount[hidden] {display:none!important}
 .pageFooter .accessRefreshButton {grid-column:1;grid-row:auto;background:#433052;border:1px solid #b69269;color:#f6e9d1}
@@ -475,3 +475,5 @@ body.tableMonitorFullscreen #tableMode [data-table-refresh] {display:block}
 
 /* Keep every caption and its control together at the top of its grid row. */
 .tournamentFields{align-items:start!important}.tournamentFields>label{display:flex!important;flex-direction:column;justify-content:flex-start!important;align-self:start;gap:6px}.tournamentFields>label>input,.tournamentFields>label>select{margin-top:0!important}
+
+#tournamentSetup label[hidden]{display:none!important}

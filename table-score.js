@@ -38,6 +38,7 @@
         if(value.complete)value.finishedAt=event.at;
         else value.scores=[0,0];
       }else if(event.type==='finish'){
+        if(rules.elimination)throw Error('K.-o.-Partien werden bis zum nötigen Gewinnframe gespielt.');
         if(value.frames[event.player]<=value.frames[1-event.player])throw Error('Zuerst den letzten Frame-Sieger eintragen. Match-Sieger muss nach Frames führen.');
         value.complete=true;value.finishedAt=event.at;value.earlyFinished=true;
       }else throw Error('Unbekannte Punkteaktion.');
@@ -46,6 +47,7 @@
   }
   function validPoolRules(rules){
     const ids=['8','9','10','14'];
+    if(rules?.rotateBestOf!=null&&(!Number.isInteger(rules.rotateBestOf)||rules.rotateBestOf<1||rules.rotateBestOf>49||rules.rotateBestOf%2!==1))throw Error('Ungültiges gemeinsames Best of.');
     if(rules?.bestOf!=null&&typeof rules.bestOf!=='boolean')throw Error('Ungültige Best-of-Regel.');
     if(rules?.sport!=='pool'||!Array.isArray(rules.disciplines)||!rules.disciplines.length||rules.disciplines.length>4)throw Error('Ungültige Pool-Disziplinen.');
     let previous=-1,total=0;
@@ -63,7 +65,8 @@
       if(!event||!Number.isFinite(event.at)||event.at<0)throw Error('Ungültige Zeitangabe.');
       if(event.type==='warningOff')continue;
       if(value.complete||![0,1].includes(event.player))throw Error('Die Partie ist beendet oder der Spieler ungültig.');
-      const configured=rules.disciplines[value.disciplineIndex],current=value.disciplines[value.disciplineIndex];
+      const currentIndex=rules.rotateBestOf?value.disciplineIndex%rules.disciplines.length:value.disciplineIndex;
+      const configured=rules.disciplines[currentIndex],current=value.disciplines[currentIndex];
       function points(player,n){
         if(configured.id!=='14'||![0,1].includes(player)||!Number.isInteger(n)||n<1||n>9999)throw Error('Punkteeingabe nur bei 14/1 endlos (1 bis 9999).');
         value.scores[player]+=n;
@@ -77,18 +80,20 @@
         if(event.pendingPoints)points(event.pendingPoints.player,event.pendingPoints.value);
         current.frames[event.player]++;value.frames[event.player]++;
         current.frameHistory.push({winner:event.player,scores:[...value.scores],breaks:copy(frameBreaks),at:event.at});frameBreaks=[[],[]];
-        if(complete(current.frames,{framesPerMatch:configured.frames,bestOf:rules.bestOf===true&&configured.id!=='14'}))value.disciplineIndex++;
-        value.complete=value.disciplineIndex===rules.disciplines.length;
+        if(rules.rotateBestOf||complete(current.frames,{framesPerMatch:configured.frames,bestOf:rules.bestOf===true&&configured.id!=='14'}))value.disciplineIndex++;
+        value.complete=rules.rotateBestOf?Math.max(...value.frames)>rules.rotateBestOf/2:value.disciplineIndex===rules.disciplines.length;
         if(value.complete)value.finishedAt=event.at;else value.scores=[0,0];
       }else if(event.type==='finish'){
+        if(rules.rotateBestOf)throw Error('K.-o.-Partien werden bis zum nötigen Gewinnframe gespielt.');
         if(current.frames[event.player]<=current.frames[1-event.player])throw Error('Zuerst den letzten Frame-Sieger eintragen. Match-Sieger muss in dieser Disziplin nach Frames führen.');
         current.earlyFinished=true;value.earlyFinished=true;value.disciplineIndex++;frameBreaks=[[],[]];
-        value.complete=value.disciplineIndex===rules.disciplines.length;
+        value.complete=rules.rotateBestOf?Math.max(...value.frames)>rules.rotateBestOf/2:value.disciplineIndex===rules.disciplines.length;
         if(value.complete)value.finishedAt=event.at;else value.scores=[0,0];
       }else throw Error('Ungültige Pool-Aktion. Ergebnisse über das Zählwerk korrigieren.');
     }
-    value.currentDiscipline=rules.disciplines[Math.min(value.disciplineIndex,rules.disciplines.length-1)];
-    value.disciplineFrames=value.disciplines[Math.min(value.disciplineIndex,value.disciplines.length-1)].frames;
+    const displayIndex=rules.rotateBestOf?(value.complete?Math.max(0,value.disciplineIndex-1):value.disciplineIndex)%rules.disciplines.length:Math.min(value.disciplineIndex,rules.disciplines.length-1);
+    value.currentDiscipline=rules.disciplines[displayIndex];
+    value.disciplineFrames=value.disciplines[displayIndex].frames;
     value.targetReached=!value.complete&&value.currentDiscipline.id==='14'&&Math.max(...value.scores)>=value.currentDiscipline.targetPoints;
     return value;
   }
