@@ -104,7 +104,7 @@ export function createTableSync({auth,db,doc,getDoc,getDocFromServer,onSnapshot,
               state={...(match.scoreMonitor?.state??model.initial()),revision:state.revision+1};model.derive(state,a.rules);
             }
           }
-          const next={...shared,assignment:a,enabled,state,...(window.ClubElimination?.is(snapshot)?{progressionLocked:r<snapshot.rounds.length-1}:window.PoolPlanner?.is(snapshot)?{progressionLocked:window.PoolPlanner.locked(snapshot,match)}:{})};
+          const next={...shared,assignment:a,enabled,state,...(window.PoolPlanner?.is(snapshot)?{progressionLocked:window.PoolPlanner.locked(snapshot,match)}:{})};
           if(!same(existing,next))tx.set(ref(slot),encodeBoard(next));
           return next;
         });
@@ -164,7 +164,7 @@ export function createTableSync({auth,db,doc,getDoc,getDocFromServer,onSnapshot,
         joinGeneration:sameTournament?existing.joinGeneration??null:null,
         joinOpen:sameTournament&&existing.joinOpen===true,
         assignment:a,enabled:true,state,
-        ...(window.ClubElimination?.is(data)?{progressionLocked:round<data.rounds.length-1}:window.PoolPlanner?.is(data)?{progressionLocked:window.PoolPlanner.locked(data,match)}:{})};
+        ...(window.PoolPlanner?.is(data)?{progressionLocked:window.PoolPlanner.locked(data,match)}:{})};
       if(!same(existing,next))tx.set(ref(slot),encodeBoard(next));
       return next;
     });

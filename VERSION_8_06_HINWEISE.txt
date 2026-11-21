@@ -1,3 +1,3 @@
-8.27 – Pool: aufgeklappte und zugeklappte Runden-/Disziplinabschnitte behalten ihren Zustand bei Neuzeichnen, Tischstart und Live-Aktualisierung. Lokaler Anzeigezustand, keine Änderung an Spielständen oder Firebase-Regeln.
+8.20 – Pool: aufgeklappte und zugeklappte Runden-/Disziplinabschnitte behalten ihren Zustand bei Neuzeichnen, Tischstart und Live-Aktualisierung. Lokaler Anzeigezustand, keine Änderung an Spielständen oder Firebase-Regeln.
 
 Ergebniseingabe beim Tischstart wartet auf die aktuelle Tischzuordnung und wird automatisch freigegeben. Keine irreführende Archivmeldung für laufende Partien.

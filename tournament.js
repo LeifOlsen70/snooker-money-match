@@ -2,19 +2,9 @@
   'use strict';
   const localStorage = window.snookerStorage;
   const isPool=window.ClubSport?.pool===true;
-  const matchRules=(data,match)=>window.ClubElimination?.is(data)?window.ClubElimination.rules(data,match):window.ClubSport?.rules?window.ClubSport.rules(data,match):(data.framesPerMatch!=null?{framesPerMatch:data.framesPerMatch}:{target:data.target});
+  const matchRules=(data,match)=>window.ClubSport?.rules?window.ClubSport.rules(data,match):(data.framesPerMatch!=null?{framesPerMatch:data.framesPerMatch}:{target:data.target});
 
   const key = 'snookerSwissTournamentV1';
-  const recoveryKey='snookerTournamentRecoveryV1';
-  function recoveryCopies(){try{const items=JSON.parse(localStorage.getItem(recoveryKey));return Array.isArray(items)?items.filter(x=>x?.data?.players?.length&&x.data.rounds?.length):[];}catch{return [];}}
-  function rememberRecovery(raw){try{const data=JSON.parse(raw);if(!data?.players?.length||!data.rounds?.length)return;const copies=recoveryCopies();if(copies.some(x=>JSON.stringify(x.data)===raw))return;copies.unshift({savedAt:Date.now(),data});localStorage.setItem(recoveryKey,JSON.stringify(copies.slice(0,5)));}catch{}}
-  function openRecovery(){
-    const copies=recoveryCopies();if(!copies.length)return;
-    const dialog=document.createElement('dialog');dialog.className='tournamentDialog';dialog.id='tournamentRecoveryDialog';
-    dialog.innerHTML='<h2>Turnier wiederherstellen</h2><p>Diese Sicherungen liegen auf diesem Gerät und gehören zum aktuell gewählten Konto und zur Sportart. Vor dem Ersetzen bleibt der aktuelle Stand als Sicherung erhalten.</p>'+copies.map((x,i)=>'<button type="button" data-recover="'+i+'">'+(x.data.freeTournament?'Freies Turnier':'Club Liga')+' · '+new Date(x.savedAt).toLocaleString('de-DE')+'<br>'+esc(x.data.players.join(', '))+' · '+x.data.rounds.length+' Runde(n)</button>').join('')+'<button type="button" data-recovery-close>Schließen</button>';
-    document.body.append(dialog);const close=()=>{dialog.close();dialog.remove();};dialog.querySelector('[data-recovery-close]').onclick=close;
-    dialog.querySelectorAll('[data-recover]').forEach(button=>button.onclick=()=>{const candidate=clone(copies[Number(button.dataset.recover)].data);if(!validBackup(candidate)){alert('Diese Sicherung kann nicht geladen werden.');return;}if(!confirm('Diese Sicherung öffnen? Der aktuelle Stand wird vorher gesichert.'))return;rememberRecovery(committed);tournament=candidate;remoteTournament=null;drafting=false;draftFreeTournament=null;openMatch=null;view='rounds';close();saveTournament(false,true);});dialog.showModal();
-  }
   const panel = $('tournamentMode');
   let tournament = null;
   const poolFoldState=new Map();
@@ -26,7 +16,6 @@
   let drafting = false;
   let archiveSelection = null;
   let draftFreeTournament = null;
-  let draftSystemChoice = null;
   let view = 'rounds';
   let fullscreen = false;
   let liveStatus = 'Für Live-Sync auf beiden Geräten mit demselben Konto anmelden.';
@@ -154,17 +143,8 @@
     data.filename = filename;
     return (await shareJsonFile({app:'Snooker Swiss Tournament', version:1, tournament:data}, filename, isPool?'Pool-Turnier speichern':'Snooker-Turnier speichern')) !== false;
   }
-  function beginPlacementFinals(){
-    if(window.ClubElimination?.startPlacement(tournament,standings())){openMatch=null;view='rounds';saveTournament();return true;}return false;
-  }
-  function renderPlacementAction(){
-    if(!tournament?.freeTournament||tournament.ended||window.ClubElimination?.is(tournament)||tournament.rounds.some(r=>r.matches.some(m=>!m.result)))return;
-    panel.insertAdjacentHTML('beforeend','<section class="card"><p>Nach der Tabellenphase: Platz 1 gegen 2 im Finale, Platz 3 gegen 4 im kleinen Finale. Gleichstände werden vorher durch BO-1-Entscheidungsspiele aufgelöst. Die Finalspiele verwenden eine ungerade Best-of-Zahl.</p><button type="button" class="primary" id="placementFinals">Tabellenphase abschließen · Platzierungsfinals starten</button></section>');
-    $('placementFinals').onclick=beginPlacementFinals;
-  }
   async function finishTournament() {
     if (openMatch !== null && !confirm('Ergebniseingabe ohne Speichern verlassen?')) return;
-    if(tournament.freeTournament&&!window.ClubElimination?.is(tournament)&&tournament.rounds.every(r=>r.matches.every(m=>m.result))){beginPlacementFinals();return;}
     const result = await choice('Turnier beenden', 'Das Turnier mit den bisher eingetragenen Ergebnissen beenden? Offene Matches werden nicht gewertet.', [
       ['save','Speichern und beenden'], ['end','Ohne Datei beenden'], ['cancel','Abbrechen']
     ]);
@@ -180,7 +160,6 @@
     if (!tournament || tournament.ended || drafting || panel.classList.contains('hidden') || !expired() || deadlineDialog || document.querySelector('dialog[open]')) return;
     if (tournament.finishLastRound) {
       if (tournament.rounds.every(r => r.matches.every(m => m.result))) {
-        if(tournament.freeTournament&&beginPlacementFinals())return;
         tournament.ended = Date.now(); openMatch = null; saveTournament();
       }
       return;
@@ -400,7 +379,7 @@
   function openTournamentType(free, resume = false) {
     applyRemoteTournament();
     const existing = tournamentOfType(free);
-    drafting = !existing;
+    drafting = !existing || (free && !resume);
     draftFreeTournament = drafting ? free : null;
     view = !drafting && sharedView ? sharedView : 'rounds';
     if (!drafting && existing !== tournament) resumeParkedTournament();
@@ -981,7 +960,6 @@
   function saveTournament(keepHistory = true, replace = false, scoreChange = false) {
     const before = committed;
     const next = JSON.stringify(tournament);
-    try{const prior=JSON.parse(committed);if(prior&&(prior.started!==tournament?.started||!prior.ended&&tournament?.ended))rememberRecovery(committed);}catch{}
     if (next !== committed) {
       if(!scoreChange){
         if (keepHistory) undoStates.push(JSON.parse(committed));
@@ -1029,11 +1007,10 @@
       <div class="card">
         <h2>${(draftFreeTournament ?? tournament?.freeTournament) ? 'Freies Turnier anlegen' : 'Club Liga Saison · Turnier anlegen'}</h2>
         <form id="tournamentSetup">
-          ${(draftFreeTournament??tournament?.freeTournament)?'<div class="turnierModeSummary"><span>Turniermodus</span><button type="button" id="chooseTournamentSystem">Turniermodus wählen</button><p id="tournamentSystemSummary" class="small"></p></div><label hidden aria-hidden="true">Turniermodus<select name="freeSystem"><option value="standard">Nach Teilnehmern / Zeit / Runden</option><option value="groups">Vierergruppen + K.-o.</option><option value="double">Doppel-K.-o.</option></select></label><label id="eliminationBO" hidden>Best of für die gesamte Begegnung<select name="eliminationBO">'+Array.from({length:25},(_,i)=>'<option value="'+(i*2+1)+'">BO '+(i*2+1)+'</option>').join('')+'</select></label><p id="eliminationHint" hidden>Nur ungerade BO. Pool: ein Spiel je Disziplin, dann nächste Disziplin; nach der letzten beginnt die Reihenfolge erneut. 14/1: Zielpunkte bleiben einstellbar.</p>':''}
           <div class="tournamentFields tournamentSetupFields">
             <label>Datum<input name="playDate" type="date" required value="${localDateValue(Date.now())}"></label>
             <label><span id="tournamentCountLabel">Spieleranzahl</span>
-              <select name="count">${Array.from({length:(draftFreeTournament??tournament?.freeTournament)?15:11}, (_, i) =>
+              <select name="count">${Array.from({length:11}, (_, i) =>
                 `<option ${i === 2 ? 'selected' : ''}>${i + 2}</option>`).join('')}</select>
             </label>
             <label>Turnierdauer
@@ -1247,29 +1224,6 @@
       $('tournamentEndTime').classList.toggle('hidden', !endless);
       form.elements.endAt.required = endless;
     };
-    if(form.elements.freeSystem){
-      const modes={standard:['Zeit / Runden','Alle sammeln Tabellenpunkte. Danach spielen Platz 1 gegen 2 das Finale und Platz 3 gegen 4 um Platz 3.'],groups:['Gruppen + K.-o.','Zuerst Gruppenphase. Die ersten zwei jeder Gruppe kommen weiter. Danach K. o., Finale und Spiel um Platz 3.'],double:['Doppel-K.-o.','Nach der ersten Niederlage geht es in die Verliererrunde. Bei den letzten vier folgen Überkreuz-Halbfinals, Finale und Spiel um Platz 3.']};
-      const chooseSystem=()=>{
-        document.getElementById('tournamentSystemDialog')?.remove();
-        const dialog=document.createElement('dialog');dialog.id='tournamentSystemDialog';dialog.className='tournamentDialog tournamentSystemDialog';
-        dialog.innerHTML='<h2>Turniermodus wählen</h2><p>Wie möchtet ihr spielen?</p><div class="tournamentSystemOptions">'+Object.entries(modes).map(([id,[title,help]])=>'<button type="button" class="secondary" data-system-choice="'+id+'"'+(form.elements.freeSystem.value===id?' aria-pressed="true"':' aria-pressed="false"')+'><strong>'+esc(title)+'</strong><span>'+esc(help)+'</span></button>').join('')+'</div><button type="button" class="secondary" data-system-close>Zurück</button>';
-        document.body.append(dialog);const close=()=>{dialog.close();dialog.remove();$('chooseTournamentSystem')?.focus();};
-        dialog.querySelectorAll('[data-system-choice]').forEach(button=>button.onclick=()=>{draftSystemChoice=button.dataset.systemChoice;form.elements.freeSystem.value=draftSystemChoice;form.elements.freeSystem.onchange();close();});
-        dialog.querySelector('[data-system-close]').onclick=close;dialog.oncancel=event=>{event.preventDefault();close();};dialog.showModal();
-      };
-      $('chooseTournamentSystem').onclick=chooseSystem;
-      if(draftSystemChoice)form.elements.freeSystem.value=draftSystemChoice;
-      form.elements.freeSystem.onchange=()=>{
-        const mode=modes[form.elements.freeSystem.value];$('chooseTournamentSystem').textContent=mode[0]+' · ändern';$('tournamentSystemSummary').textContent=mode[1];
-        const knockout=form.elements.freeSystem.value!=='standard';
-        $('eliminationBO').hidden=!knockout;$('eliminationBO').style.display=knockout?'':'none';$('eliminationHint').hidden=!knockout;
-        for(const name of ['duration','rounds','endAt','framesPerMatch','byePoints','poolOrder']){const el=form.elements[name];if(el){const hide=knockout||(isPool&&name==='framesPerMatch');el.closest('label').hidden=hide;el.closest('label').style.display=hide?'none':'';el.disabled=knockout;}}
-        if(isPool)for(const id of ['8','9','10','14']){const el=form.elements['poolFrames'+id];el.closest('label').hidden=knockout;el.closest('label').style.display=knockout?'none':'';el.style.display=knockout?'none':'';if(knockout)el.value='1';}
-        if(!knockout)form.elements.duration.onchange();
-      };
-      form.elements.freeSystem.onchange();
-      if(!draftSystemChoice&&!tournamentOfType(true)&&!recoveryCopies().length)chooseSystem();
-    }
     if ($('cancelTournamentSetup')) $('cancelTournamentSetup').onclick = () => {
       const fromHome = draftFreeTournament !== null;
       drafting = false;
@@ -1292,8 +1246,7 @@
       let poolConfig={};
       if(isPool){try{poolConfig=window.ClubSport.read(form);}catch(err){$('tournamentSetupError').textContent=err.message;return;}}
       const playDate = form.elements.playDate.value;
-      const knockout=Boolean(form.elements.freeSystem&&form.elements.freeSystem.value!=='standard');
-      const timed = !knockout&&form.elements.duration.value === 'endless';
+      const timed = form.elements.duration.value === 'endless';
       const endAt = !timed ? null : playDate === localDateValue(Date.now())
         ? nextEndTime(form.elements.endAt.value)
         : new Date(playDate + 'T' + form.elements.endAt.value).getTime();
@@ -1312,7 +1265,7 @@
       tournament = {
         ...poolConfig,
         ...(!isPool?{bestOf:true}:{}),
-        ...(isPool&&!knockout&&poolConfig.poolOrder!=='pair'?{poolSchedule:window.PoolPlanner.KIND}:{}),
+        ...(isPool&&poolConfig.poolOrder!=='pair'?{poolSchedule:window.PoolPlanner.KIND}:{}),
         ...(isPool?{poolArchive:archivePool(previous)}:{}),
         players,
         freeTournament,
@@ -1337,7 +1290,7 @@
       draftFreeTournament = null;
       openMatch = null;
       view = 'rounds';
-      if(knockout){if(isPool)tournament.poolOrder='pair';window.ClubElimination.init(tournament,form.elements.freeSystem.value,Number(form.elements.eliminationBO.value));}else tournament.rounds.push(pairRound());
+      tournament.rounds.push(pairRound());
       saveTournament(!changeType);
     };
   }
@@ -1462,7 +1415,7 @@
     dialog.showModal();
   }
 
-  function poolArchiveEntry(data){return {...(window.ClubElimination?.is(data)?{elimination:clone(data.elimination),freeTournament:true}:{}),started:data.started,playDate:data.playDate,players:clone(data.players),...(data.poolSchedule?{poolSchedule:data.poolSchedule}:{}),poolRules:clone(data.poolRules),rounds:clone(data.rounds)}}
+  function poolArchiveEntry(data){return {started:data.started,playDate:data.playDate,players:clone(data.players),...(data.poolSchedule?{poolSchedule:data.poolSchedule}:{}),poolRules:clone(data.poolRules),rounds:clone(data.rounds)}}
   function archivePool(previous){
     const list=clone(previous?.poolArchive??[]);
     if(previous?.poolRules&&previous.rounds.some(r=>r.matches.some(m=>m.scoreMonitor||m.result))&&!list.some(d=>d.started===previous.started))list.push(poolArchiveEntry(previous));
@@ -1540,7 +1493,7 @@
     }}catch{return false;}
     if(isPool){try{for(const day of data.poolArchive??[]){if(!Array.isArray(day.players)||!Array.isArray(day.rounds))return false;window.SnookerTableScore.validPoolRules(day.poolRules);for(const round of day.rounds)for(const match of round.matches)if(match.scoreMonitor){const st=match.scoreMonitor.state;window.SnookerTableScore.derive(st,matchRules(day,match));window.SnookerTableScore.derive({...st,cursor:st.events.length},matchRules(day,match));}}}catch{return false;}}
     const timestamp = value => value == null || (Number.isFinite(value) && value >= 0);
-    if (!data || !Array.isArray(data.players) || !integer(data.players.length, 2, data.freeTournament?16:12)
+    if (!data || !Array.isArray(data.players) || !integer(data.players.length, 2, 12)
       || !data.players.every(name => typeof name === 'string' && name.trim())
       || !integer(data.tables, 1, 6)
       || (data.frameTimeLimitMinutes!=null&&!integer(data.frameTimeLimitMinutes,0,1440))
@@ -1558,7 +1511,7 @@
       (day.completed == null || typeof day.completed === 'boolean') &&
       day.rows.every(row => row && typeof row.name === 'string' && row.name.trim() &&
         Number.isFinite(row.points) && row.points >= 0 &&
-        (row.place == null || integer(row.place,1,16)) &&
+        (row.place == null || integer(row.place,1,12)) &&
         (row.highestBreak == null || integer(row.highestBreak,0,isPool?9999:155)));
     if (data.overallDays != null && (!Array.isArray(data.overallDays) || !data.overallDays.every(validDay))) return false;
     if (data.yearDays != null && (!Array.isArray(data.yearDays) || !data.yearDays.every(validDay))) return false;
@@ -1580,8 +1533,6 @@
         Array.isArray(game.names) && game.names.length === 2 && game.names.every(name) && [0,.5,1].includes(game.score)) ||
       !Array.isArray(data.elo.edits) || !data.elo.edits.every(edit => edit && Number.isFinite(edit.at) && edit.at > 0 &&
         name(edit.name) && integer(edit.rating, 0, 9999)))) return false;
-    if(window.ClubElimination?.is(data))return window.ClubElimination.validate(data,window.SnookerTableScore);
-    if(data.elimination!=null)return false;
     if(data.poolSchedule!=null&&!window.PoolPlanner?.is(data))return false;
     if(window.PoolPlanner?.is(data))return window.PoolPlanner.validate(data,window.SnookerTableScore);
     const validPlayer = id => integer(id, 0, data.players.length - 1);
@@ -1709,7 +1660,7 @@
         draftFreeTournament = null;
         drafting = false;
         saveTournament(false, true);
-        drafting = true;draftSystemChoice=null;
+        drafting = true;
         renderTournament();
       } catch (error) {
         errorOutput.textContent = 'Die Datei konnte nicht geladen werden. Bitte eine gültige Club-Liga-Sicherung (.json) auswählen.';
@@ -1748,7 +1699,6 @@
     const {data, raw} = remoteTournament;
     remoteTournament = null;
     if (raw === committed) return;
-    if(tournament&&(tournament.started!==data?.started||!tournament.ended&&data?.ended))rememberRecovery(committed);
     tournament = data;
     committed = raw;
     undoStates = [];
@@ -1841,123 +1791,16 @@
     panel.querySelectorAll('[data-edit]').forEach(button=>button.onclick=()=>openResultDialog(at(button.dataset.edit),button.dataset.edit));
     panel.querySelectorAll('[data-warning-off]').forEach(button=>button.onclick=()=>window.snookerMonitors.silence(button.dataset.warningOff));
     if($('nextTournamentRound'))$('nextTournamentRound').onclick=()=>{const next=planner.next(data);if(!next){renderTournament();return;}data.rounds.push(next);saveTournament();};
-    if($('newTournament'))$('newTournament').onclick=()=>{if(data.freeTournament){draftFreeTournament=null;drafting=true;draftSystemChoice=null;renderTournament();}else askClubFileBeforeNewTournament();};
+    if($('newTournament'))$('newTournament').onclick=()=>{if(data.freeTournament){draftFreeTournament=null;drafting=true;renderTournament();}else askClubFileBeforeNewTournament();};
     if($('changeEndTime'))$('changeEndTime').onclick=editEndTime;
-    renderPlacementAction();updateClocks();refreshHistory();
+    updateClocks();refreshHistory();
   }
 
-  function alternateGroups(entries){
-    const groups=new Map();for(const entry of entries){const key=entry.m.group??-1;if(!groups.has(key))groups.set(key,[]);groups.get(key).push(entry);}
-    const keys=[...groups.keys()].sort((a,b)=>a-b),ordered=[];let left=true;
-    while(left){left=false;for(const key of keys){const entry=groups.get(key).shift();if(entry){ordered.push(entry);left=true;}}}return ordered;
-  }
-  function byeExplanation(round,data,compact=false){
-    if(round.byeSelection?.method==='performance'){
-      const info=round.byeSelection;
-      const message='Freilose nach Siegquote, danach Frame-Differenz pro Spiel.'+(info.randomAtCutoff?' Bei Gleichstand um ein Freilos hat das Los entschieden.':'');
-      if(compact)return '<p class="small">'+message+'</p>';
-      return '<p class="small">'+message+' Eines je Turnierhälfte.</p><details class="byeComparison"><summary>Freilos-Wertung ansehen</summary><p class="small">Nur die drei Gruppensieger werden verglichen. Unterschiedliche Gruppengrößen werden über Quoten ausgeglichen. Entscheidungsspiele zählen hier nicht zusätzlich.</p><table class="tournamentTable"><thead><tr><th>Spieler / Team</th><th>Siege / Spiele</th><th>Siegquote</th><th>Frame-Δ / Spiel</th><th>Weiter</th></tr></thead><tbody>'+info.ranking.map((row,i)=>'<tr><td>'+esc(data.players[row.player])+'</td><td>'+row.wins+' / '+row.played+'</td><td>'+formatPoints(Math.round(row.wins/row.played*1000)/10)+' %</td><td>'+formatPoints(Math.round(row.diff/row.played*100)/100)+'</td><td>'+(i<2?'Freilos':'Viertelfinale')+'</td></tr>').join('')+'</tbody></table></details>';
-    }
-    return round.groupWinnerByeDraw?'<p class="small">Freilose unter den Gruppensiegern ausgelost.</p>':'';
-  }
-  function engineGroupRows(data,g){return window.ClubElimination.groupRows(data,g).rows.map((row,i)=>'<div id="treeGroupPlayer'+row.id+'" class="treePlayer"><span>'+(i+1)+'. '+esc(data.players[row.id])+'</span><strong>'+row.wins+'</strong></div>').join('');}
-  function renderTournamentTree(data){
-    const rounds=data.rounds.map((round,r)=>({round,r})).filter(({round})=>round.matches.some(m=>m.bracket||m.decider));
-    const label=m=>({upper:'Gewinnerrunde',lower:'Verliererrunde',semi:'Halbfinale',final:'Finale · Platz 1 / 2',bronze:'Kleines Finale · Platz 3 / 4',ko:'K.-o.'}[m.bracket]??'Entscheidung');
-    const order=[...new Set(data.rounds[0].matches.flatMap(m=>m.players))];for(let id=0;id<data.players.length;id++)if(!order.includes(id))order.push(id);
-    const roster='<section id="treeStart" class="treeColumn treeStart"><h3>Startaufstellung · '+data.players.length+'</h3><table><thead><tr><th>Nr.</th><th>Spieler / Team</th></tr></thead><tbody>'+order.map((id,i)=>'<tr id="treeSeed'+id+'"><td>'+(i+1)+'</td><td>'+esc(data.players[id])+'</td></tr>').join('')+'</tbody></table><p class="small">Startreihenfolge der ausgelosten Paarungen</p></section>';
-    const seen=new Map(order.map(id=>[id,{key:data.elimination.groups?'treeGroupPlayer'+id:'treeSeed'+id,loss:false,title:data.elimination.groups?'Gruppenphase':'Startaufstellung'}])),links=[];
-    const columns=rounds.map(({round,r})=>{
-      const matches=round.matches.map((m,i)=>{
-        const key='treeMatch'+r+'_'+i;
-        const source=m.players.map(id=>seen.get(id));
-        source.forEach(from=>{if(from&&from.key!==key)links.push({from:from.key,to:key,loss:from.loss});});
-        let frames=m.result?.frames;
-        if(!frames&&m.scoreMonitor)try{frames=window.SnookerTableScore.derive(m.scoreMonitor.state,matchRules(data,m)).frames;}catch{}
-        const winner=frames&&m.result?(frames[0]>frames[1]?0:1):null;
-        const names=m.players.map((id,n)=>'<div class="treePlayer'+(winner===n?' treeWinner':'')+'"><span>'+esc(data.players[id])+'</span><strong>'+(frames?frames[n]:'–')+'</strong></div>').join('');
-        const state=m.result?'Beendet':m.table?'Läuft · Tisch '+m.table:m.paused?'Pausiert':'Wartet auf Start';
-        const origins=source.map((from,n)=>from?esc(data.players[m.players[n]])+': '+(from.key.startsWith('treeGroupPlayer')?'qualifiziert':from.loss?'Verlierer':'Sieger')+' aus '+esc(from.title):'').filter(Boolean);
-        m.players.forEach((id,n)=>{if(m.result)seen.set(id,{key,loss:winner!==n,title:label(m)+' · Spiel '+(i+1)})});
-        return '<article id="'+key+'" class="treeMatch'+(m.table&&!m.result?' treeLive':'')+'"><h4>'+esc(label(m))+' · '+(i+1)+'</h4>'+names+'<p class="treeState">'+esc(state)+'</p>'+(origins.length?'<details class="treeOrigin"><summary>Woher kommen die Spieler?</summary><p>'+origins.join('<br>')+'</p></details>':'')+'</article>';
-      }).join('');
-      const byes=(round.slots??[]).filter(x=>x[1]==null).map(x=>esc(data.players[x[0]]));
-      return {round,html:'<section class="treeColumn"><h3>'+esc(round.slots?.length===4?'Viertelfinale':round.slots?.length===8?'Achtelfinale':round.label??'Runde '+(r+1))+'</h3><div class="treeColumnMatches">'+matches+'</div>'+byeExplanation(round,data,true)+(byes.length?'<p class="small">Freilos · weiter: '+byes.join(', ')+'</p>':'')+(round.resting?.length?'<p class="small">Wartet in dieser Phase: '+round.resting.map(id=>esc(data.players[id])).join(', ')+'</p>':'')+'</section>'};
-    });
-    const lowerColumns=columns.filter(x=>x.round.matches.every(m=>m.bracket==='lower')),upperColumns=columns.filter(x=>!x.round.medal&&!x.round.matches.every(m=>m.bracket==='lower'));
-    const pending=(title)=>'<section class="treeColumn treePending"><h3>'+title+'</h3><p>Paarungen noch offen</p><p class="small">Wird nach den Ergebnissen der vorherigen Ebenen gefüllt.</p></section>';
-    const levels=data.elimination.mode==='double'?Math.max(1,Math.ceil(Math.log2(data.players.length))-1):data.elimination.groups?Math.max(0,Math.ceil(Math.log2(data.elimination.groups.length*2))-2):0;
-    const futureLower=data.elimination.mode==='double'?Array.from({length:Math.max(0,2*levels-1-lowerColumns.length)},(_,i)=>pending('← Verliererebene '+(lowerColumns.length+i+1))):[];
-    const futureUpper=Array.from({length:Math.max(0,levels-upperColumns.length)},(_,i)=>pending((data.elimination.mode==='double'?'Gewinnerebene ':'K.-o.-Runde ')+(upperColumns.length+i+1)+' →'));
-    const left=data.elimination.mode==='double'?[...lowerColumns.map(x=>x.html),...futureLower].reverse().join(''):'';
-    const groupColumn=data.elimination.groups?'<section class="treeColumn"><h3>Gruppenphase · Erste zwei weiter</h3>'+data.elimination.groups.map((ids,g)=>'<article class="treeMatch"><h4>Gruppe '+String.fromCharCode(65+g)+'</h4>'+engineGroupRows(data,g)+'</article>').join('')+'</section>':'';
-    const right=groupColumn+[...upperColumns.map(x=>x.html),...futureUpper].join('');
-    const medals=columns.filter(x=>x.round.medal).map(x=>x.html).join('');
-    const pendingMedals=pending(data.elimination.mode==='double'?'Letzte vier: G1 gegen V2 · G2 gegen V1':'Halbfinale')+pending('Finale und kleines Finale · Platz 1–4');
-    const branches=data.elimination.mode==='double'?'<div class="treeBranches"><div class="treeSide treeLeft">'+left+'</div>'+roster+'<div class="treeSide treeRight">'+right+'</div></div><div class="treeMedals">'+(medals||pendingMedals)+'</div>':'<div class="treeBranches treeForward">'+roster+'<div class="treeSide treeRight">'+right+(medals||pendingMedals)+'</div></div>';
-    panel.insertAdjacentHTML('beforeend','<section class="card"><h2>Turnierbaum</h2><p>Startaufstellung in der Mitte. Doppel-K.-o.: nach links zur Verliererrunde, nach rechts zur Gewinnerrunde. Die letzten vier spielen Halbfinale, Finale und kleines Finale. Durchgezogene Linien: Siegerweg; gestrichelte Linien: Weg nach einer Niederlage.</p><div class="treeTools"><button type="button" id="treeCenter" class="secondary">Zur Startaufstellung</button><button type="button" id="treeFit" class="secondary">Alles anzeigen</button><button type="button" id="treeMinus" class="secondary" aria-label="Verkleinern">−</button><button type="button" id="treePlus" class="secondary" aria-label="Vergrößern">+</button><button type="button" id="treeToGames" class="secondary">Zu den Begegnungen</button></div>'+(!rounds.length?'<p>Zuerst wird die Gruppenphase gespielt. Der K.-o.-Baum erscheint, sobald die Gruppenergebnisse bestätigt sind.</p>':'')+'<div class="treeScroll" data-no-page-swipe tabindex="0" role="region" aria-label="Turnierbaum, seitlich scrollbar"><div id="treeScaleFrame"><div id="tournamentTreeCanvas" class="treeCanvas treeCentered">'+branches+'</div></div></div>'+(!data.ended?'<p class="small">Weitere Paarungen erscheinen nach Bestätigung der aktuellen Phase unter „Turnierverlauf“.</p>':'')+'</section>');
-    $('treeToGames').onclick=()=>{view='rounds';renderTournament()};
-    const draw=()=>{
-      const canvas=$('tournamentTreeCanvas');if(!canvas||typeof canvas.getBoundingClientRect!=='function')return;
-      canvas.querySelector('svg')?.remove();const box=canvas.getBoundingClientRect();
-      const paths=links.map(link=>{const a=$(link.from),b=$(link.to);if(!a||!b)return '';const from=a.getBoundingClientRect(),to=b.getBoundingClientRect();const ax=(from.left+from.right)/2,bx=(to.left+to.right)/2;const left=bx<ax;const x1=(left?from.left:from.right)-box.left,y1=from.top+(from.height??from.bottom-from.top)/2-box.top,x2=(left?to.right:to.left)-box.left,y2=to.top+(to.height??to.bottom-to.top)/2-box.top,mid=(x1+x2)/2;return '<path d="M '+x1+' '+y1+' C '+mid+' '+y1+', '+mid+' '+y2+', '+x2+' '+y2+'" class="'+(link.loss?'treeLossPath':'')+'"/>';}).join('');
-      canvas.insertAdjacentHTML('afterbegin','<svg class="treeConnections" aria-hidden="true" width="'+canvas.scrollWidth+'" height="'+canvas.scrollHeight+'" viewBox="0 0 '+canvas.scrollWidth+' '+canvas.scrollHeight+'">'+paths+'</svg>');
-    };
-    const scroll=panel.querySelector('.treeScroll'),canvas=$('tournamentTreeCanvas'),frame=$('treeScaleFrame');let zoom=1;
-    const setZoom=value=>{if(!canvas||typeof canvas.getBoundingClientRect!=='function')return;zoom=Math.max(.15,Math.min(1.8,value));canvas.style.transform='';draw();const width=canvas.scrollWidth,height=canvas.scrollHeight;if(!width||!height)return;frame.style.width=width*zoom+'px';frame.style.height=height*zoom+'px';canvas.style.transform='scale('+zoom+')';};
-    const center=()=>{setZoom(1);const start=$('treeStart');if(start&&Number.isFinite(start.offsetLeft)){scroll.scrollLeft=Math.max(0,start.offsetLeft-(scroll.clientWidth-start.clientWidth)/2);scroll.scrollTop=Math.max(0,start.offsetTop-12);}};
-    $('treeCenter').onclick=center;$('treePlus').onclick=()=>setZoom(zoom*1.25);$('treeMinus').onclick=()=>setZoom(zoom/1.25);$('treeFit').onclick=()=>{setZoom(1);setZoom(Math.min(1,scroll.clientWidth/canvas.scrollWidth,(scroll.clientHeight||canvas.scrollHeight)/canvas.scrollHeight));scroll.scrollLeft=0;scroll.scrollTop=0;};
-    scroll.addEventListener('touchstart',event=>event.stopPropagation(),{passive:true});scroll.addEventListener('touchend',event=>event.stopPropagation(),{passive:true});
-    window.requestAnimationFrame?window.requestAnimationFrame(center):center();
-    if(window.ResizeObserver){const canvas=$('tournamentTreeCanvas');const observer=new window.ResizeObserver(()=>{if(!canvas.isConnected)observer.disconnect();else if(zoom===1)draw();});observer.observe($('tournamentTreeCanvas'));}
-  }
-
-  function renderEliminationGroups(data){
-      if(data.elimination.groups)for(let g=0;g<data.elimination.groups.length;g++){
-        const rows=window.ClubElimination.groupRows(data,g).rows;
-        panel.insertAdjacentHTML('beforeend',`<section class="card"><h3>Gruppe ${String.fromCharCode(65+g)} · Erste zwei kommen weiter</h3><table class="tournamentTable"><thead><tr><th>Pl.</th><th>Spieler / Team</th><th>Siege</th><th>Frame-Δ</th></tr></thead><tbody>${rows.map((r,i)=>'<tr><td>'+(i+1)+'</td><td>'+esc(data.players[r.id])+'</td><td>'+r.wins+'</td><td>'+r.diff+'</td></tr>').join('')}</tbody></table><p class="small">Siege → Frame-Differenz → direkter Vergleich. Bei weiterem Gleichstand folgt ein Entscheidungsspiel BO 1.</p></section>`);
-      }
-  }
-
-  function renderElimination(){
-    const data=tournament,e=data.elimination,engine=window.ClubElimination;
-    panel.insertAdjacentHTML('beforeend','<nav class="tournamentActions tournamentViews" aria-label="Turnieransicht"><button type="button" id="eliminationRounds">Begegnungen</button><button type="button" id="eliminationTree">Turnierbaum</button><button type="button" id="eliminationMonitors">Tischmonitore</button>'+(e.groups?'<button type="button" id="eliminationGroups" aria-label="Gruppentabellen anzeigen">Gruppen</button>':'')+'</nav>');
-    panel.insertAdjacentHTML('beforeend',`<section class="card"><h2>${e.mode==='groups'?'Gruppenphase + K.-o.':e.mode==='placement'?'Platzierungsfinals':'Doppel-K.-o.'}</h2><p>BO ${e.bo} pro Begegnung · ${data.players.length} ${data.poolMode==='double'?'Teams':'Spieler'} · ${data.tables} Tisch(e)</p>${isPool?'<p>'+data.poolRules.disciplines.map(d=>esc(d.label)).join(' → ')+' · ein Spiel je Frame, Reihenfolge wird wiederholt.</p>':''}${data.ended?'<h3>Turniersieger: '+(e.champion==null?'Turnier vorzeitig beendet':esc(data.players[e.champion]))+'</h3><button type="button" id="eliminationNew">Neues Turnier</button>':''}</section>`);
-    $('eliminationRounds').onclick=()=>{view='rounds';renderTournament()};$('eliminationMonitors').onclick=()=>{view='monitors';renderTournament()};
-    $('eliminationTree').onclick=()=>{view='tree';renderTournament()};
-    if($('eliminationGroups'))$('eliminationGroups').onclick=()=>{view='groups';renderTournament()};
-    for(const [id,current] of [['eliminationRounds','rounds'],['eliminationTree','tree'],['eliminationMonitors','monitors'],...($('eliminationGroups')?[['eliminationGroups','groups']]:[])]){$(id).classList.toggle('primary',view===current);$(id).classList.toggle('secondary',view!==current);$(id).setAttribute('aria-pressed',String(view===current));}
-    if($('eliminationNew'))$('eliminationNew').onclick=()=>{drafting=true;draftSystemChoice=null;renderTournament()};
-    if(e.mode==='placement'){const rows=standings(data.rounds.slice(0,e.qualificationRounds),data);panel.insertAdjacentHTML('beforeend','<section class="card"><h3>Tabelle nach der Qualifikation</h3><p>'+rows.map(r=>r.place+'. '+esc(data.players[r.id])+' · '+formatPoints(r.points)+' Pkt.').join('<br>')+'</p></section>');}
-    if(e.placements)panel.insertAdjacentHTML('beforeend','<section class="card"><h3>Endplatzierung</h3><ol>'+e.placements.map(id=>'<li>'+esc(data.players[id])+'</li>').join('')+'</ol></section>');
-    if(view==='groups'&&e.groups){renderEliminationGroups(data);}
-    else if(view==='tree'){renderTournamentTree(data);}
-    else if(view==='monitors'){
-      panel.insertAdjacentHTML('beforeend','<div id="tournamentMonitors"></div>');window.snookerMonitors?.renderOverview($('tournamentMonitors'),data);
-    }else{
-      data.rounds.forEach((round,r)=>{
-        const current=r===data.rounds.length-1,finished=round.matches.filter(m=>m.result).length;
-        const byes=(round.slots??[]).filter(s=>s[1]==null).map(s=>data.players[s[0]]);
-        const entries=round.matches.map((m,i)=>({m,i}));
-        const category=m=>m.result?0:m.table?1:current&&engine.ready(data,m)?2:3;
-        const ordered=[0,1,2,3].flatMap(level=>alternateGroups(entries.filter(x=>category(x.m)===level)));
-        panel.insertAdjacentHTML('beforeend',`<details class="card" data-pool-fold="elim:${data.started}:${r}" ${current?'open':''}><summary><strong>${esc(round.label??'Runde '+(r+1))}</strong> · ${finished}/${round.matches.length} beendet</summary>${byeExplanation(round,data)}${byes.length?'<p>Freilos · weiter: '+byes.map(esc).join(', ')+'</p>':''}${round.resting?.length?'<p>Wartet auf nächste Runde: '+round.resting.map(id=>esc(data.players[id])).join(', ')+'</p>':''}${ordered.map(({m,i})=>'<div data-match-category="'+category(m)+'" data-game-group="'+(m.group??'')+'">'+(m.group!=null?'<p>Gruppe '+String.fromCharCode(65+m.group)+'</p>':m.bracket?'<p>'+({upper:'Gewinnerrunde',lower:'Verliererrunde',final:'Finale · Platz 1 / 2',bronze:'Kleines Finale · Platz 3 / 4',semi:'Halbfinale',ko:'K.-o.'}[m.bracket]??'')+'</p>':'')+renderMatch(m,r+':'+i,current?availableTables():[],!current||!engine.ready(data,m))+'</div>').join('')}</details>`);
-      });
-      if(!data.ended&&data.rounds.at(-1).matches.every(m=>m.result))panel.insertAdjacentHTML('beforeend','<button type="button" class="primary" id="eliminationNext">Ergebnisse bestätigen · nächste Phase / Sieger anzeigen</button>');
-      if($('eliminationNext'))$('eliminationNext').onclick=()=>{if(engine.advance(data))saveTournament()};
-      const at=index=>{const [r,m]=index.split(':').map(Number);return data.rounds[r].matches[m]};
-      panel.querySelectorAll('[data-start]').forEach(b=>b.onclick=()=>{const m=at(b.dataset.start),slot=Number(b.dataset.table);if(!engine.ready(data,m)||!availableTables().includes(slot))return;m.table=slot;m.startedAt=Date.now();saveTournament()});
-      panel.querySelectorAll('[data-pause]').forEach(b=>b.onclick=()=>{const m=at(b.dataset.pause);if(m.table||m.result||data.ended)return;m.paused=!m.paused;saveTournament()});
-      panel.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>{const [r]=b.dataset.edit.split(':').map(Number);if(r!==data.rounds.length-1){alert('Diese Phase ist abgeschlossen. Die Spielhistorie bleibt sichtbar.');return;}openResultDialog(at(b.dataset.edit),b.dataset.edit)});
-    }
-    renderBackupControls();renderLiveStatus();updateClocks();restorePoolFolds();
-  }
   function renderTournament() {
-    if(isPool||window.ClubElimination?.is(tournament))rememberPoolFolds();
+    if(isPool)rememberPoolFolds();
     refreshPlayerList = null;
     applyRemoteTournament();
     panel.innerHTML = '<button type="button" id="tournamentHome" class="secondary tournamentTop">← Startseite</button>';
-    if(recoveryCopies().length){panel.insertAdjacentHTML('beforeend','<button type="button" id="recoverTournament" class="secondary">Turnier wiederherstellen</button>');$('recoverTournament').onclick=openRecovery;}
     $('tournamentHome').onclick = () => {
       if (openMatch !== null && !confirm('Ergebniseingabe ohne Speichern verlassen?')) return;
       openMatch = null;
@@ -1975,13 +1818,11 @@
       const history = panel.querySelector('.tournamentHistory');
       renderSetup();
       panel.prepend(home, history);
-      if(recoveryCopies().length){panel.insertAdjacentHTML('afterbegin','<button type="button" id="recoverSetupTournament" class="secondary">Turnier wiederherstellen</button>');$('recoverSetupTournament').onclick=openRecovery;}
       renderBackupControls();
       renderLiveStatus();
       return;
     }
 
-    if(window.ClubElimination?.is(tournament)){renderElimination();return;}
     panel.insertAdjacentHTML('beforeend', `<div class="card tournamentActions">
       <strong>${tournament.freeTournament ? 'Freies Turnier' : 'Club Liga Saison'}</strong>
     </div>`);
@@ -2061,7 +1902,7 @@
     renderLiveStatus();
     panel.insertAdjacentHTML('beforeend', roundCards.reverse().join(''));
     if(isPool)restorePoolFolds();
-    renderPlacementAction();updateClocks();refreshHistory();
+    updateClocks();refreshHistory();
     panel.querySelectorAll('[data-warning-off]').forEach(button=>button.onclick=()=>window.snookerMonitors.silence(button.dataset.warningOff));
 
     function matchAt(index) {
@@ -2106,7 +1947,7 @@
       // Free tournament remains unchanged. The Club Liga asks for the latest season backup.
       if (tournament.freeTournament) {
         draftFreeTournament = null;
-        drafting = true;draftSystemChoice=null;
+        drafting = true;
         renderTournament();
       } else {
         askClubFileBeforeNewTournament();
@@ -2121,7 +1962,6 @@ window.snookerTournamentBridge=Object.freeze({
     applyBoard(board){
       if(!tournament||tournament.ended||drafting||openMatch!==null||!board.assignment||window.snookerTableSync?.syncing)return;
       const a=board.assignment,match=tournament.rounds[a.round]?.matches[a.index];
-      if(window.ClubElimination?.is(tournament)&&a.round<tournament.rounds.length-1)return;
       if(!match||a.tournament!==String(tournament.started)||match.table!==board.tableNumber)return;
       const expected=[tournament.freeTournament?'free':'club',tournament.started,a.round,a.index,match.startedAt].join(':');
       if(expected!==a.id)return;
