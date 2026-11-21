@@ -390,7 +390,7 @@ body.monitorOverviewFullscreen .pageFooter {display:none!important}
  .monitorKeypad button {min-height:42px}
 }
 
-/* v8.24: approval counter and refresh control */
+/* v8.25: approval counter and refresh control */
 .accessPendingCount {display:inline-flex;align-items:center;justify-content:center;min-width:23px;height:23px;padding:0 5px;box-sizing:border-box;border-radius:999px;background:#eac374;color:#25142d;border:1px solid #f7e0a1;font-weight:900;font-size:14px;margin-left:8px;vertical-align:middle}
 .accessPendingCount[hidden] {display:none!important}
 .pageFooter .accessRefreshButton {grid-column:1;grid-row:auto;background:#433052;border:1px solid #b69269;color:#f6e9d1}
@@ -486,3 +486,4 @@ body.tableMonitorFullscreen #tableMode [data-table-refresh] {display:block}
 .treeCentered{display:flex;flex-direction:column;align-items:center;gap:36px;position:relative;width:max-content;min-width:0;transform-origin:top left}.treeBranches,.treeSide,.treeMedals{display:flex;align-items:stretch;gap:30px}.treeStart{align-self:center;background:#183e33;border:2px solid #dfbf70;border-radius:10px;padding:10px;box-sizing:border-box}.treeStart table{width:100%;border-collapse:collapse;font-size:14px;color:#fff2d6}.treeStart th,.treeStart td{padding:7px;border-bottom:1px solid #ffffff30;text-align:left}.treeStart th:first-child,.treeStart td:first-child{width:25px}.treeCentered .treeColumn{width:220px}.treeCentered .treeMatch h4{font-size:12px;padding:5px 8px}.treeCentered .treePlayer{font-size:14px;padding:6px 8px}.treeCentered .treeState{font-size:12px;padding:5px 8px}.treeCentered .treeColumn>h3{font-size:14px}.treePending{justify-content:center;opacity:.8}.treeMedals{border-top:2px solid #bda26c;padding-top:18px;justify-content:center}.treeMedals .treeColumn{width:245px}.treeTools{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}.treeTools button{padding:10px 12px}.treeScroll{max-height:75dvh;overflow:auto;touch-action:pan-x pan-y;overscroll-behavior:contain}#treeScaleFrame{position:relative;flex-shrink:0}#treeScaleFrame>.treeCanvas{position:absolute;left:0;top:0}
 .quickPair{padding:12px 0;border-top:1px solid #ffffff35}.quickPair>strong{display:block;margin-bottom:8px}.quickPair>div{display:flex;flex-wrap:wrap;gap:8px}.quickPair button{padding:10px 14px;font-size:1rem}
 #tournamentRecoveryDialog button{display:block;width:100%;text-align:left;white-space:normal;margin:10px 0}
+.treeForward{align-items:stretch}.treeForward>.treeStart{align-self:center}.treeForward .treeRight>.treeColumn{border-top:0;padding-top:0}
