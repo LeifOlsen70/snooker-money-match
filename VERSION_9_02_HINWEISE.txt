@@ -1,0 +1,26 @@
+VERSION 9.02 – Shoot-out nur für unklare Halbfinalteilnahme
+
+Die vier Halbfinalisten werden anhand der eingefrorenen Tabelle bestimmt.
+Shoot-outs werden ausschließlich benötigt, wenn eine Gleichstandsgruppe über die Grenze
+zwischen qualifiziert und nicht qualifiziert reicht.
+
+Beispiele:
+- Platz 1/2 gleich und Platz 3/4 gleich: alle vier sicher dabei, kein Shoot-out.
+- Drei Spieler sicher, Plätze 4–6 gleich: ein Shoot-out-Sieger rückt nach.
+- Zwei Spieler sicher, Plätze 3–5 gleich: zwei Nachrücker ermitteln; danach sofort Halbfinale.
+- Gleichstand vollständig unterhalb der ersten vier: kein Shoot-out.
+- Gleiche Werte innerhalb bereits sicher Qualifizierter: angezeigte Tabellenreihenfolge
+  bleibt die Setzreihenfolge. Kein zusätzliches Spiel allein für die Reihenfolge.
+- Weiterhin Halbfinale 1 gegen 4 und 2 gegen 3, Finale und kleines Finale.
+
+Die Anzeige benennt die Anzahl noch freier Halbfinalplätze.
+Vorrundenpunkte werden durch Shoot-outs nicht verändert.
+
+Bereits vorbereitete Finalrunden aus 9.0/9.01 mit überflüssigen Shoot-outs werden
+beim Öffnen korrigiert. Vorrundenergebnisse bleiben erhalten.
+Schon begonnene Halbfinals und ihre Ergebnisse bleiben unverändert.
+
+ZIP vollständig entpacken und gesamten Inhalt wie gewohnt hochladen.
+Anschließend auf allen Geräten aktualisieren und Version 9.02 kontrollieren.
+Keine Änderungen an Firebase-Regeln erforderlich.
+8.20 bleibt die letzte bestätigte gültige Rückfallversion.

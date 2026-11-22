@@ -1895,15 +1895,15 @@
     panel.insertAdjacentHTML('beforeend',`<section class="card tournamentOverview"><h2>${esc(title)}</h2><p>BO ${e.bo} · ${data.players.length} ${data.poolMode==='double'?'Teams':'Spieler'} · ${data.tables} Tisch(e)</p>${isPool?'<p class="small">Ein Frame je Disziplin: '+data.poolRules.disciplines.map(d=>esc(d.label)).join(' → ')+'. Danach beginnt die Auswahl erneut.</p>':''}<p>${data.ended?(e.phase==='done'?'Turnier beendet · Plätze stehen fest':'Turnier vorzeitig beendet'):e.phase==='shootout'?'Shoot-out für die Halbfinalplätze':esc(last.label)}</p>${e.phase==='lives'?'<p class="small">Bis vier Spieler übrig sind. Dann Halbfinale, Finale und Spiel um Platz 3 ohne weitere Leben.</p>':''}${e.phase==='semis'?'<p class="small">Ab jetzt entscheidet eine Niederlage. Beide Verlierer spielen anschließend um Platz 3.</p>':''}${data.ended?'<button type="button" class="primary" id="newKnockoutTournament">Neues Turnier</button>':''}</section>`);
     if($('newKnockoutTournament'))$('newKnockoutTournament').onclick=newTournamentFromResults;
     if(e.phase==='shootout'&&!data.ended){
-      const ids=knockout.seedState(data).pending;
-      panel.insertAdjacentHTML('beforeend','<section class="card knockoutShootout"><h2>Shoot-out</h2><p>Diese Spieler sind nach Punkten, Differenz und direktem Vergleich gleichauf. Spielweise am Tisch vereinbaren. Anschließend nur den Sieger antippen.</p><div class="tournamentActions">'+ids.map(id=>'<button type="button" class="secondary tournamentResult" data-shootout-winner="'+id+'">Sieger: '+esc(data.players[id])+'</button>').join('')+'</div><p class="small">Bei mehreren offenen Plätzen folgen weitere Shoot-outs. Vorrundenpunkte bleiben unverändert.</p></section>');
+      const seedState=knockout.seedState(data),ids=seedState.pending,slots=4-seedState.order.indexOf(ids[0]);
+      panel.insertAdjacentHTML('beforeend','<section class="card knockoutShootout"><h2>Shoot-out</h2><p><strong>'+slots+' '+(slots===1?'Halbfinalplatz frei':'Halbfinalplätze frei')+'</strong></p><p>Für die letzten freien Halbfinalplätze sind diese Spieler nach Punkten, Differenz und direktem Vergleich gleichauf. Spielweise am Tisch vereinbaren. Anschließend nur den Sieger antippen.</p><div class="tournamentActions">'+ids.map(id=>'<button type="button" class="secondary tournamentResult" data-shootout-winner="'+id+'">Sieger: '+esc(data.players[id])+'</button>').join('')+'</div><p class="small">Bereits sicher qualifizierte Spieler spielen kein Shoot-out. Bei mehreren freien Halbfinalplätzen folgen weitere Siegerauswahlen. Vorrundenpunkte bleiben unverändert.</p></section>');
       panel.querySelectorAll('[data-shootout-winner]').forEach(button=>button.onclick=()=>{knockout.shootoutWinner(data,Number(button.dataset.shootoutWinner));saveTournament();});
     }
     const entries=data.rounds.flatMap((r,ri)=>r.matches.map((m,mi)=>({r,m,index:ri+':'+mi}))).filter(x=>!x.m.cancelled);
     const sections=[['Abgeschlossen',entries.filter(x=>x.m.result)],['Am Tisch',entries.filter(x=>x.m.table&&!x.m.result)],['Startbereit',entries.filter(x=>!x.m.result&&!x.m.table&&!x.m.paused)],['Pausiert',entries.filter(x=>!x.m.result&&!x.m.table&&x.m.paused)]];
     for(const [label,list]of sections){if(!list.length)continue;
       const completed=label==='Abgeschlossen';
-      const content=list.map(x=>'<p class="small knockoutMatchLabel">'+esc(x.r.label)+(x.m.bracket==='final'?' · Platz 1 / 2':x.m.bracket==='bronze'?' · Platz 3 / 4':x.m.bracket==='upper'?' · Gewinnerrunde':x.m.bracket==='lower'?' · Verliererrunde':'')+'</p>'+renderMatch(x.m,x.index,free,false)).join('');
+      const content=list.map(x=>'<p class="small knockoutMatchLabel">'+esc(x.r.label??('Vorrunde '+(Number(x.index.split(':')[0])+1)))+(x.m.bracket==='final'?' · Platz 1 / 2':x.m.bracket==='bronze'?' · Platz 3 / 4':x.m.bracket==='upper'?' · Gewinnerrunde':x.m.bracket==='lower'?' · Verliererrunde':'')+'</p>'+renderMatch(x.m,x.index,free,false)).join('');
       panel.insertAdjacentHTML('beforeend',completed?'<details class="card" open><summary>Abgeschlossen · '+list.length+'</summary>'+content+'</details>':'<section class="card"><h3>'+label+'</h3>'+content+'</section>');
     }
     if(!data.ended&&e.phase==='lives'){
@@ -1919,6 +1919,7 @@
     if(isPool)rememberPoolFolds();
     refreshPlayerList = null;
     applyRemoteTournament();
+    if(!drafting&&knockout.upgrade(tournament)){saveTournament(false);return;}
     panel.innerHTML = '<button type="button" id="tournamentHome" class="secondary tournamentTop">← Startseite</button>';
     $('tournamentHome').onclick = () => {
       if (openMatch !== null && !confirm('Ergebniseingabe ohne Speichern verlassen?')) return;

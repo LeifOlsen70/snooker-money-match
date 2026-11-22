@@ -93,7 +93,7 @@
     for(const row of rows) {
       const last=groups.at(-1);if(last?.place===row.place)last.ids.push(row.id);else groups.push({place:row.place,ids:[row.id]});
     }
-    d.knockout={version:1,mode:'finals',bo,phase:'shootout',qualificationRounds:d.rounds.length,
+    d.knockout={version:1,mode:'finals',qualificationPolicy:'cutoff-only',bo,phase:'shootout',qualificationRounds:d.rounds.length,
       qualificationLimit:d.limit,qualificationEndAt:d.endAt,baseRows:copy(rows),seedGroups:groups,shootouts:[],draw:d.players.map((_,id)=>id)};
     d.endAt=null;d.limit=999;d.finishLastRound=false;delete d.finalRoundRequest;
     for(const r of d.rounds)for(const m of r.matches)if(!m.result)m.cancelled=true;
@@ -106,7 +106,9 @@
       for(const shot of e.shootouts)if(left.length>1&&JSON.stringify(shot.candidates)===JSON.stringify(left)) {
         chosen.push(shot.winner);left=left.filter(id=>id!==shot.winner);
       }
-      if(!pending&&left.length>1&&order.length+chosen.length<4)pending=left;
+      const belowCutoff=order.length+chosen.length+left.length>4;
+      const legacy=e.qualificationPolicy!=='cutoff-only';
+      if(!pending&&left.length>1&&order.length+chosen.length<4&&(legacy||belowCutoff))pending=left;
       for(const id of chosen)blocks.push([id]);
       if(left.length)blocks.push(left);
       order.push(...chosen,...left);
@@ -118,6 +120,15 @@
     d.knockout.seeds=state.order.slice(0,4);
     const [a,b,c,f]=d.knockout.seeds;
     d.rounds.push(semis(d,[a,f,b,c]));return true;
+  }
+  function upgrade(d) {
+    if(!is(d)||d.knockout.mode!=='finals'||d.knockout.qualificationPolicy)return false;
+    const e=d.knockout;
+    if(e.phase!=='shootout'||d.ended){e.qualificationPolicy='legacy-seeded';return true;}
+    // Keep genuine qualification decisions; discard only old ranking-only shootouts.
+    const previous=e.shootouts;e.qualificationPolicy='cutoff-only';e.shootouts=[];
+    for(const shot of previous){const pending=seedState(d).pending;if(pending&&JSON.stringify(pending)===JSON.stringify(shot.candidates)&&pending.includes(shot.winner))e.shootouts.push(shot);}
+    resolveSeeds(d);return true;
   }
   function shootoutWinner(d,id) {
     if(!is(d)||d.ended||d.knockout.phase!=='shootout')throw Error('Kein offenes Shoot-out.');
@@ -195,6 +206,7 @@
       if(e.mode==='lives'&&![1,2].includes(e.lives))return false;
       if(!['lives','shootout','semis','finals','done'].includes(e.phase))return false;
       if(e.mode==='finals') {
+        if(e.qualificationPolicy!=null&&!['cutoff-only','legacy-seeded'].includes(e.qualificationPolicy))return false;
         if(!Number.isInteger(e.qualificationRounds)||e.qualificationRounds<1||e.qualificationRounds>d.rounds.length||!Array.isArray(e.baseRows)||e.baseRows.length!==n||!ids(e.baseRows.map(r=>r.id))||!Array.isArray(e.seedGroups)||!ids(e.seedGroups.flatMap(g=>g.ids))||e.seedGroups.flatMap(g=>g.ids).length!==n||!Array.isArray(e.shootouts))return false;
         for(const row of e.baseRows)if(!Number.isInteger(row.place)||row.place<1||row.place>n||!Number.isFinite(row.points)||!Number.isFinite(row.diff)||typeof row.name!=='string')return false;
         const checked=copy(d);checked.knockout.shootouts=[];
@@ -252,5 +264,5 @@
       return true;
     }catch{return false;}
   }
-  root.ClubKnockout=Object.freeze({is,init,advance,stats,rankings,rules,locked,rewind,prepareFinals,seedState,shootoutWinner,validBo,validate});
+  root.ClubKnockout=Object.freeze({is,init,advance,stats,rankings,rules,locked,rewind,prepareFinals,seedState,shootoutWinner,validBo,validate,upgrade});
 })(typeof window!=='undefined'?window:globalThis);
