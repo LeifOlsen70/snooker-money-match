@@ -169,14 +169,18 @@
   }
   function rankings(d,baseRows=[]) {
     if(!is(d))return baseRows;
-    const e=d.knockout,rows=d.players.map((name,id)=>({id,name,played:0,wins:0,draws:0,byes:0,diff:0,breaks:[],points:0,direct:0,place:1}));
+    const e=d.knockout;
+    // Keep qualification ranks and points intact while the medal places are still open.
+    const qualification=baseRows.length?baseRows:e.baseRows;
+    if(e.mode==='finals'&&e.phase!=='done')return copy(qualification);
+    const rows=d.players.map((name,id)=>({id,name,played:0,wins:0,draws:0,byes:0,diff:0,breaks:[],points:0,direct:0,place:1}));
     const byId=new Map(rows.map(r=>[r.id,r]));
     for(const r of d.rounds)for(const m of r.matches)if(m.result) {
       for(let i=0;i<2;i++) {const row=byId.get(m.players[i]);row.played++;row.wins+=winner(m)===row.id?1:0;row.diff+=m.result.frames[i]-m.result.frames[1-i];row.breaks.push(...(m.result.breaks?.[i]??[]));}
     }
     if(e.mode==='finals') {
-      for(const row of e.baseRows)Object.assign(byId.get(row.id),copy(row));
-      for(const r of d.rounds.slice(e.qualificationRounds))for(const m of r.matches)if(m.result)for(let i=0;i<2;i++){const row=byId.get(m.players[i]);row.played++;row.wins+=winner(m)===row.id?1:0;row.diff+=m.result.frames[i]-m.result.frames[1-i];row.breaks.push(...(m.result.breaks?.[i]??[]));}
+      for(const row of qualification)Object.assign(byId.get(row.id),copy(row));
+      for(const r of d.rounds.slice(e.qualificationRounds))for(const m of r.matches)if(m.result)for(let i=0;i<2;i++){const row=byId.get(m.players[i]);row.played++;row.wins+=winner(m)===row.id?1:0;row.points+=winner(m)===row.id?(d.framesPerMatch==null?1:2):0;row.diff+=m.result.frames[i]-m.result.frames[1-i];row.breaks.push(...(m.result.breaks?.[i]??[]));}
       const s=seedState(d);let place=1;
       for(const block of s.blocks){for(const id of block)byId.get(id).place=place;place+=block.length;}
     }else {
@@ -189,12 +193,10 @@
         remaining-=out.length;
       }
     }
-    // The top four are only finally ranked after both medal matches finish.
-    if(e.mode==='finals'&&e.phase!=='done')for(const id of e.seeds??[])byId.get(id).place=1;
     for(const [i,id]of(e.placements??[]).entries())byId.get(id).place=i+1;
     rows.sort((a,b)=>a.place-b.place||a.id-b.id);
     for(let start=0;start<rows.length;) {let end=start+1;while(end<rows.length&&rows[end].place===rows[start].place)end++;
-      for(let i=start;i<end;i++) {rows[i].seasonPoints=d.players.length-(start+end-1)/2;rows[i].points=2*rows[i].wins+rows[i].draws;}
+      for(let i=start;i<end;i++) {rows[i].seasonPoints=d.players.length-(start+end-1)/2;if(e.mode!=='finals')rows[i].points=2*rows[i].wins+rows[i].draws;}
       start=end;
     }
     return rows;

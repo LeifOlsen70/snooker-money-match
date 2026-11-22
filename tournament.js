@@ -320,7 +320,12 @@
   }
   // Only confirmed results and assigned byes count toward the standings.
   function standings(rounds = tournament.rounds, data = tournament) {
-    if(knockout.is(data))return knockout.rankings(data);
+    if(knockout.is(data)){
+      // Rebuild qualification order from the actual frozen round results, not saved display ranks.
+      const qualification=data.knockout.mode==='finals'
+        ? standings(data.rounds.slice(0,data.knockout.qualificationRounds),{...data,knockout:undefined}) : [];
+      return knockout.rankings(data,qualification);
+    }
     if(window.PoolPlanner?.is(data))rounds=window.PoolPlanner.scoringRounds(data,rounds);
     const rows = data.players.map((name, id) => ({
       name, id, played: 0, wins: 0, draws: 0, byes: 0, diff: 0, breaks: []
@@ -1487,18 +1492,24 @@
 
   function renderStandings(data = tournament) {
     const rows = standings(data.rounds, data);
+    const finalRound=knockout.is(data)&&data.knockout.mode==='finals'&&data.knockout.phase!=='done';
+    const openKnockout=knockout.is(data)&&data.knockout.mode==='lives'&&data.knockout.phase!=='done';
+    const activeIds=new Set(openKnockout?knockout.stats(data).filter(row=>row.losses<data.knockout.lives).map(row=>row.id):[]);
+    const standingsTitle=finalRound?'Vorrundentabelle':knockout.is(data)&&data.knockout.phase==='done'?'Abschlusstabelle':openKnockout?'Zwischenstand · K.-o.':tournamentTitle(data,true);
     const tableRows = rows.map(row => {
-      return `<tr><td>${row.place}</td><td>${esc(row.name)}</td><td>${formatPoints(row.points)}</td>
+      return `<tr><td>${activeIds.has(row.id)?'–':row.place}</td><td>${esc(row.name)}</td><td>${formatPoints(row.points)}</td>
         <td>${row.played + row.byes}</td><td>${row.wins}</td><td>${row.draws}</td><td>${row.diff > 0 ? '+' : ''}${row.diff}</td></tr>`;
     });
     // Also display breaks from live matches that have not finished yet.
-    for(const row of rows) row.breaks=playerBreaks(data,row.id);
+    for(const row of rows) row.breaks=playerBreaks(finalRound?{...data,rounds:data.rounds.slice(0,data.knockout.qualificationRounds)}:data,row.id);
     const playedBreaks = rows.filter(row => row.breaks.length);
     return `<div class="card tournamentStandings" style="--table-rows:${rows.length + 1}">
       <div class="tournamentStandingsHeader">
-        <h3>${esc(tournamentTitle(data, true))}</h3>
+        <h3>${esc(standingsTitle)}</h3>
         <button type="button" class="secondary" id="tournamentFullscreenToggle" aria-pressed="false">Vollbild an</button>
       </div>
+      ${finalRound?(data.ended?'<p class="small">Finalrunde vorzeitig beendet. Gezeigt wird die Vorrundentabelle einschließlich Freilospunkten.</p>':'<p class="small">Finalrunde läuft. Diese Tabelle zeigt unverändert die Vorrunde einschließlich Freilospunkten. Die Endplatzierung steht nach Finale und Spiel um Platz 3 fest.</p>'):openKnockout?'<p class="small">– = Endplatz noch offen. Ausgeschiedene Spieler behalten ihre bereits feststehende Platzierung.</p>':knockout.is(data)?'<p class="small">Endplätze nach den Finalspielen. Matchpunkte einschließlich Vorrunde; Saisonpunkte werden nach Endplatzierung vergeben.</p>':''}
+      ${!knockout.is(data)||finalRound?'<p class="small">Sortierung: Punkte → Frame-Differenz → direkter Vergleich.</p>':''}
       <table class="tournamentTable"><thead><tr><th>Pl.</th><th>Spieler</th><th>Pkt.</th><th title="Matches mit Ergebnis plus Freilose">Spiele</th><th>Siege</th><th title="Unentschieden">Remis</th><th>Frame-Δ</th></tr></thead>
       <tbody>${tableRows.join('')}</tbody></table>
       ${tableExportButtons()}
@@ -1815,6 +1826,7 @@
       const date = tournamentDateLabel(data);
       const title = daySection ? daySection.dataset.exportTitle : eloSection ? 'Elo-Wertung' : details ? details.querySelector('summary').textContent.trim()
         : view === 'overall' ? (data.freeTournament ? 'Gesamt' : 'Tabelle Saison')
+        : view==='standings'&&knockout.is(data)?panel.querySelector('.tournamentStandings h3')?.textContent??tournamentTitle(data,true)
         : data.freeTournament ? 'Freies Turnier · ' + tournamentTitle(data, true)
         : data.ended ? tournamentTitle(data, true) : 'Tabelle Turniertag';
       const datedTitle = date && !daySection && (!details || details.id === 'tournamentElo') && !title.includes(date)

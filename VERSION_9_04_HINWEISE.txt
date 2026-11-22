@@ -1,0 +1,20 @@
+VERSION 9.04 – Rang- und Punkteanzeige der Finalrunde
+
+Korrektur in Pool und Snooker, jeweils Club Liga und freiem Turnier:
+- Die vier Halbfinalisten werden nicht mehr pauschal auf Platz 1 angezeigt.
+- Während einer optionalen Finalrunde zeigt „Vorrundentabelle“ den unveränderten
+  Stand bei Abschluss der Vorrunde: Plätze, Matchpunkte, Freilospunkte, Spiele,
+  Siege, Remis und Frame-Differenz.
+- Erst nach Finale UND Spiel um Platz 3 zeigt „Abschlusstabelle“ die Endplätze.
+- In der Abschlusstabelle bleiben die Freilospunkte erhalten. Matchpunkte aus den
+  Platzierungsspielen kommen hinzu. Saisonpunkte werden nach Endplatzierung berechnet.
+- Bei laufendem K.-o. kennzeichnet „–“ die noch offenen Endplätze.
+  Bereits ausgeschiedene Spieler behalten ihre feststehenden gemeinsamen Plätze.
+- Geteilte Plätze nach Ausscheidungsrunde und die vereinbarte Saisonpunkteteilung bleiben erhalten.
+- Export übernimmt den sichtbaren Tabellentitel.
+
+Vorhandene Turnierstände bleiben erhalten. Keine neue Turnieranlage erforderlich.
+ZIP vollständig entpacken und gesamten Inhalt hochladen.
+Anschließend auf allen Geräten aktualisieren und Version 9.04 kontrollieren.
+Keine Änderung an Firebase-Regeln erforderlich.
+8.20 bleibt die letzte bestätigte gültige Rückfallversion.

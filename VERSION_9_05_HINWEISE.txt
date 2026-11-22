@@ -1,0 +1,27 @@
+VERSION 9.05 – Tatsächliche Rangfolge der Vorrundentabelle
+
+Die Vorrundenrangfolge wird auch bei bereits vorbereiteten/gespeicherten Finalrunden
+frisch aus den eingefrorenen Vorrundenergebnissen berechnet. Gespeicherte Anzeigeplätze
+oder eine falsche Reihenfolge in einer Tabellenkopie sind nicht maßgeblich.
+
+Reihenfolge: Punkte → Frame-Differenz → direkter Vergleich.
+Bei verbleibendem Gleichstand gemeinsamer Rang; nachfolgende Plätze werden übersprungen.
+
+Beispiel:
+Markus: 4 Punkte, +2 → Platz 1.
+Kai und Helmut: je 4 Punkte, +1 → Plätze 2/3 nach direktem Vergleich;
+fehlt eine Entscheidung im direkten Vergleich, beide gemeinsam auf Platz 2.
+Wolle B: 2 Punkte, 0 → Platz 4.
+
+Für sicher qualifizierte Spieler entsteht daraus kein Shoot-out.
+Die bestehende Halbfinal-/Finalphase wird nicht neu gestartet.
+Nach vollständig ausgespielter Finalrunde zählen deren Endplätze.
+Freilospunkte bleiben erhalten. Saisonwertung und Startbereit-Sortierung bleiben erhalten.
+
+In Pool und Snooker, jeweils Club Liga und freiem Turnier geprüft, einschließlich
+beider möglicher direkten Vergleichsergebnisse, fehlendem direkten Vergleich,
+Speichern/Laden und absichtlich falsch gespeicherten Anzeigeplätzen.
+
+Gesamten ZIP-Inhalt hochladen, alle Geräte aktualisieren und Version 9.05 kontrollieren.
+Keine neue Turnieranlage oder Firebase-Regeländerung nötig.
+8.20 bleibt die letzte bestätigte gültige Rückfallversion.
