@@ -474,7 +474,7 @@ body.tableMonitorFullscreen #tableMode [data-table-refresh] {display:block}
 .shortNumericCode {font-size:2.6rem!important;font-weight:800;text-align:center;letter-spacing:.2em;color:#ffdf8d;background:#21132c;border:1px solid #bc9b59;border-radius:10px;padding:10px;box-sizing:border-box;width:100%}
 
 /* Keep every caption and its control together at the top of its grid row. */
-.tournamentFields{align-items:start!important}.tournamentFields>label{display:flex!important;flex-direction:column;justify-content:flex-start!important;align-self:start;gap:6px}.tournamentFields>label>input,.tournamentFields>label>select{margin-top:0!important}
+.tournamentFields{align-items:start!important}.tournamentFields>label:not(.hidden):not([hidden]){display:flex!important;flex-direction:column;justify-content:flex-start!important;align-self:start;gap:6px}.tournamentFields>label>input,.tournamentFields>label>select{margin-top:0!important}
 
 /* v9.0: compact lives overview, no bracket visualization. */
 .knockoutRemaining{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px}
@@ -487,3 +487,6 @@ body.tableMonitorFullscreen #tableMode [data-table-refresh] {display:block}
 .knockoutShootout .tournamentActions{display:flex;flex-wrap:wrap;gap:10px}
 #knockoutBoField .small,#knockoutLivesField .small{font-weight:normal}
 .tournamentSetupFields>label{align-self:start}
+
+/* v9.01: a layout rule must never reveal mode-specific hidden form fields. */
+#tournamentSetup label.hidden,#tournamentSetup label[hidden]{display:none!important}

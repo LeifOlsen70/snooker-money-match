@@ -1,0 +1,14 @@
+VERSION 9.01 – Korrektur der Formularanzeige
+
+Eine allgemeine Layoutregel konnte die ausgeblendeten Felder wieder sichtbar machen.
+Korrigiert in Pool und Snooker, jeweils Club Liga und freiem Turnier:
+- Anzahl Leben und K.-o.-Best-of ausschließlich bei K.-o.
+- Zeitmodus: Endzeit, bisheriges Best-of / Disziplinen und Freilospunkte.
+- Rundenmodus: Rundenzahl, bisheriges Best-of / Disziplinen und Freilospunkte.
+- Keine doppelte Best-of-Auswahl bei Snooker.
+- K.-o.-Leben und K.-o.-Best-of außerhalb K.-o. zusätzlich deaktiviert.
+- Wechsel zurück zu Zeit oder Runden blendet die K.-o.-Felder wieder aus.
+
+Gesamten ZIP-Inhalt wie gewohnt hochladen, dann auf allen Geräten aktualisieren.
+Version 9.01 kontrollieren. Firebase-Regeln bleiben unverändert.
+8.20 bleibt die letzte bestätigte gültige Rückfallversion.

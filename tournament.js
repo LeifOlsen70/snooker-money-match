@@ -1058,8 +1058,8 @@
               <select name="duration"><option value="fixed">Feste Rundenzahl</option>
               <option value="endless">Nach Zeit · Endlos</option><option value="ko">K.-o.</option></select>
             </label>
-            <label id="knockoutLivesField" class="hidden">Anzahl Leben<select name="knockoutLives"><option value="1">1 · K.-o.</option><option value="2">2 · Doppel-K.-o.</option></select><span class="small">Bis vier übrig sind. Danach Halbfinale, Finale und Spiel um Platz 3 ohne weitere Leben.</span></label>
-            <label id="knockoutBoField" class="hidden">Best of<select name="knockoutBo">${Array.from({length:25},(_,i)=>2*i+1).map(n=>`<option value="${n}" ${n===3?'selected':''}>BO ${n}</option>`).join('')}</select><span class="small">Bei Pool wechselt die Disziplin nach jedem Frame. Die Auswahl wiederholt sich bei Bedarf.</span></label>
+            <label id="knockoutLivesField" class="hidden" hidden>Anzahl Leben<select name="knockoutLives" disabled><option value="1">1 · K.-o.</option><option value="2">2 · Doppel-K.-o.</option></select><span class="small">Bis vier übrig sind. Danach Halbfinale, Finale und Spiel um Platz 3 ohne weitere Leben.</span></label>
+            <label id="knockoutBoField" class="hidden" hidden>Best of<select name="knockoutBo" disabled>${Array.from({length:25},(_,i)=>2*i+1).map(n=>`<option value="${n}" ${n===3?'selected':''}>BO ${n}</option>`).join('')}</select>${isPool?'<span class="small">Die Disziplin wechselt nach jedem Frame. Die Auswahl wiederholt sich bei Bedarf.</span>':''}</label>
             <label id="tournamentRoundCount">${isPool?'Runden (je alle Disziplinen)':'Anzahl Runden'}
               <select name="rounds">${options(999, 3)}</select>
             </label>
@@ -1266,6 +1266,8 @@
       form.elements.count.innerHTML=Array.from({length:ko?13:11},(_,i)=>i+(ko?4:2)).map(n=>'<option '+(n===selectedCount?'selected':'')+'>'+n+'</option>').join('');
       renderNames();
       $('knockoutLivesField').classList.toggle('hidden',!ko);$('knockoutBoField').classList.toggle('hidden',!ko);
+      $('knockoutLivesField').hidden=!ko;$('knockoutBoField').hidden=!ko;
+      form.elements.knockoutLives.disabled=!ko;form.elements.knockoutBo.disabled=!ko;
       $('standardBoField').classList.toggle('hidden',ko||isPool);$('standardByeField').classList.toggle('hidden',ko);
       $('tournamentRoundCount').classList.toggle('hidden', endless||ko);
       form.elements.rounds.disabled = endless||ko;
