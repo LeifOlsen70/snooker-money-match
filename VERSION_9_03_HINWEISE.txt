@@ -1,0 +1,18 @@
+VERSION 9.03 – Startbereite Partien immer oben
+
+Neue Anordnung in Pool und Snooker, jeweils Club Liga und freies Turnier:
+1. Startbereit
+2. Am Tisch
+3. Wartend / pausiert
+4. Abgeschlossen – unten, zunächst eingeklappt
+
+Gilt für K.-o., Doppel-K.-o., Finalrunde sowie Zeit- und Rundenmodus.
+Auch Pool mit disziplinweisem oder paarungsweisem Ablauf zeigt die startbereiten Partien zuerst.
+Neue Halbfinals und Finals stehen vor der bisherigen Spielhistorie.
+Abgeschlossene Partien bleiben zum Ansehen und zulässigen Korrigieren aufklappbar.
+An Spielständen, Paarungslogik, Shoot-outs oder Saisonwertung wurde nichts geändert.
+Laufende Turniere müssen nicht neu angelegt werden.
+
+Gesamten ZIP-Inhalt wie gewohnt hochladen und auf allen Geräten aktualisieren.
+Version 9.03 kontrollieren. Keine Firebase-Regeländerung nötig.
+Version 8.20 bleibt die letzte bestätigte gültige Rückfallversion.

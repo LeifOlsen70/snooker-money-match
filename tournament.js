@@ -1828,24 +1828,27 @@
     panel.insertAdjacentHTML('beforeend', `<p class="small" id="tournamentLiveStatus" role="status">${esc(liveStatus)}</p>`);
   }
 
+  function orderedMatchCards(entries,freeTables){
+    const groups=[
+      ['Startbereit',entries.filter(x=>!x.match.result&&!x.match.table&&!x.match.paused&&!x.blocked)],
+      ['Am Tisch',entries.filter(x=>!x.match.result&&x.match.table)],
+      ['Wartend / pausiert',entries.filter(x=>!x.match.result&&!x.match.table&&(x.match.paused||x.blocked))],
+      ['Abgeschlossen',entries.filter(x=>x.match.result)]
+    ];
+    return groups.filter(([,list])=>list.length).map(([label,list])=>{
+      const content=list.map(x=>'<p class="small knockoutMatchLabel">'+esc(x.label)+'</p>'+renderMatch(x.match,x.index,freeTables,x.blocked)).join('');
+      return label==='Abgeschlossen'?'<details class="card tournamentCompletedMatches"><summary>Abgeschlossen · '+list.length+'</summary>'+content+'</details>':'<section class="card tournamentMatchGroup"><h3>'+label+'</h3>'+content+'</section>';
+    }).join('');
+  }
+
   function renderPoolRounds(){
     const planner=window.PoolPlanner,free=availableTables(),data=tournament;
     const canNext=planner.next(data),all=data.rounds.flatMap(r=>r.matches),running=all.filter(m=>m.table&&!m.result),ready=all.filter(m=>planner.ready(data,m));
     panel.insertAdjacentHTML('beforeend',`<section class="card poolDirectorSummary"><h2>${esc(tournamentTitle(data))}</h2><p>${data.players.length} ${data.poolMode==='double'?'Teams':'Spieler'} · ${data.tables} Tische · ${data.poolRules.disciplines.map(d=>esc(d.label)).join(' → ')}</p><div class="poolProgressBadges"><span>${running.length} läuft</span><span>${ready.length} startbereit</span><span>${free.length} Tische frei</span></div><p>Spielablauf: <strong>Disziplinweise</strong></p><p>Eine Runde = alle Paarungen in allen gewählten Disziplinen. Spieler können gleitend zur nächsten Disziplin wechseln.</p>${canNext?'<button type="button" id="nextTournamentRound" class="primary">Neue Runde starten</button>':''}${data.ended?'<button type="button" id="newTournament" class="primary">Neues Turnier</button>':''}${data.limit===null?`<p>Endzeit ${data.endAt?endLabel():'offen'} · ${data.finishLastRound?'Laufende Runden zu Ende spielen':''}</p>${!data.ended?'<button type="button" id="changeEndTime">Endzeit ändern</button>':''}`:''}</section>`);
+    const entries=data.rounds.flatMap((round,r)=>round.matches.map((match,m)=>({match,index:r+':'+m,
+      label:'Runde '+(r+1)+' · '+(data.poolRules.disciplines.find(d=>d.id===match.disciplineId)?.label??''),blocked:planner.blocked(data,match)})));
+    panel.insertAdjacentHTML('beforeend',orderedMatchCards(entries,free));
     renderBackupControls();renderLiveStatus();
-    const cards=data.rounds.map((round,r)=>{
-      const done=round.matches.filter(m=>m.result).length,complete=done===round.matches.length;
-      const body=data.poolRules.disciplines.map(d=>{
-        const entries=round.matches.map((match,m)=>({match,m})).filter(x=>x.match.disciplineId===d.id);
-        const finished=entries.filter(x=>x.match.result),live=entries.filter(x=>x.match.table&&!x.match.result),available=entries.filter(x=>planner.ready(data,x.match)),waiting=entries.filter(x=>!x.match.result&&!x.match.table&&!planner.ready(data,x.match));
-        const render=({match,m})=>renderMatch(match,`${r}:${m}`,free,planner.blocked(data,match));
-        const visibleFinished=finished.map(({match,m})=>`<article class="tournamentMatch poolFinishedMatch"><h4>${match.players.map(id=>esc(data.players[id])).join(' – ')}</h4><p class="poolMatchDiscipline">${esc(d.label)}</p><p class="tournamentStatus">Fertig · <strong>${match.result.frames.join(':')}</strong></p>${renderMatchTime(match,r+':'+m)}${!data.ended?`<button type="button" class="secondary tournamentCorrect" data-edit="${r}:${m}">Ergebnis korrigieren</button>`:''}</article>`).join('');
-        return `<details data-pool-fold="${data.started}:r${r}:d${d.id}" class="poolDisciplineSection" ${live.length||available.length||finished.length?'open':''}><summary>Runde ${r+1} · ${esc(d.label)} <small>${finished.length}/${entries.length} beendet · ${available.length} bereit · ${entries.filter(x=>x.match.paused).length} pausiert</small></summary>${visibleFinished}${live.length?'<h4 class="poolGroupLabel">Am Tisch</h4>'+live.map(render).join(''):''}${available.length?'<h4 class="poolGroupLabel">Startbereit</h4>'+available.map(render).join(''):''}${waiting.length?`<details data-pool-fold="${data.started}:r${r}:d${d.id}:waiting"><summary>Wartend / pausiert (${waiting.length})</summary>${waiting.map(render).join('')}</details>`:''}${finished.length?`<details data-pool-fold="${data.started}:r${r}:d${d.id}:finished"><summary>Abgeschlossen (${finished.length})</summary>${finished.map(render).join('')}</details>`:''}</details>`;
-      }).join('');
-      return complete?`<details data-pool-fold="${data.started}:r${r}" class="card poolRoundComplete" open><summary>Runde ${r+1} · abgeschlossen (${done}/${round.matches.length})</summary>${body}</details>`:`<section class="card poolRound"><h2>Runde ${r+1}${data.limit===null?'':' / '+data.limit} · ${done}/${round.matches.length} Begegnungen beendet</h2>${body}</section>`;
-    });
-    panel.insertAdjacentHTML('beforeend',cards.reverse().join(''));
-    restorePoolFolds();
     function at(index){const [r,m]=index.split(':').map(Number);return data.rounds[r]?.matches[m]}
     panel.querySelectorAll('[data-start]').forEach(button=>button.onclick=()=>{const match=at(button.dataset.start),table=Number(button.dataset.table);if(!match||!planner.ready(data,match)||!availableTables().includes(table)){renderTournament();return;}match.table=table;match.startedAt=Date.now();saveTournament();});
     panel.querySelectorAll('[data-pause]').forEach(button=>button.onclick=()=>{const match=at(button.dataset.pause);if(!match||data.ended||match.result||match.table)return;match.paused=!match.paused;saveTournament();});
@@ -1900,11 +1903,11 @@
       panel.querySelectorAll('[data-shootout-winner]').forEach(button=>button.onclick=()=>{knockout.shootoutWinner(data,Number(button.dataset.shootoutWinner));saveTournament();});
     }
     const entries=data.rounds.flatMap((r,ri)=>r.matches.map((m,mi)=>({r,m,index:ri+':'+mi}))).filter(x=>!x.m.cancelled);
-    const sections=[['Abgeschlossen',entries.filter(x=>x.m.result)],['Am Tisch',entries.filter(x=>x.m.table&&!x.m.result)],['Startbereit',entries.filter(x=>!x.m.result&&!x.m.table&&!x.m.paused)],['Pausiert',entries.filter(x=>!x.m.result&&!x.m.table&&x.m.paused)]];
+    const sections=[['Startbereit',entries.filter(x=>!x.m.result&&!x.m.table&&!x.m.paused)],['Am Tisch',entries.filter(x=>x.m.table&&!x.m.result)],['Pausiert',entries.filter(x=>!x.m.result&&!x.m.table&&x.m.paused)],['Abgeschlossen',entries.filter(x=>x.m.result)]];
     for(const [label,list]of sections){if(!list.length)continue;
       const completed=label==='Abgeschlossen';
       const content=list.map(x=>'<p class="small knockoutMatchLabel">'+esc(x.r.label??('Vorrunde '+(Number(x.index.split(':')[0])+1)))+(x.m.bracket==='final'?' · Platz 1 / 2':x.m.bracket==='bronze'?' · Platz 3 / 4':x.m.bracket==='upper'?' · Gewinnerrunde':x.m.bracket==='lower'?' · Verliererrunde':'')+'</p>'+renderMatch(x.m,x.index,free,false)).join('');
-      panel.insertAdjacentHTML('beforeend',completed?'<details class="card" open><summary>Abgeschlossen · '+list.length+'</summary>'+content+'</details>':'<section class="card"><h3>'+label+'</h3>'+content+'</section>');
+      panel.insertAdjacentHTML('beforeend',completed?'<details class="card tournamentCompletedMatches"><summary>Abgeschlossen · '+list.length+'</summary>'+content+'</details>':'<section class="card"><h3>'+label+'</h3>'+content+'</section>');
     }
     if(!data.ended&&e.phase==='lives'){
       const names=ids=>ids.map(id=>esc(data.players[id])).join(', ');
@@ -1995,18 +1998,11 @@
     const mode = tournament.limit === null ? 'Endlos' : `${tournament.limit} Runden`;
     const openRounds = tournament.rounds.flatMap((round, i) => round.matches.some(match => !match.result) ? [i + 1] : []);
     const previousPlayers = new Set();
-    const roundCards = tournament.rounds.map((round, roundIndex) => {
-      const roundComplete = round.matches.every(match => match.result);
-      const title = `Runde ${roundIndex + 1}${tournament.limit === null ? '' : ` / ${tournament.limit}`}`;
-      const content = `${round.bye === null ? '' : `<p class="tournamentStatus">Freilos · ${esc(tournament.players[round.bye])}</p>`}
-        ${round.matches.map((match, i) => renderMatch(match, `${roundIndex}:${i}`, freeTables,
-          !match.table && match.players.some(id => previousPlayers.has(id)))).join('')}`;
-      for (const match of round.matches) {
-        if (!match.result) match.players.forEach(id => previousPlayers.add(id));
-      }
-      return roundComplete && roundIndex < number - 1
-        ? `<details class="card tournamentRound" ${isPool?`data-pool-fold="${tournament.started}:r${roundIndex}"`:''} ${openMatch?.startsWith(`${roundIndex}:`) ? 'open' : ''}><summary>${title} · abgeschlossen</summary>${content}</details>`
-        : `<div class="card tournamentRound"><h3>${title}${roundComplete ? ' · abgeschlossen' : tournament.ended ? '' : ' · läuft'}</h3>${roundIndex === number - 1 ? `${replacement ? '<button type="button" class="secondary" id="repairTournamentRound">Paarungen neu erstellen</button>' : ''}${nextRound ? `<button type="button" class="primary" id="nextTournamentRound">${complete ? 'Nächste Runde starten' : 'Neue Runde starten'}</button>` : ''}` : ''}${content}</div>`;
+    const orderedEntries=tournament.rounds.flatMap((round,r)=>{
+      const entries=round.matches.map((match,m)=>({match,index:r+':'+m,label:'Runde '+(r+1),
+        blocked:!match.table&&match.players.some(id=>previousPlayers.has(id))}));
+      for(const match of round.matches)if(!match.result)match.players.forEach(id=>previousPlayers.add(id));
+      return entries;
     });
     panel.insertAdjacentHTML('beforeend', `
       <div class="card tournamentOverview">
@@ -2023,10 +2019,12 @@
       </div>
     `);
     if ($('changeEndTime')) $('changeEndTime').onclick = editEndTime;
-    renderBackupControls();
-    renderLiveStatus();
-    panel.insertAdjacentHTML('beforeend', roundCards.reverse().join(''));
-    if(isPool)restorePoolFolds();
+    if(!tournament.ended&&(nextRound||replacement))panel.insertAdjacentHTML('beforeend','<div class="tournamentActions">'+(replacement?'<button type="button" class="secondary" id="repairTournamentRound">Paarungen neu erstellen</button>':'')+(nextRound?'<button type="button" class="primary" id="nextTournamentRound">'+(complete?'Nächste Runde starten':'Neue Runde starten')+'</button>':'')+'</div>');
+    panel.insertAdjacentHTML('beforeend',orderedMatchCards(orderedEntries,freeTables));
+    const byes=tournament.rounds.flatMap((round,r)=>round.bye==null?[]:['<p class="small">Runde '+(r+1)+' · Freilos: '+esc(tournament.players[round.bye])+'</p>']);
+    if(byes.length)panel.insertAdjacentHTML('beforeend','<details class="card"><summary>Freilose</summary>'+byes.join('')+'</details>');
+    renderBackupControls();renderLiveStatus();
+
     updateClocks();refreshHistory();
     panel.querySelectorAll('[data-warning-off]').forEach(button=>button.onclick=()=>window.snookerMonitors.silence(button.dataset.warningOff));
 
