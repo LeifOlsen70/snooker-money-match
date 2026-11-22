@@ -50,11 +50,13 @@
     if(rules?.sport!=='pool'||!Array.isArray(rules.disciplines)||!rules.disciplines.length||rules.disciplines.length>4)throw Error('Ungültige Pool-Disziplinen.');
     let previous=-1,total=0;
     for(const d of rules.disciplines){const index=ids.indexOf(d.id);if(index<=previous||!Number.isInteger(d.frames)||d.frames<1||d.frames>50||(d.id==='14'&&(!Number.isInteger(d.targetPoints)||d.targetPoints<1||d.targetPoints>9999)))throw Error('Ungültige Disziplin oder Zielpunktzahl.');previous=index;total+=d.frames;}
-    if(rules.framesPerMatch!==total)throw Error('Ungültige Gesamtframezahl.');
+    if(rules.rotation!==true&&rules.framesPerMatch!==total)throw Error('Ungültige Gesamtframezahl.');
+    if(rules.rotation===true&&(!Number.isInteger(rules.framesPerMatch)||rules.framesPerMatch<1||rules.framesPerMatch>49||rules.framesPerMatch%2!==1||rules.bestOf!==true))throw Error('Ungültige Best-of-Rotation.');
     return true;
   }
   function derivePool(state,rules){
     validPoolRules(rules);
+    if(rules.rotation===true)return derivePoolRotation(state,rules);
     if(!state||!Array.isArray(state.events)||state.events.length>2000||!Number.isInteger(state.cursor)||state.cursor<0||state.cursor>state.events.length||!Number.isInteger(state.revision)||state.revision<0)throw Error('Ungültiger Pool-Spielstand.');
     const value={scores:[0,0],frames:[0,0],breaks:[[],[]],complete:false,finishedAt:null,disciplineIndex:0,
       disciplines:rules.disciplines.map(d=>({...d,frames:[0,0],breaks:[[],[]],frameHistory:[]}))};
@@ -89,6 +91,37 @@
     }
     value.currentDiscipline=rules.disciplines[Math.min(value.disciplineIndex,rules.disciplines.length-1)];
     value.disciplineFrames=value.disciplines[Math.min(value.disciplineIndex,value.disciplines.length-1)].frames;
+    value.targetReached=!value.complete&&value.currentDiscipline.id==='14'&&Math.max(...value.scores)>=value.currentDiscipline.targetPoints;
+    return value;
+  }
+  function derivePoolRotation(state,rules){
+    if(!state||!Array.isArray(state.events)||state.events.length>2000||!Number.isInteger(state.cursor)||state.cursor<0||state.cursor>state.events.length||!Number.isInteger(state.revision)||state.revision<0)throw Error('Ungültiger Pool-Spielstand.');
+    const value={scores:[0,0],frames:[0,0],breaks:[[],[]],complete:false,finishedAt:null,disciplineIndex:0,
+      disciplines:rules.disciplines.map(d=>({...d,frames:[0,0],breaks:[[],[]],frameHistory:[]}))};
+    let frameBreaks=[[],[]];
+    for(const event of state.events.slice(0,state.cursor)){
+      if(!event||!Number.isFinite(event.at)||event.at<0)throw Error('Ungültige Zeitangabe.');
+      if(event.type==='warningOff')continue;
+      if(value.complete||![0,1].includes(event.player))throw Error('Die Partie ist beendet oder der Spieler ungültig.');
+      const configured=rules.disciplines[value.disciplineIndex],current=value.disciplines[value.disciplineIndex];
+      function points(player,n){
+        if(configured.id!=='14'||![0,1].includes(player)||!Number.isInteger(n)||n<1||n>9999)throw Error('Punkteeingabe nur bei 14/1 endlos (1 bis 9999).');
+        value.scores[player]+=n;if(n>=20){value.breaks[player].push(n);current.breaks[player].push(n);frameBreaks[player].push(n);}
+      }
+      if(event.type==='points')points(event.player,event.value);
+      else if(event.type==='foul'){if(configured.id!=='14'||![1,15].includes(event.value))throw Error('Ungültiger Punktabzug.');value.scores[event.player]-=event.value;}
+      else if(event.type==='frame'){
+        if(event.pendingPoints)points(event.pendingPoints.player,event.pendingPoints.value);
+        current.frames[event.player]++;value.frames[event.player]++;
+        current.frameHistory.push({winner:event.player,scores:[...value.scores],breaks:copy(frameBreaks),at:event.at});frameBreaks=[[],[]];
+        value.complete=complete(value.frames,rules);if(value.complete)value.finishedAt=event.at;
+        else {value.scores=[0,0];value.disciplineIndex=(value.frames[0]+value.frames[1])%rules.disciplines.length;}
+      }else if(event.type==='finish'){
+        if(value.frames[event.player]<=value.frames[1-event.player])throw Error('Match-Sieger muss nach Frames führen.');
+        value.complete=true;value.earlyFinished=true;value.finishedAt=event.at;
+      }else throw Error('Ungültige Pool-Aktion.');
+    }
+    value.currentDiscipline=rules.disciplines[value.disciplineIndex];value.disciplineFrames=[...value.frames];
     value.targetReached=!value.complete&&value.currentDiscipline.id==='14'&&Math.max(...value.scores)>=value.currentDiscipline.targetPoints;
     return value;
   }

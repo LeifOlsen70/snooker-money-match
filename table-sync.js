@@ -104,7 +104,7 @@ export function createTableSync({auth,db,doc,getDoc,getDocFromServer,onSnapshot,
               state={...(match.scoreMonitor?.state??model.initial()),revision:state.revision+1};model.derive(state,a.rules);
             }
           }
-          const next={...shared,assignment:a,enabled,state,...(window.PoolPlanner?.is(snapshot)?{progressionLocked:window.PoolPlanner.locked(snapshot,match)}:{})};
+          const next={...shared,assignment:a,enabled,state,...((window.PoolPlanner?.is(snapshot)||window.ClubKnockout?.is(snapshot))?{progressionLocked:window.ClubKnockout?.is(snapshot)?window.ClubKnockout.locked(snapshot,match):window.PoolPlanner.locked(snapshot,match)}:{})};
           if(!same(existing,next))tx.set(ref(slot),encodeBoard(next));
           return next;
         });

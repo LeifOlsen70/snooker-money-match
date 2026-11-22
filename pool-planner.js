@@ -37,7 +37,7 @@
  }
  function freeTables(data){const used=new Set(data.rounds.flatMap(r=>r.matches).filter(m=>m.table&&!m.result).map(m=>m.table));return Array.from({length:data.tables},(_,i)=>i+1).filter(t=>!used.has(t))}
  function next(data,now=Date.now()){
-  if(!is(data)||data.ended||data.finishLastRound||data.limit!==null&&data.rounds.length>=data.limit||data.limit===null&&data.endAt!=null&&now>=data.endAt||!freeTables(data).length)return null;
+  if(window.ClubKnockout?.is(data)||data.finalRoundRequest||!is(data)||data.ended||data.finishLastRound||data.limit!==null&&data.rounds.length>=data.limit||data.limit===null&&data.endAt!=null&&now>=data.endAt||!freeTables(data).length)return null;
   if(data.rounds.some(r=>r.matches.some(m=>ready(data,m))))return null;
   const last=data.rounds.at(-1),final=data.poolRules.disciplines.at(-1).id;
   if(!last.matches.every(m=>m.result)&&!last.matches.some(m=>m.disciplineId===final&&m.startedAt!=null))return null;
@@ -46,6 +46,7 @@
   return candidate;
  }
  function scoringRounds(data,rounds=data.rounds){if(!is(data))return rounds;return rounds.map(round=>{
+  if(round.stage)return round;
   const grouped=new Map();for(const match of round.matches){const key=match.players.join(':');if(!grouped.has(key))grouped.set(key,[]);grouped.get(key).push(match)}
   const matches=[...grouped.values()].map(parts=>{
    const result=parts.length===data.poolRules.disciplines.length&&parts.every(m=>m.result)?{frames:[0,0],breaks:[[],[]]}:null;

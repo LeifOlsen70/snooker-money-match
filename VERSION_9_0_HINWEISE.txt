@@ -1,0 +1,63 @@
+VERSION 9.0 – auf Basis der unveränderten Version 8.20
+
+RÜCKFALLVERSION
+Version 8.20 bleibt die letzte vom Nutzer bestätigte gültige Rückfallversion.
+Die Versionen 8.21–8.27 dienen nicht als Grundlage dieser Ausgabe.
+Version 9.0 enthält eine neu getrennte K.-o.-Logik, keinen Turnierbaum.
+
+NEU – in Pool und Snooker, jeweils Club Liga UND freies Turnier
+- Turniermodus: feste Rundenzahl, nach Zeit oder K.-o.
+- K.-o.: 4 bis 16 Spieler/Teams; Auswahl 1 oder 2 Leben.
+- Eine Matchniederlage kostet ein Leben. Ein verlorener Frame allein nicht.
+- 2 Leben: Gewinnerrunde und Verliererrunde; genau vier bleiben für die Finalphase.
+- Zwei ungeschlagene Spieler warten, bis zwei Spieler aus der Verliererrunde feststehen.
+- Halbfinale dann über Kreuz; ab Halbfinale keine weiteren Leben.
+- Finale um Platz 1/2 und kleines Finale um Platz 3/4.
+- Bei vier Startern beginnt das Turnier sofort im Halbfinale.
+- Nur ungerade Best-of-Werte im K.-o. und in der Finalrunde.
+- Pool: ein Frame pro gewählter Disziplin, dann nächste; Auswahl wiederholt sich bis BO entschieden ist.
+- 14/1 behält Zielpunkte. Im bisherigen Zeit-/Rundenmodus bleibt die Spieleanzahl erhalten.
+- Freilose ohne erspielten Sieg oder Lebensverlust. Auswahl: Siegquote, Frame-Differenz je Match,
+  bei gleichen Werten bisherige Freilose und gespeicherte Losreihenfolge.
+- Zusatzreiter „Spieler übrig“ bei zwei Leben: Gewinner- und Verliererrunde nebeneinander.
+- Kein Turnierbaum und keine Gruppenphase.
+
+ZEIT / RUNDEN – OPTIONALE FINALRUNDE
+- Bei „Turnier beenden“ ab vier Teilnehmern Abfrage nach einer Finalrunde.
+- Bereits laufende Matches zuerst abschließen; neue Starts sind bis dahin gesperrt.
+- Anschließend aktuelle Tabelle einfrieren: Punkte, Differenz, direkter Vergleich.
+- Relevante Gleichstände werden per Shoot-out entschieden.
+- Die App legt keine Shoot-out-Spielweise fest: ausschließlich Sieger auswählen.
+- Bei mehreren gleichen Spielern folgen weitere Siegerauswahlen für die benötigten Plätze.
+- Halbfinale: 1 gegen 4, 2 gegen 3. Anschließend Finale und Spiel um Platz 3.
+- BO der Finalrunde separat wählen.
+
+SAISONWERTUNG CLUB LIGA
+- Punkte nach bisheriger Teilnehmerstaffel (bei 8 Teilnehmern 8 bis 1 Punkte).
+- Gleiche Ausscheidungsrunde = gemeinsam belegte Plätze und deren durchschnittliche Punkte.
+- Beispiel Plätze 7/8: je 1,5 Punkte. Plätze 5–8: je 2,5 Punkte.
+- Bei den neuen K.-o.-/Finalrunden erst nach vollständig ausgespielten Platzierungsspielen.
+- Ein Abbruch einer neuen K.-o.-/Finalrunde vergibt keine vorläufigen Saisonpunkte.
+- Freie Turniere werden nicht in die Club-Saison übernommen.
+
+INSTALLATION
+ZIP entpacken und den Inhalt wie gewohnt ins GitHub-Projekt hochladen/ersetzen.
+Die Dateien müssen direkt auf der bisherigen Ebene liegen, nicht in einem zusätzlichen Club900-Ordner.
+„knockout.js“ ist neu und muss mit hochgeladen werden.
+Enthaltene Ordner (insbesondere audio und functions) in ihrer Struktur beibehalten.
+Firebase-Regeln und Cloud Functions sind gegenüber 8.20 unverändert; keine Veröffentlichung nötig.
+Danach auf allen verwendeten Geräten die App aktualisieren und Version 9.0 kontrollieren.
+Vor dem Test vorhandene Turnier-/Saisondaten über die App sichern.
+
+RÜCKKEHR ZU 8.20
+Die ursprüngliche Club820.zip bleibt unverändert erhalten.
+Zum Rückwechsel deren Dateien hochladen und alle Geräte aktualisieren.
+Neue 9.0-K.-o.-Sicherungen benötigen 9.0; für 8.20 eine vorherige 8.20-Sicherung verwenden.
+
+PRÜFUNGEN
+624 vollständige K.-o.-Abläufe mit 4–16 Teilnehmern, beiden Sportarten, beiden Leben-Varianten
+und unterschiedlichen ungeraden Best-of-Werten. Zwischenstände, Rangpunkte und Wiederladen geprüft.
+Bedienungsprüfungen mit Formularen, Ergebniseingaben, Finalrundenanforderung, Shoot-outs,
+Korrektur/Undo/Redo und echten 8.20-Sicherungen. Tischtransport mit nachgebildetem Firebase-Backend
+für Organisator/Tischgerät geprüft. Keine Live-Prüfung mit den persönlichen Firebase-Daten
+oder realen iPhone-/iPad-Geräten vorgenommen.

@@ -475,3 +475,15 @@ body.tableMonitorFullscreen #tableMode [data-table-refresh] {display:block}
 
 /* Keep every caption and its control together at the top of its grid row. */
 .tournamentFields{align-items:start!important}.tournamentFields>label{display:flex!important;flex-direction:column;justify-content:flex-start!important;align-self:start;gap:6px}.tournamentFields>label>input,.tournamentFields>label>select{margin-top:0!important}
+
+/* v9.0: compact lives overview, no bracket visualization. */
+.knockoutRemaining{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px}
+.knockoutRemaining .card{min-width:0;padding:12px}
+.knockoutRemaining h3{font-size:clamp(14px,3.5vw,22px);overflow-wrap:anywhere}
+.knockoutRemaining .tournamentTable{font-size:clamp(12px,2.9vw,18px);table-layout:auto;width:100%}
+.knockoutRemaining .tournamentTable th,.knockoutRemaining .tournamentTable td{padding:8px 3px;white-space:normal;overflow-wrap:anywhere}
+.knockoutRemaining .tournamentTable th:first-child,.knockoutRemaining .tournamentTable td:first-child{width:auto}
+.knockoutMatchLabel{margin:16px 0 5px}
+.knockoutShootout .tournamentActions{display:flex;flex-wrap:wrap;gap:10px}
+#knockoutBoField .small,#knockoutLivesField .small{font-weight:normal}
+.tournamentSetupFields>label{align-self:start}

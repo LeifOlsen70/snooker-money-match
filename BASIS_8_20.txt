@@ -1,0 +1,3 @@
+Projektstand, bestätigt am 22.11.2026:
+Die letzte vom Nutzer bestätigte gültige Rückfallversion ist 8.20 (Club820.zip).
+Version 9.0 wurde ausschließlich darauf aufgebaut. 8.20 nicht überschreiben.
