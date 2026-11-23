@@ -1,0 +1,22 @@
+VERSION 9.06 – Club-Liga-Dateien mit älteren geparkten Turnieren laden
+
+Ursache: Eine gültige Club-Liga-Sicherung kann zusätzlich ein geparktes freies
+Gruppen-/K.-o.-Turnier aus der früheren Turnierlogik enthalten. Die vorherige Prüfung
+lehnte dadurch die gesamte Sicherung ab, obwohl Club-Liga und Saisonarchive gültig waren.
+
+Korrektur:
+- Beide Ladewege erkennen diese zusätzlich enthaltenen älteren freien Turniere.
+- Club-Liga, Ergebnisse, Jahres-/Saisonarchive und Elo werden unverändert übernommen.
+- Das alte freie Turnier wird vollständig als separate ältere Sicherung erhalten.
+- Im Sicherungsbereich lässt sich diese ältere Sicherung separat speichern.
+- Es wird nicht als aktuelles 9.x-Turnier gestartet und nicht in die Club-Saison eingerechnet.
+- Auch beim Anlegen des nächsten Club-Liga-Spieltags bleibt die ältere Sicherung erhalten.
+- Leseprobleme mit iCloud, leere Dateien, ungültiges JSON und falsche Sicherungsarten
+  erhalten unterscheidbare Fehlermeldungen. Fehlgeschlagene Datenprüfungen ersetzen keine Daten.
+
+Installation: Gesamten ZIP-Inhalt wie gewohnt hochladen und alle Geräte aktualisieren.
+Danach die ursprüngliche Club-Liga-JSON erneut laden. Kein neuer Saisonstart nötig.
+Keine Firebase-Regeländerung nötig. 8.20 bleibt die bestätigte Rückfallversion.
+
+Reparierte persönliche Sicherungen ausschließlich in der App laden.
+Persönliche Turnier-JSON-Dateien nicht ins GitHub-Projekt hochladen.

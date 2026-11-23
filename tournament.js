@@ -1330,6 +1330,7 @@
         ...(isPool&&poolConfig.poolOrder!=='pair'?{poolSchedule:window.PoolPlanner.KIND}:{}),
         ...(isPool?{poolArchive:archivePool(previous)}:{}),
         players,
+        legacyParkedTournaments:clone(previous?.legacyParkedTournaments??tournament?.legacyParkedTournaments??[]),
         freeTournament,
         parkedTournament,
         parkedAt,
@@ -1547,6 +1548,33 @@
     }
   }
 
+  function isLegacyParkedTournament(data){
+    if(!data||data.freeTournament!==true||!['groups','double','placement'].includes(data.elimination?.mode)||data.knockout!=null)return false;
+    if(!Array.isArray(data.players)||data.players.length<2||data.players.length>16||!data.players.every(name=>typeof name==='string'&&name.trim())||!Array.isArray(data.rounds)||!data.rounds.length)return false;
+    return data.rounds.every(round=>Array.isArray(round?.matches)&&round.matches.every(match=>Array.isArray(match?.players)&&match.players.length===2&&match.players[0]!==match.players[1]&&match.players.every(id=>Number.isInteger(id)&&id>=0&&id<data.players.length)));
+  }
+  function preserveLegacyParked(data){
+    if(!isLegacyParkedTournament(data?.parkedTournament))return false;
+    const legacy=data.parkedTournament;
+    const list=data.legacyParkedTournaments??[];
+    if(!Array.isArray(list))throw Error('Ungültiges Archiv älterer Turnierstände.');
+    if(!list.some(entry=>JSON.stringify(entry)===JSON.stringify(legacy)))list.push(legacy);
+    data.legacyParkedTournaments=list;
+    delete data.parkedTournament;
+    return true;
+  }
+  async function readTournamentFile(file){
+    let text;
+    try{text=await file.text();}catch{throw Error('Die Datei konnte nicht gelesen werden. Bitte zuerst vollständig aus iCloud laden und erneut auswählen.');}
+    if(!text.trim())throw Error('Die Datei ist leer oder noch nicht vollständig aus iCloud geladen.');
+    let backup;
+    try{backup=JSON.parse(text.replace(/^\uFEFF/,''));}catch{throw Error('Der Dateiinhalt ist keine lesbare JSON-Sicherung. Bitte die Originaldatei verwenden.');}
+    if(backup?.app!=='Snooker Swiss Tournament'||backup.version!==1)throw Error('Bitte eine Turnier-Sicherung dieser App (.json) auswählen.');
+    const data=clone(backup.tournament),migrated=preserveLegacyParked(data);
+    if(!validBackup(data))throw Error('Die Datenprüfung dieser Sicherung ist fehlgeschlagen. Die vorhandenen Daten wurden nicht ersetzt. Bitte die Datei zur Prüfung bereitstellen.');
+    return {data,migrated};
+  }
+
   function validBackup(data, allowParked = true) {
     if(isPool !== (data?.sport==='pool'))return false;
     if(data?.bestOf!=null&&typeof data.bestOf!=='boolean')return false;
@@ -1603,6 +1631,7 @@
         Array.isArray(game.names) && game.names.length === 2 && game.names.every(name) && [0,.5,1].includes(game.score)) ||
       !Array.isArray(data.elo.edits) || !data.elo.edits.every(edit => edit && Number.isFinite(edit.at) && edit.at > 0 &&
         name(edit.name) && integer(edit.rating, 0, 9999)))) return false;
+    if(data.legacyParkedTournaments!=null&&(!Array.isArray(data.legacyParkedTournaments)||!data.legacyParkedTournaments.every(isLegacyParkedTournament)))return false;
     if(data.finalRoundRequest&&(!knockout.validBo(data.finalRoundRequest.bo)||!timestamp(data.finalRoundRequest.requestedAt)||data.knockout))return false;
     if(data.knockout!=null)return knockout.validate(data,window.SnookerTableScore);
     if(data.poolSchedule!=null&&!window.PoolPlanner?.is(data))return false;
@@ -1638,6 +1667,7 @@
         ${tournament ? '<button type="button" class="secondary" id="saveTournamentFile">Turnier speichern</button>' : ''}
         <button type="button" class="secondary" id="restoreTournamentFile">Turnier wiederherstellen</button>
       </div>
+      ${tournament?.legacyParkedTournaments?.length?`<details><summary>Ältere freie Turniersicherungen · ${tournament.legacyParkedTournaments.length}</summary><p class="small">Zusätzlich erhaltene freie Turniere aus einer früheren Version. Sie werden nicht in die aktuelle Club-Liga eingerechnet.</p>${tournament.legacyParkedTournaments.map((_,i)=>`<button type="button" class="secondary" data-export-legacy="${i}">Ältere Sicherung ${i+1} separat speichern</button>`).join('')}</details>`:''}
       <input id="tournamentFileInput" type="file" accept=".json,application/json" class="hidden">
       <p class="tournamentStatus" id="tournamentBackupStatus" role="status"></p>
     </details>`);
@@ -1650,6 +1680,7 @@
         status.textContent = 'Turnierdatei konnte nicht gespeichert werden.';
       }
     };
+    panel.querySelectorAll('[data-export-legacy]').forEach(button=>button.onclick=()=>exportTournament(clone(tournament.legacyParkedTournaments[Number(button.dataset.exportLegacy)])).catch(()=>{$('tournamentBackupStatus').textContent='Die ältere Sicherung konnte nicht gespeichert werden.';}));
     const input = $('tournamentFileInput');
     $('restoreTournamentFile').onclick = () => input.click();
     input.onchange = async () => {
@@ -1657,12 +1688,9 @@
       input.value = '';
       if (!file) return;
       try {
-        const backup = JSON.parse(await file.text());
-        if (backup?.app !== 'Snooker Swiss Tournament' || backup.version !== 1 || !validBackup(backup.tournament)) {
-          throw new Error('Ungültige Turnierdatei');
-        }
+        const {data,migrated}=await readTournamentFile(file);
         if (tournament && !confirm('Den gesamten gespeicherten Turnierstand auf diesem Gerät durch die Datei ersetzen? Ergebnisse, Saison- und Jahresarchive sowie Elo werden vollständig aus der Datei übernommen. Der bisherige Turnierverlauf kann danach nicht über Zurück wiederhergestellt werden.')) return;
-        tournament = backup.tournament;
+        tournament = data;
         remoteTournament = null;
         undoStates = [];
         redoStates = [];
@@ -1672,9 +1700,9 @@
         openMatch = null;
         view = 'rounds';
         saveTournament(false, true);
-        $('tournamentBackupStatus').textContent = 'Turnierstand vollständig aus der Datei übernommen.';
+        $('tournamentBackupStatus').textContent = 'Turnierstand vollständig aus der Datei übernommen.'+(migrated?' Das ältere freie Turnier wurde separat erhalten.':'');
       } catch (error) {
-        $('tournamentBackupStatus').textContent = 'Turnier konnte nicht wiederhergestellt werden. Bitte eine gültige Turnier-Sicherung auswählen.';
+        $('tournamentBackupStatus').textContent = error.message||'Turnier konnte nicht wiederhergestellt werden.';
       }
     };
   }
@@ -1713,13 +1741,10 @@
       fileInput.value = '';
       if (!file) return;
       try {
-        const backup = JSON.parse(await file.text());
-        if (backup?.app !== 'Snooker Swiss Tournament' || backup.version !== 1 ||
-            !validBackup(backup.tournament) || backup.tournament.freeTournament) {
-          throw new Error('invalid-club-backup');
-        }
+        const {data,migrated}=await readTournamentFile(file);
+        if(data.freeTournament)throw Error('Bitte eine Club-Liga-Sicherung auswählen. Diese Datei enthält ein freies Turnier.');
         if (!confirm('Diese Liga-Datei als Grundlage für den neuen Spieltag übernehmen? Der bislang gespeicherte Liga-Stand auf diesem Gerät wird ersetzt.')) return;
-        tournament = backup.tournament;
+        tournament = data;
         remoteTournament = null;
         undoStates = [];
         redoStates = [];
@@ -1734,8 +1759,9 @@
         saveTournament(false, true);
         drafting = true;
         renderTournament();
+        if(migrated)$('tournamentBackupStatus').textContent='Club-Liga übernommen. Das ältere freie Turnier wurde separat erhalten.';
       } catch (error) {
-        errorOutput.textContent = 'Die Datei konnte nicht geladen werden. Bitte eine gültige Club-Liga-Sicherung (.json) auswählen.';
+        errorOutput.textContent = error.message||'Die Datei konnte nicht geladen werden.';
       }
     };
     dialog.showModal();
