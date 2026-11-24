@@ -1,0 +1,13 @@
+Version 9.09
+
+Freies Turnier: Optionales Feld Turniername in Snooker und Pool. Der Name wird gespeichert und in Turnierkopf, Tabelle, Tabellenexporten und Zuschaueransicht angezeigt. Ohne Eingabe bleibt die bisherige Bezeichnung erhalten.
+
+Pool paarungsweise: Alle gewählten Disziplinen werden durchgespielt. Die Summe der gewonnenen Frames entscheidet die Begegnung. Beispiel 2:3 + 2:3 + 3:0 = 7:6: Sieger 2 Tabellenpunkte, Verlierer 0. Unentschieden ergibt je 1 Punkt. Die bisherige Zählung erfüllt diese Regel bereits; sie wurde gezielt getestet und verständlicher beschriftet. Keine Wertung nach der Anzahl gewonnener Disziplinen.
+Tabellenreihenfolge bleibt Punkte, Frame-Differenz, direkter Vergleich. Disziplinweise und K.-o.-Ablauf unverändert. Keine zusätzliche Auswahl einer Frame-Tabellenwertung.
+
+Zuschaueransicht: Sichtbarer Zurück-zur-App-Button oben. Innerhalb der App wird der bereits vorhandene obere Zurück-Button benutzt, um Doppelungen zu vermeiden. Footer-Link bleibt erhalten.
+Alle aktuellen Versionsanzeigen 9.09.
+
+Installation: Alle Dateien und Unterordner der ZIP hochladen. Firebase-Regeln unverändert zu 9.07/9.08. Sind diese bereits veröffentlicht, keine erneute Einrichtung erforderlich. Keine Cloud Functions.
+
+Geprüft: Beispielsieg 7:6 inklusive 2/0 Tabellenpunkten, Namenseingabe nur beim freien Turnier, beide Sportbereiche, Speicherung und Wiederladen, Zuschaueransicht und Reiter, Ranking- und K.-o.-Regression. Kein Live-Test auf echtem iPhone/iPad. Rückfallversion 8.20 unverändert.

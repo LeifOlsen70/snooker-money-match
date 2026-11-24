@@ -1,3 +1,5 @@
+VERSION 9.09 – Optionaler Name im freien Turnier; paarungsweise entscheidet die Summe aller Frames; oberer Zurück-Button in der Zuschaueransicht; einheitliche Versionsanzeigen. Siehe VERSION_9_09_HINWEISE.txt.
+
 VERSION 9.08 – Neu: „Turnier verfolgen“ auf der Startseite mit QR-Scanner und Link-Eingabe innerhalb der App. Siehe VERSION_9_08_HINWEISE.txt. Firebase-Regeln unverändert zu 9.07.
 
 BILLARD & SNOOKER – VERSION 9.07

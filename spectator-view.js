@@ -1,20 +1,20 @@
 import {initializeApp} from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js';
 import {getAuth,setPersistence,browserLocalPersistence,signInAnonymously,signOut} from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-auth.js';
 import {getFirestore,doc,getDoc,onSnapshot,runTransaction} from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore.js';
-import {firebaseConfig} from './firebase-config.js?v=9.08';
-import {createTableConnection} from './table-connection.js?v=9.08';
+import {firebaseConfig} from './firebase-config.js?v=9.09';
+import {createTableConnection} from './table-connection.js?v=9.09';
 const model=window.SnookerSpectator,pool=new URLSearchParams(location.search).get('sport')==='pool',sport=pool?'pool':'snooker',token=location.hash.slice(1),e=id=>document.getElementById(id);
 const app=initializeApp(firebaseConfig,pool?'pool-code-device-v1':'table-code-device-v2'),auth=getAuth(app),db=getFirestore(app);
 let data=null,meta=null,view='matches',boards=new Map(),stops=[],rootStop=null,connected=false;
 const returnKey='snooker-viewer-return:'+sport;
 const appUrl=()=>new URL('app.html?sport='+sport,location.href).href;
 e('viewerLogo').src=pool?'pool-logo.png':'flensburger-snooker-club.png';e('viewerLogo').alt=pool?'Poolbillard':'Snooker';
-e('viewerApp').href=appUrl();
+e('viewerApp').href=appUrl();e('viewerBack').href=appUrl();
 function status(text){e('viewerStatus').textContent=text;}
 function render(){e('viewerContent').innerHTML=window.SnookerSpectatorRender.render(data,[...boards.values()],view);}
 function clear(text){for(const stop of stops)stop();stops=[];boards.clear();data=null;render();status(text);e('viewerTitle').textContent='Turnieransicht nicht verfügbar';}
 function tableNavigation(){sessionStorage.setItem(returnKey,token);if(window.parent!==window)window.parent.location.href=appUrl();else location.href=appUrl();}
-if(window.parent!==window){e('viewerApp').onclick=event=>{event.preventDefault();window.parent.postMessage('snooker-viewer-close',location.origin);};}
+if(window.parent!==window){e('viewerBack').style.display='none';for(const id of ['viewerApp','viewerBack'])e(id).onclick=event=>{event.preventDefault();window.parent.postMessage('snooker-viewer-close',location.origin);};}
 const connection=createTableConnection({auth,db,doc,getDoc,runTransaction,signInAnonymously,signOut,pool,storage:localStorage,onJoined:tableNavigation});
 function tableButton(){const setup=connection.setup();e('viewerTable').hidden=!setup;e('viewerJoin').hidden=Boolean(setup);}
 e('viewerTable').onclick=tableNavigation;

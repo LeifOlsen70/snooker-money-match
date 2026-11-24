@@ -499,3 +499,5 @@ body.tableMonitorFullscreen #tableMode [data-table-refresh] {display:block}
 .spectatorLinkButton{display:inline-block;padding:12px 16px;border:1px solid #8a6a97;border-radius:12px;color:#fff1d3;background:#382147;text-decoration:none;font-weight:700}
 #spectatorSharing .danger{background:#7b354b;border-color:#ad6177;color:#fff1d3}
 .spectatorEntry video{width:100%;max-height:45dvh;object-fit:cover;border-radius:12px;margin:12px 0}.spectatorEntry input{width:100%;box-sizing:border-box;font-size:16px}.spectatorEntry [hidden]{display:none!important}.spectatorEmbedded{position:fixed;inset:0;z-index:10000;display:flex;flex-direction:column;background:#10091c;padding-top:env(safe-area-inset-top)}.spectatorEmbedded>button{flex:none;margin:6px 12px;align-self:flex-start}.spectatorEmbedded iframe{flex:1;min-height:0;width:100%;border:0;background:#10091c}body.spectatorEmbeddedOpen{overflow:hidden}
+
+.tournamentNameField{grid-column:1/-1}

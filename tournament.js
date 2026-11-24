@@ -1032,7 +1032,7 @@
   }
 
   function tournamentTitle(data, standingsView = false) {
-    if (data.freeTournament) return standingsView ? (data.ended ? 'Abschlusstabelle' : 'Zwischenstand') : 'Freies Turnier';
+    if (data.freeTournament) return standingsView ? (data.ended ? 'Abschlusstabelle' : 'Zwischenstand') : (data.tournamentName || 'Freies Turnier');
     if (standingsView && !data.ended) return 'Tabelle Turniertag';
     const cutoff = data.seasonStarted ?? 0;
     const validDay = data.ended && hasMatchResult(data) && (!cutoff || data.started >= cutoff);
@@ -1054,6 +1054,7 @@
         <h2>${(draftFreeTournament ?? tournament?.freeTournament) ? 'Freies Turnier anlegen' : 'Club Liga Saison · Turnier anlegen'}</h2>
         <form id="tournamentSetup">
           <div class="tournamentFields tournamentSetupFields">
+            ${(draftFreeTournament ?? tournament?.freeTournament) ? '<label class="tournamentNameField">Turniername (optional)<input name="tournamentName" type="text" maxlength="80" placeholder="Zum Beispiel Golden 9 Ball" autocomplete="off"></label>' : ''}
             <label>Datum<input name="playDate" type="date" required value="${localDateValue(Date.now())}"></label>
             <label><span id="tournamentCountLabel">Spieleranzahl</span>
               <select name="count">${Array.from({length:11}, (_, i) =>
@@ -1332,6 +1333,7 @@
         players,
         legacyParkedTournaments:clone(previous?.legacyParkedTournaments??tournament?.legacyParkedTournaments??[]),
         freeTournament,
+        ...(freeTournament?{tournamentName:form.elements.tournamentName.value.trim()}:{}),
         parkedTournament,
         parkedAt,
         overallDays: freeTournament ? [] : overallDays(previous),
@@ -1496,7 +1498,8 @@
     const finalRound=knockout.is(data)&&data.knockout.mode==='finals'&&data.knockout.phase!=='done';
     const openKnockout=knockout.is(data)&&data.knockout.mode==='lives'&&data.knockout.phase!=='done';
     const activeIds=new Set(openKnockout?knockout.stats(data).filter(row=>row.losses<data.knockout.lives).map(row=>row.id):[]);
-    const standingsTitle=finalRound?'Vorrundentabelle':knockout.is(data)&&data.knockout.phase==='done'?'Abschlusstabelle':openKnockout?'Zwischenstand · K.-o.':tournamentTitle(data,true);
+    const baseStandingsTitle=finalRound?'Vorrundentabelle':knockout.is(data)&&data.knockout.phase==='done'?'Abschlusstabelle':openKnockout?'Zwischenstand · K.-o.':tournamentTitle(data,true);
+    const standingsTitle=data.freeTournament&&data.tournamentName?data.tournamentName+' · '+baseStandingsTitle:baseStandingsTitle;
     const tableRows = rows.map(row => {
       return `<tr><td>${activeIds.has(row.id)?'–':row.place}</td><td>${esc(row.name)}</td><td>${formatPoints(row.points)}</td>
         <td>${row.played + row.byes}</td><td>${row.wins}</td><td>${row.draws}</td><td>${row.diff > 0 ? '+' : ''}${row.diff}</td></tr>`;
@@ -1510,6 +1513,7 @@
         <button type="button" class="secondary" id="tournamentFullscreenToggle" aria-pressed="false">Vollbild an</button>
       </div>
       ${finalRound?(data.ended?'<p class="small">Finalrunde vorzeitig beendet. Gezeigt wird die Vorrundentabelle einschließlich Freilospunkten.</p>':'<p class="small">Finalrunde läuft. Diese Tabelle zeigt unverändert die Vorrunde einschließlich Freilospunkten. Die Endplatzierung steht nach Finale und Spiel um Platz 3 fest.</p>'):openKnockout?'<p class="small">– = Endplatz noch offen. Ausgeschiedene Spieler behalten ihre bereits feststehende Platzierung.</p>':knockout.is(data)?'<p class="small">Endplätze nach den Finalspielen. Matchpunkte einschließlich Vorrunde; Saisonpunkte werden nach Endplatzierung vergeben.</p>':''}
+      ${isPool&&data.poolOrder==='pair'&&!knockout.is(data)?'<p class="small">Paarungsweise: Alle Disziplinen werden gespielt. Die Summe der gewonnenen Frames entscheidet die Begegnung. Sieg 2 Punkte · Unentschieden 1 · Niederlage 0.</p>':''}
       ${!knockout.is(data)||finalRound?'<p class="small">Sortierung: Punkte → Frame-Differenz → direkter Vergleich.</p>':''}
       <table class="tournamentTable"><thead><tr><th>Pl.</th><th>Spieler</th><th>Pkt.</th><th title="Matches mit Ergebnis plus Freilose">Spiele</th><th>Siege</th><th title="Unentschieden">Remis</th><th>Frame-Δ</th></tr></thead>
       <tbody>${tableRows.join('')}</tbody></table>
@@ -1577,6 +1581,7 @@
 
   function validBackup(data, allowParked = true) {
     if(isPool !== (data?.sport==='pool'))return false;
+    if(data?.tournamentName!=null&&(typeof data.tournamentName!=='string'||data.tournamentName.length>80))return false;
     if(data?.bestOf!=null&&typeof data.bestOf!=='boolean')return false;
     if(isPool&&data.poolOrder!=null&&!['discipline','pair'].includes(data.poolOrder))return false;
     if(isPool){try{window.SnookerTableScore.validPoolRules(data.poolRules);if(data.framesPerMatch!==data.poolRules.framesPerMatch)return false;}catch{return false;}}
@@ -1853,7 +1858,7 @@
       const title = daySection ? daySection.dataset.exportTitle : eloSection ? 'Elo-Wertung' : details ? details.querySelector('summary').textContent.trim()
         : view === 'overall' ? (data.freeTournament ? 'Gesamt' : 'Tabelle Saison')
         : view==='standings'&&knockout.is(data)?panel.querySelector('.tournamentStandings h3')?.textContent??tournamentTitle(data,true)
-        : data.freeTournament ? 'Freies Turnier · ' + tournamentTitle(data, true)
+        : data.freeTournament ? (data.tournamentName || 'Freies Turnier') + ' · ' + tournamentTitle(data, true)
         : data.ended ? tournamentTitle(data, true) : 'Tabelle Turniertag';
       const datedTitle = date && !daySection && (!details || details.id === 'tournamentElo') && !title.includes(date)
         ? title + ' · ' + date : title;
@@ -1985,7 +1990,7 @@
     }
 
     panel.insertAdjacentHTML('beforeend', `<div class="card tournamentActions">
-      <strong>${tournament.freeTournament ? 'Freies Turnier' : 'Club Liga Saison'}</strong>
+      <strong>${esc(tournament.freeTournament ? (tournament.tournamentName || 'Freies Turnier') : 'Club Liga Saison')}</strong>
     </div>`);
 
     panel.insertAdjacentHTML('beforeend', `

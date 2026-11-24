@@ -5,7 +5,7 @@
   const key=d=>(d.freeTournament?'free:':'club:')+String(d.started);
   function snapshot(data,rows){
     const lifeStats=data.knockout?.mode==='lives'&&data.knockout.phase!=='done'?root.ClubKnockout.stats(data):null;
-    return {schema:1,key:key(data),sport:data.sport==='pool'?'pool':'snooker',title:data.freeTournament?'Freies Turnier':'Club Liga',date:String(data.date??''),
+    return {schema:1,key:key(data),sport:data.sport==='pool'?'pool':'snooker',title:data.freeTournament?(data.tournamentName||'Freies Turnier'):'Club Liga',date:String(data.date??''),
       started:data.started,ended:data.ended??null,tables:data.tables,players:[...data.players],
       mode:data.knockout?(data.knockout.mode==='finals'?'Finalrunde':data.knockout.lives===2?'Doppel-K.-o.':'K.-o.'):(data.limit===null?'Nach Zeit':String(data.limit)+' Runden'),
       standingsTitle:data.knockout?.mode==='finals'&&data.knockout.phase!=='done'?'Vorrundentabelle':data.ended?'Abschlusstabelle':'Tabelle',
