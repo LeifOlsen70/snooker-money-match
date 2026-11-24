@@ -99,7 +99,7 @@ export function createTableSync({auth,db,doc,getDoc,getDocFromServer,onSnapshot,
             state={...state,revision:(existing?.state?.revision??0)+1};
             if(match.result&&!model.derive(state,a.rules).complete)state=model.command(state,a.rules,{type:'manual',frames:match.result.frames,breaks:match.result.breaks,at:match.finishedAt??Date.now()});
           }else if(appliesChange&&!monitorSource&&previous){
-            const oldMatch=previous.rounds?.[r]?.matches?.[m];
+            const oldMatch=previous.rounds.flatMap((round,ri)=>round.matches.map((match,mi)=>({match,ri,mi}))).find(x=>assignment(previous,x.ri,x.mi,x.match).id===a.id)?.match;
             if(oldMatch&&oldMatch.startedAt===match.startedAt&&!same(oldMatch.scoreMonitor?.state,match.scoreMonitor?.state)){
               if(oldMatch.scoreMonitor?.state?.revision!==state.revision)throw Error('Der Tisch wurde inzwischen geändert. Den aktuellen Stand prüfen, bevor die Turnieränderung wiederholt wird.');
               state={...(match.scoreMonitor?.state??model.initial()),revision:state.revision+1};model.derive(state,a.rules);

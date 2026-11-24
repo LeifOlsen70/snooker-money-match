@@ -1,0 +1,12 @@
+Version 9.10 – Freier Tisch, nächste Runde
+
+Pool disziplinweise: Ein freier Tisch kann vor Ende älterer Runden für eine neue Runde genutzt werden, sofern eine startfähige Paarung aus zwei freien Spielern möglich ist und die Endzeit bzw. Rundenzahl dies zulässt. Wartende Gegner in älteren Runden reservieren einen freien Spieler nicht mehr pauschal für die gesamte Runde.
+
+Alle Tische belegt: Keine neue Runde. Laufende Spieler werden nicht doppelt eingeteilt. Dieselbe offene Paarung wird nicht parallel wiederholt. Die Disziplinreihenfolge einer Runde bleibt erhalten. Nach Endzeit, Turnierende oder Anforderung zum Abschluss wird keine neue Runde angeboten. Bereits startfähige Partien lassen sich wie bisher starten. Neue Runde weiterhin bewusst über den Button starten.
+
+Wer eine neue Runde vorzieht, kann dort erneut auf einen bereits gespielten Gegner treffen, während andere Paarungen älterer Runden noch warten. Dies entspricht dem gewünschten gleitenden Weiterbetrieb bei freien Tischen.
+
+Bestehende Turniere müssen nicht neu erstellt werden. Speichern und Wiederladen unterstützen die überlappenden Runden. Tabellenwertung, paarungsweise Frame-Summe, Turniername, Zuschauerzugang und K.-o. bleiben bestehen.
+
+Installation: Aktualisierte App-Dateien hochladen. Firebase-Regeln und vendor unverändert; keine erneute Einrichtung erforderlich.
+Geprüft: Nachgestellter Fall mit 6 Spielern und 3 Tischen, zwei laufenden Partien und einem freien Tisch; zwei freie Spieler erhalten die nächste Runde. Doppelbelegung und Endzeit-Sperre sowie Wiederladen geprüft. Weitere Turnier- und Zuschauertests durchgeführt. Kein Test im echten laufenden Turnier oder auf einem iPhone. Version 8.20 unverändert.

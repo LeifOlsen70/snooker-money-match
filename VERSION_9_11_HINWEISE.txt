@@ -1,0 +1,19 @@
+Version 9.11 – Zeit/Endlos: echte Runden
+
+Gilt für Club Liga und Freies Turnier, Snooker und Pool, Einzel- und Doppelteilnehmer, Pool paarungsweise und disziplinweise.
+
+Eine Runde enthält eine Paarung je Spieler (bei ungerader Anzahl ein Freilos). Bei 10 Spielern sind dies fünf Paarungen; drei Tische erlauben zunächst drei laufende Partien. Bei Pool disziplinweise enthält jede Paarung je ein Spiel in jeder gewählten Disziplin.
+
+Wartende, startfähige Partien haben Vorrang. Erst wenn keine solche Partie mehr wartet UND mindestens ein Tisch frei ist, wird eine nächste Runde angeboten, sofern diese zulässig ist. Laufende Spieler werden niemals doppelt eingesetzt. Neue Runde weiterhin bewusst per Button starten, nicht automatisch. Alle Tische besetzt: keine neue Runde. Endzeit/Turnierende/Abschlussanforderung sperren weitere Runden.
+
+Pool disziplinweise im Zeitbetrieb verwendet nun echte Paarungsrunden. Bei sechs Spielern fünf Runden pro Jeder-gegen-jeden-Durchgang; bei zehn Spielern neun. Erste Auslosung zufällig. Jeder Gegner kommt je Durchgang genau einmal vor. Nächste passende Paarungsrunde bevorzugt verfügbare Spieler. Ein neuer Durchgang beginnt erst nach Abschluss des vorherigen.
+
+Bestehende Zeit-Turniere mit der alten großen Pool-Runde werden beim Öffnen automatisch aufgeteilt. Gespeicherte Ergebnisse und aktive Gerätekennungen werden erhalten. Alle beteiligten Spielleitergeräte/Browser auf 9.11 aktualisieren, damit eine ältere Version nicht wieder den alten Plan lädt. Vor dem Update wie üblich eine JSON-Sicherung aufbewahren.
+
+Die ursprüngliche Sicherung Golden 9Ball wurde verlustfrei geprüft: 15 Paarungen werden fünf Runden, neun Ergebnisse und zwei laufende Partien bleiben erhalten. Bereits in der alten Reihenfolge gespielte Begegnungen werden nicht neu ausgelost oder rückwirkend verändert. Deshalb kann eine bereits bestehende Wartepause zunächst bestehen bleiben, wenn die beiden freien Spieler schon gegeneinander gespielt haben. Neue Turniere starten direkt mit der neuen Rundenplanung.
+
+K.-o., Tabellenwertung nach 2/1/0, Frame-Summen beim paarungsweisen Poolspiel, Turniername und Zuschauerzugang bleiben erhalten. Firebase-Regeln und vendor unverändert. Keine Cloud Functions. Alle App-Dateien auf GitHub aktualisieren.
+
+Prüfungen: komplette neue Jeder-gegen-jeden-Durchgänge mit geraden/ungeraden Teilnehmerzahlen und einer/drei Disziplinen; keine Wiederholungen im Durchgang; tatsächliche Bedienung mit 10 Spielern/3 Tischen in allen Zeitvarianten; Übernahme der Originaldatei; Tischcode und zwischenzeitliche Tischeingaben bei Umstellung erhalten; Folgeeingabe am Tischgerät möglich; 624 komplette K.-o.-Turniere und Ranking-/Zuschauerregression. Kein Test auf einem echten iPhone/iPad.
+
+Version 8.20 bleibt unveränderte Rückfallversion.
