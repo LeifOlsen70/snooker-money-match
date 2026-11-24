@@ -1,0 +1,44 @@
+Version 9.07 – Turnier teilen und Zuschauerzugang
+
+Einrichtung (einmalig)
+1. Die Webdateien aus Club907.zip wie bisher vollständig in das GitHub-Repository hochladen. Die ZIP enthält alle Dateien der App. Keine persönlichen Sicherungsdateien hochladen.
+2. In Firebase > Firestore Database > Regeln den bisherigen Regeltext sichern, anschließend durch den vollständigen Inhalt der beiliegenden firestore.rules ersetzen und veröffentlichen. Ein GitHub-Upload aktualisiert die Firebase-Regeln NICHT.
+3. Firebase > Authentication > Anmeldemethode: E-Mail/Passwort und Anonym müssen aktiviert sein. Anonym wird bereits für die Tischgeräte verwendet.
+4. Keine Cloud Functions und kein zusätzlicher Anbieter erforderlich. Der Firebase-Tarif muss für diese Ergänzung nicht gewechselt werden.
+5. App auf allen Geräten aktualisieren. Alte, noch geöffnete Versionen schließen und neu öffnen.
+
+Turnierleitung
+- Snooker und Pool; Club Liga und Freies Turnier; nach Runden, nach Zeit, K.-o. mit einem oder zwei Leben sowie optionale Finalrunde.
+- Im laufenden oder beendeten Turnier den neuen Reiter „Turnier teilen“ öffnen.
+- „Zuschauerlink erstellen“: Link kopieren/teilen oder QR-Code scannen lassen. „Vorschau öffnen“ zeigt die separate Zuschaueransicht.
+- Link und QR-Code gewähren ausschließlich Leserechte für dieses Turnier. Sie enthalten keinen Tischcode.
+- „Zuschauerzugang deaktivieren“ entzieht den Zugriff auf Turnierdaten. Erneutes Aktivieren erzeugt einen neuen Link; der alte bleibt deaktiviert.
+- Bei Wechsel zu einem anderen Turnier wird der alte aktive Zuschauerzugang deaktiviert. Die Freigabe gilt für das derzeit synchronisierte Turnier des jeweiligen Kontos und Spielbereichs.
+- Anmeldung und Benutzerfreigabe für Spielleiter bleiben unverändert (E-Mail und Passwort).
+
+Zuschauer
+- Keine Registrierung: Zuschauerlink öffnen oder QR-Code scannen.
+- Reiter „Begegnungen“, „Live-Spielstände“ und „Tabelle“. Jeder Zuschauer wählt seine Ansicht unabhängig von der Turnierleitung.
+- Live-Spielstände kommen auch direkt vom verbundenen Tischgerät, während die Turnierleitung kurz offline ist. Tabellen und Folgepaarungen werden durch die Turnierleitung bestätigt bzw. weitergeführt. Für einen vollständigen Turnierbetrieb sollte deren App geöffnet und online bleiben.
+- Es werden nur die Daten dieses Turniers veröffentlicht. Keine Kontodaten, gespeicherte Namenliste, Saisonarchive, geparkte Turniere oder Tischcodes.
+- Wer den Link weitergegeben bekommt, kann ebenfalls dieses Turnier ansehen. Der Link ist deshalb wie besprochen für den privaten Teilnehmerkreis bestimmt.
+
+Dasselbe Handy als Tischgerät
+- Unter „Tischgerät“ > „Als Tischgerät verbinden“ den zusätzlichen vierstelligen Tischcode eingeben.
+- Der Tischcode muss zum angezeigten Turnier und Spielbereich gehören.
+- Pro Tisch ist genau eine aktive Gerätekennung möglich. Gleichzeitige Beitritte werden atomar begrenzt. Mehrere Tabs desselben Browserprofils teilen die Gerätekennung; es handelt sich nicht um eine Hardware-Geräteerkennung.
+- Das verbundene Gerät darf nur die zugewiesene Partie bedienen. „Turnier ansehen“ führt zurück zur Leseansicht, die Tischverbindung bleibt dabei bestehen.
+- „Zur Tisch-Eingabe“ führt wieder zur Partie.
+- Erst „Tisch verlassen“ oder das Abmelden/Zurücksetzen durch die Turnierleitung gibt den Tisch für ein anderes Gerät frei. Der bisherige Tischcode bleibt dabei erhalten; dessen interne Berechtigung wird beim Zurücksetzen erneuert.
+- Nach Trennung oder Entzug der Tischberechtigung wird auf demselben Tab zur Zuschaueransicht zurückgekehrt, sofern von dort verbunden wurde.
+
+Validierung vor Auslieferung
+- Neue Firebase-Regeln im lokalen Firestore-Emulator geprüft: 16 Kombinationen beider Spielbereiche, Club/Frei, Runden/Zeit/K.-o./Doppel-K.-o.
+- Zuschauer-Schreibversuche, private Datenzugriffe und Auflisten fremder Zuschauerlinks abgewiesen.
+- Konkurrenz um Tischcode, Live-Spielstand, Trennen/Zurücksetzen, erneuter Beitritt und Entzug des Zuschauerlinks geprüft.
+- Zuschauerreiter und Live-Aktualisierungen am tatsächlichen HTML-DOM sowie QR-Codes durch Rücklesen geprüft.
+- Bestehende Turnierlogik einschließlich 624 kompletter K.-o.-Turniere sowie Ranking/Shoot-out/Finalrunde weiter geprüft.
+- Keine Änderungen im produktiven Firebase-Projekt veröffentlicht. Kein Test auf einem echten iPhone/iPad erfolgt. Nach Einrichtung vor dem nächsten echten Turnier mit zwei Geräten kurz prüfen.
+
+Rückfallversion
+Version 8.20 bleibt die vom Nutzer bestätigte letzte gültige Rückfallversion und wurde nicht geändert. Version 9.06 bleibt ebenfalls als vorheriger Arbeitsstand erhalten.

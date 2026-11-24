@@ -1,3 +1,13 @@
+VERSION 9.08 – Neu: „Turnier verfolgen“ auf der Startseite mit QR-Scanner und Link-Eingabe innerhalb der App. Siehe VERSION_9_08_HINWEISE.txt. Firebase-Regeln unverändert zu 9.07.
+
+BILLARD & SNOOKER – VERSION 9.07
+
+NEU: Zuschauerzugang unter dem Reiter „Turnier teilen“.
+Bitte zuerst VERSION_9_07_HINWEISE.txt lesen.
+Für diese Ergänzung die neue firestore.rules in Firebase veröffentlichen. GitHub-Upload allein reicht nicht. E-Mail/Passwort und bestehende Tischcodes bleiben erhalten. Keine zusätzlichen Cloud Functions nötig.
+
+Die folgenden älteren Einträge dokumentieren die bisherige Entwicklung; die aktuellen Einrichtungsschritte stehen in VERSION_9_07_HINWEISE.txt.
+
 8.20 – Kurzer privater Nutzungshinweis in beiden Infoseiten. Geldprämien und Abrechnung aus den allgemeinen Snooker-Infos entfernt; Spielfunktionen unverändert. noindex auf allen vier HTML-Seiten. Turnierfelder oben ausgerichtet. Bereits in anderen Namensfeldern ausgewählte Spieler werden im Popup abgedunkelt und mit „bereits ausgewählt“ markiert, bleiben auswählbar. Firebase-Regeln unverändert.
 
 8.20 – Pool-Spielabend und Snooker-Einzel mit Best of

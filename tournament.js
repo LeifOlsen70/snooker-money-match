@@ -255,7 +255,7 @@
     if (openMatch !== null && !confirm('Ergebniseingabe ohne Speichern verlassen?')) return;
     openMatch = null;
     view = nextView;
-    if (view === 'days' || view === 'monitors') setTournamentFullscreen(false);
+    if (view === 'days' || view === 'monitors' || view === 'share') setTournamentFullscreen(false);
     if (view === 'standings' || view === 'overall') window.dispatchEvent(new CustomEvent('snooker-tournament-view', {detail:view}));
     renderTournament();
     if (fullscreen) panel.scrollTop = 0;
@@ -2001,15 +2001,18 @@
           aria-pressed="${view === 'days'}">${tournament.freeTournament ? 'Spieltage' : 'Spieltage &amp; Elo'}</button>
         ${knockout.is(tournament)&&tournament.knockout.lives===2?`<button type="button" id="knockoutPlayersView" class="${view==='remaining'?'primary':'secondary'}" aria-pressed="${view==='remaining'}">Spieler übrig</button>`:''}
         ${isPool?`<button type="button" id="poolHistoryView" class="${view==='poolHistory'?'primary':'secondary'}" aria-pressed="${view==='poolHistory'}">Spielhistorie</button>`:''}
+        <button type="button" id="tournamentShareView" class="${view === 'share' ? 'primary' : 'secondary'}" aria-pressed="${view === 'share'}">Turnier teilen</button>
       </nav>`);
+    $('tournamentShareView').onclick=()=>showTournamentView('share');
     $('tournamentMonitorsView').onclick=()=>showTournamentView('monitors');
     $('tournamentRoundsView').onclick = () => showTournamentView('rounds');
     $('tournamentStandingsView').onclick = () => showTournamentView('standings');
     $('tournamentOverallView').onclick = () => showTournamentView('overall');
     if ($('tournamentDaysView')) $('tournamentDaysView').onclick = () => showTournamentView('days');
     if($('knockoutPlayersView'))$('knockoutPlayersView').onclick=()=>showTournamentView('remaining');
-    if(view==='remaining'){renderRemainingPlayers();return;}
     if(isPool)$('poolHistoryView').onclick=()=>showTournamentView('poolHistory');
+    if(view==='share'){window.snookerSpectatorUI.render(panel,tournament);return;}
+    if(view==='remaining'){renderRemainingPlayers();return;}
     if(view==='poolHistory'){panel.insertAdjacentHTML('beforeend',renderPoolArchive(tournament));return;}
     if(view==='monitors'){const container=document.createElement('div');container.id='tournamentMonitors';panel.append(container);window.snookerMonitors?.renderOverview(container,tournament);return;}
     if (view === 'standings' || view === 'overall' || view === 'days') {
@@ -2118,6 +2121,7 @@
 
 window.snookerTournamentBridge=Object.freeze({
     refreshHistory,
+    spectatorSnapshot(data=tournament){return window.SnookerSpectator.snapshot(data,standings(data.rounds,data));},
     get current(){return tournament},
     get canApply(){return tournament&&!drafting&&openMatch===null},
     applyBoard(board){

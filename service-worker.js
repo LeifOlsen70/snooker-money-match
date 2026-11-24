@@ -1,37 +1,49 @@
-const CACHE_NAME = 'v9-06-legacy-backup-import';
+const CACHE_NAME = 'v9-08-in-app-qr';
 const APP_SHELL = [
   './',
-  './knockout.js?v=9.06',
+  './knockout.js?v=9.08',
   './index.html',
+  './spectator.html',
+  './spectator-entry.js?v=9.08',
+  './vendor/jsQR.js?v=9.08',
+  './spectator.css?v=9.08',
+  './spectator-view.js?v=9.08',
+  './spectator-render.js?v=9.08',
+  './spectator-model.js?v=9.08',
+  './spectator-owner.js?v=9.08',
+  './spectator-share.js?v=9.08',
+  './firebase-config.js?v=9.08',
+  './table-connection.js?v=9.08',
+  './vendor/qrcode.js?v=9.08',
   './app.html',
   './app.html?sport=pool',
   './app.html?sport=snooker',
-  './sports.js?v=9.06',
-  './player-picker.js?v=9.06',
-  './kai-audio.js?v=9.06',
+  './sports.js?v=9.08',
+  './player-picker.js?v=9.08',
+  './kai-audio.js?v=9.08',
   './audio/Kai_01-09.mp3',
   './audio/Kai_10-19.mp3',
   './audio/Kai_20-29.mp3',
   './audio/Kai_30-39.mp3',
-  './player-picker.css?v=9.06',
-  './partner-drag.js?v=9.06',
-  './pool-planner.js?v=9.06',
-  './pool-single.js?v=9.06',
-  './pool.css?v=9.06',
+  './player-picker.css?v=9.08',
+  './partner-drag.js?v=9.08',
+  './pool-planner.js?v=9.08',
+  './pool-single.js?v=9.08',
+  './pool.css?v=9.08',
   './pool-logo.png',
   './pool-infos.html',
   './infos.html',
-  './app-navigation.js?v=9.06',
-  './account-access.js?v=9.06',
-  './access-ui.js?v=9.06',
-  './table-access.js?v=9.06',
-  './table-score.js?v=9.06',
-  './table-sync.js?v=9.06',
-  './table-monitor.js?v=9.06',
-  './firebase-sync.js?v=9.06',
-  './pdf-export.js?v=9.06',
-  './tournament.js?v=9.06',
-  './tournament.css?v=9.06',
+  './app-navigation.js?v=9.08',
+  './account-access.js?v=9.08',
+  './access-ui.js?v=9.08',
+  './table-access.js?v=9.08',
+  './table-score.js?v=9.08',
+  './table-sync.js?v=9.08',
+  './table-monitor.js?v=9.08',
+  './firebase-sync.js?v=9.08',
+  './pdf-export.js?v=9.08',
+  './tournament.js?v=9.08',
+  './tournament.css?v=9.08',
   './manifest.webmanifest',
   './icon-192.png',
   './icon-512.png',
@@ -65,7 +77,7 @@ self.addEventListener('fetch', event => {
   // otherwise fall back to the locally cached app.
   if (request.mode === 'navigate') {
     const path=new URL(request.url).pathname;
-    const navigationFile=path.endsWith('/app.html')?'./app.html'+new URL(request.url).search:path.endsWith('/pool-infos.html')?'./pool-infos.html':path.endsWith('/infos.html')?'./infos.html':'./index.html';
+    const navigationFile=path.endsWith('/spectator.html')?'./spectator.html':path.endsWith('/app.html')?'./app.html'+new URL(request.url).search:path.endsWith('/pool-infos.html')?'./pool-infos.html':path.endsWith('/infos.html')?'./infos.html':'./index.html';
     event.respondWith(
       fetch(request, {cache: 'no-cache'})
         .then(response => {
@@ -77,7 +89,7 @@ self.addEventListener('fetch', event => {
         })
         .catch(async () => {
           return (await caches.match(navigationFile)) ||
-                 (path.endsWith('/app.html')?await caches.match('./app.html'):await caches.match('./index.html')) ||
+                 (path.endsWith('/spectator.html')?await caches.match('./spectator.html'):path.endsWith('/app.html')?await caches.match('./app.html'):await caches.match('./index.html')) ||
                  Response.error();
         })
     );

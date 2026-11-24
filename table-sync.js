@@ -78,7 +78,8 @@ export function createTableSync({auth,db,doc,getDoc,getDocFromServer,onSnapshot,
           if(activeSlot&&newTournament&&(await tx.get(inviteRef)).data())throw Object.assign(Error('Code bereits vergeben.'),{code:'table-code-collision'});
           const oldRef=existing?.joinToken&&existing.joinToken!==joinToken?doc(db,'snookerTableInvites',existing.joinToken):null;
           const oldInvite=oldRef?(await tx.get(oldRef)).data():null;
-          const shared={schema:4,tableNumber:slot,tournamentKey:key,joinToken,joinGeneration,joinOpen:activeSlot&&!snapshot.ended};
+          const viewerToken=!newTournament&&existing?.viewerToken?{viewerToken:existing.viewerToken}:{};
+          const shared={...viewerToken,schema:4,tableNumber:slot,tournamentKey:key,joinToken,joinGeneration,joinOpen:activeSlot&&!snapshot.ended};
           if(token!==session||!active())throw Error('Anmeldung wurde gewechselt.');
           if(oldInvite?.owner===organizer&&oldInvite.slot===slot)tx.delete(oldRef);
           if(activeSlot&&newTournament)tx.set(inviteRef,{owner:organizer,slot,tournamentKey:key,generation:joinGeneration,...(pool?{sport:'pool'}:{})});
@@ -182,7 +183,13 @@ export function createTableSync({auth,db,doc,getDoc,getDocFromServer,onSnapshot,
       if(action.type==='manual'&&role!=='owner')throw Error('Nur die Turnierleitung darf Ergebnisse direkt korrigieren.');
       if(action.type==='undo'&&board.progressionLocked&&model.derive(board.state,board.assignment.rules).complete)throw Error('Eine Folgebegegnung wurde bereits gestartet. Dieses abgeschlossene Ergebnis kann nicht mehr zurückgenommen werden.');
       const state=model.command(board.state,board.assignment.rules,{...action,at:Date.now()});
+      let mirror=null;
+      if(board.viewerToken){
+        const meta=(await tx.get(doc(db,'snookerSpectatorLinks',board.viewerToken))).data();
+        if(meta?.enabled&&meta.owner===organizer&&meta.tournamentKey===board.tournamentKey&&meta.sport===(pool?'pool':'snooker'))mirror=doc(db,'snookerSpectatorLinks',board.viewerToken,'tables',String(slot));
+      }
       tx.update(ref(slot),{state:encodeState(state)});
+      if(mirror)tx.set(mirror,{slot,tournamentKey:board.tournamentKey,assignment:board.assignment,state:encodeState(state),enabled:board.enabled===true});
       return {...board,state,slot};
     });
     if(token===session&&active()){cache.set(slot,saved);if(!syncCount)notify()}

@@ -1,0 +1,15 @@
+Version 9.08 – Turnier direkt in der App verfolgen
+
+Startseite Snooker oder Pool: „Turnier verfolgen“.
+QR-Code scannen (Kamera erlauben) oder vollständigen Zuschauerlink einfügen.
+Die Zuschaueransicht öffnet sich innerhalb der App mit ihren bisherigen Reitern. „Zur App“ schließt die Ansicht. Auch Links des jeweils anderen Spielbereichs werden unterstützt.
+
+Der Scanner verarbeitet Kamerabilder lokal; es werden keine Bilder hochgeladen. Beim Schließen, Ansichtswechsel oder Verlassen der App wird die Kamera gestoppt. Link-Einfügen bleibt bei fehlender Kamera oder verweigerter Freigabe möglich.
+
+Zusätzlicher Tischcode erlaubt weiterhin nur die zugewiesene Partie. Der Wechsel zur Tisch-Eingabe erfolgt im selben App-Fenster.
+
+Installation: Alle Dateien und Unterordner auf GitHub aktualisieren.
+Firebase-Regeln identisch zu Version 9.07: Wenn diese bereits veröffentlicht sind, keine weitere Änderung nötig. Beim Update von 9.06 oder älter die beiliegende firestore.rules einmalig in Firebase veröffentlichen; siehe VERSION_9_07_HINWEISE.txt. Keine Cloud Functions erforderlich.
+
+Geprüft: Linkprüfung, Kamera-Start/-Stopp, verzögerte Kamerafreigabe nach Schließen, QR-Erkennung, eingebettete Ansicht, Rückkehr, Zuschauerreiter und Live-Aktualisierung. Kein Test auf einem echten iPhone/iPad.
+Version 8.20 bleibt unverändert als Rückfallversion erhalten.
