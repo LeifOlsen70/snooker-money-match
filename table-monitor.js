@@ -3,7 +3,6 @@
   const model=window.SnookerTableScore,bridge=window.snookerTournamentBridge;
   const app=document.querySelector('.app');
   const escape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  let correction=null;
   let tableSlot=null,boards=[],message='',popupBoard=null,popupPlayer=0,busy=false,landing=false,detailSlot=null;
   const tablePage=document.createElement('section');tablePage.id='tableMode';tablePage.hidden=true;app.append(tablePage);
   const popup=document.createElement('dialog');popup.id='tableScoreDialog';popup.className='tournamentDialog monitorInputDialog';
@@ -26,67 +25,22 @@
     else if(e.key==='Enter'&&e.target!==popup.querySelector('[data-close]')){e.preventDefault();document.getElementById('tableInputSubmit').click()}
   });
   function status(text){message=text;document.querySelectorAll('[data-monitor-message]').forEach(el=>el.textContent=text)}
-  const disciplineStates=new Map(),disciplineNotices=new Set(),disciplineQueue=[];
-  const disciplineDialog=document.createElement('dialog');disciplineDialog.id='poolDisciplineDialog';disciplineDialog.className='tournamentDialog poolDisciplineDialog';document.body.append(disciplineDialog);
-  disciplineDialog.oncancel=e=>e.preventDefault();
-  function showDisciplineNotice(){
-    if(disciplineDialog.open||!disciplineQueue.length)return;
-    const item=disciplineQueue[0];
-    disciplineDialog.innerHTML='<h2>'+escape(item.label)+' beendet</h2><p class="small">Tisch '+item.slot+'</p><div class="poolDisciplineResult"><span>'+escape(item.names[0])+'</span><strong>'+item.frames.join(' : ')+'</strong><span>'+escape(item.names[1])+'</span></div>'+(item.final?'<p>'+item.results.map(d=>escape(d.label)+' '+d.frames.join(' : ')).join('<br>')+'</p>':'<p>Gesamtergebnis: '+item.total.join(' : ')+'</p>')+'<button type="button" class="primary" data-next-discipline>'+(item.final?'Bestätigen':'Weiter mit '+escape(item.next))+'</button>';
-    disciplineDialog.querySelector('[data-next-discipline]').onclick=()=>{disciplineQueue.shift();disciplineDialog.close();showDisciplineNotice()};
-    disciplineDialog.showModal();
-  }
-  function observeDiscipline(board,value){
-    if(disciplineQueue.some(item=>item.slot===board.slot&&item.id!==board.assignment.id)){
-      const head=disciplineQueue[0];
-      for(let i=disciplineQueue.length-1;i>=0;i--)if(disciplineQueue[i].slot===board.slot&&disciplineQueue[i].id!==board.assignment.id)disciplineQueue.splice(i,1);
-      if(head!==disciplineQueue[0]&&disciplineDialog.open)disciplineDialog.close();
-      queueMicrotask(showDisciplineNotice);
-    }
-    const single=board.assignment.id.startsWith('single:');
-    if(board.assignment.rules.sport!=='pool'||(!single&&board.assignment.rules.disciplines.length<2))return;
-    const id=board.assignment.id,previous=disciplineStates.get(id),state=board.state;
-    if(board.assignment.rules.rotation===true){
-      const frameCount=value.frames[0]+value.frames[1];
-      disciplineStates.set(id,{frameCount,cursor:state.cursor,prefix:JSON.stringify(state.events.slice(0,state.cursor))});
-      if(previous&&frameCount>previous.frameCount&&state.cursor>previous.cursor&&JSON.stringify(state.events.slice(0,previous.cursor))===previous.prefix){
-        const key=id+':rotation:'+state.cursor+':'+JSON.stringify(state.events[state.cursor-1]);
-        if(!disciplineNotices.has(key)){disciplineNotices.add(key);const done=board.assignment.rules.disciplines[(frameCount-1)%board.assignment.rules.disciplines.length];disciplineQueue.push({id,slot:board.slot,names:board.assignment.names,label:value.complete?'Match':done.label,frames:value.frames,total:value.frames,next:value.currentDiscipline.label,final:value.complete,results:value.disciplines});queueMicrotask(showDisciplineNotice);}
-      }
-      return;
-    }
-    disciplineStates.set(id,{index:value.disciplineIndex,cursor:state.cursor,prefix:JSON.stringify(state.events.slice(0,state.cursor))});
-    if(disciplineStates.size>200)disciplineStates.delete(disciplineStates.keys().next().value);
-    if(!previous||(value.complete&&!single)||value.disciplineIndex<=previous.index||state.cursor<=previous.cursor||JSON.stringify(state.events.slice(0,previous.cursor))!==previous.prefix)return;
-    const event=state.events[state.cursor-1];
-    if(!['frame','finish'].includes(event?.type))return;
-    const key=id+':'+state.cursor+':'+JSON.stringify(event);
-    if(disciplineNotices.has(key))return;
-    disciplineNotices.add(key);if(disciplineNotices.size>300)disciplineNotices.delete(disciplineNotices.values().next().value);
-    const completed=value.disciplines[value.disciplineIndex-1];
-    disciplineQueue.push({id,slot:board.slot,names:board.assignment.names,label:value.complete?'Spielabend':completed.label,frames:value.complete?value.frames:completed.frames,total:value.frames,next:value.currentDiscipline.label,final:value.complete,results:value.disciplines});
-    queueMicrotask(showDisciplineNotice);
-  }
   function assignment(data,r,m,match){return window.ClubSport?.assignment?window.ClubSport.assignment(data,r,m,match):{id:[data.freeTournament?'free':'club',data.started,r,m,match.startedAt].join(':'),tournament:String(data.started),frameTimeLimitMinutes:data.frameTimeLimitMinutes??0,round:r,index:m,names:match.players.map(id=>data.players[id]),players:[...match.players],rules:data.framesPerMatch!=null?{framesPerMatch:data.framesPerMatch}:{target:data.target}}}
   function forMatch(data,r,m,match){
     const a=assignment(data,r,m,match),remote=boards.find(board=>board.assignment?.id===a.id);
-    if(remote)return {...remote,enabled:remote.enabled&&!window.ClubKnockout?.locked(data,match),assignment:{...remote.assignment,frameTimeLimitMinutes:data.frameTimeLimitMinutes??0},startedAt:match.startedAt,stoppedAt:match.finishedAt??data.ended??null};
+    if(remote)return {...remote,assignment:{...remote.assignment,frameTimeLimitMinutes:data.frameTimeLimitMinutes??0},startedAt:match.startedAt,stoppedAt:match.finishedAt??data.ended??null};
     let state=match.scoreMonitor?.state??model.initial();
     try{model.derive(state,a.rules)}catch{state=model.initial()}
     if(match.result&&!model.derive(state,a.rules).complete)state=model.command(state,a.rules,{type:'manual',frames:match.result.frames,breaks:match.result.breaks,at:match.finishedAt??Date.now()});
-    return {startedAt:match.startedAt,stoppedAt:match.finishedAt??data.ended??null,slot:match.table,tableNumber:match.table,assignment:a,state,enabled:!data.ended&&!window.ClubKnockout?.locked(data,match),_local:window.snookerTableSync?.role!=='owner'};
+    return {startedAt:match.startedAt,stoppedAt:match.finishedAt??data.ended??null,slot:match.table,tableNumber:match.table,assignment:a,state,enabled:!data.ended,_local:window.snookerTableSync?.role!=='owner'};
   }
   async function send(board,action){
-    if(busy||disciplineDialog.open)return;busy=true;
+    if(busy)return;busy=true;
     popup.querySelectorAll('button').forEach(el=>el.disabled=true);
     try{
-      if(board._correction){
-        if(!correction||board.assignment.id!==correction.board.assignment.id)throw Error('Korrektur bitte erneut öffnen.');
-        correction.board={...board,state:model.command(board.state,board.assignment.rules,{...action,at:board.stoppedAt??Date.now()})};
-      }else if(board._local){
+      if(board._local){
         const latest=bridge.current?.rounds[board.assignment.round]?.matches[board.assignment.index];
         if(!latest||latest.startedAt==null||assignment(bridge.current,board.assignment.round,board.assignment.index,latest).id!==board.assignment.id||(latest.scoreMonitor?.state?.revision??board.state.revision)!==board.state.revision)throw Error('Spielstand wurde geändert. Bitte erneut öffnen.');
-        if(action.type==='undo'&&window.ClubKnockout?.locked(bridge.current,latest)&&model.derive(board.state,board.assignment.rules).complete)throw Error('Die nächste Turnierphase steht bereits fest.');
         if(action.type==='undo'&&window.PoolPlanner?.is(bridge.current)&&window.PoolPlanner.locked(bridge.current,latest)&&model.derive(board.state,board.assignment.rules).complete)throw Error('Eine Folgebegegnung wurde bereits gestartet. Ergebnis kann nicht mehr zurückgenommen werden.');
         bridge.applyBoard({...board,forceResult:action.type==='undo'||action.type==='redo',state:model.command(board.state,board.assignment.rules,{...action,at:Date.now()})});
       }else{
@@ -100,22 +54,23 @@
     finally{busy=false;popup.querySelectorAll('button').forEach(el=>el.disabled=false)}
   }
   function winner(board,player,pendingPoints=null){
-    if(busy||disciplineDialog.open||!board.enabled)return;
+    if(busy||!board.enabled)return;
     const value=model.derive(board.state,board.assignment.rules);
     if(value.complete)return;
-    if(!board._local&&!boards.some(b=>b.assignment?.id===board.assignment.id&&b.enabled)){
+    if(!board._local&&!boards.some(b=>b.assignment?.id===board.assignment.id)){
       status('Der Tisch wird noch verbunden. Bitte kurz warten.');return;
     }
+    if(board.assignment.id.startsWith('single:')&&!confirm(`Frame-Sieg für ${board.assignment.names[player]} bestätigen?`))return;
     send(board,{type:'frame',player,...(pendingPoints?{pendingPoints}:{})});
   }
   function finishButtons(board,value){
-    if(value.complete)return '';
+    if(board.assignment.id.startsWith('single:')||value.complete)return '';
     const frames=value.disciplineFrames??value.frames;
-    return '<div class="monitorActions monitorFinishActions">'+board.assignment.names.map((name,i)=>`<button type="button" class="monitorMatchWinner" data-monitor-finish="${i}" data-monitor-slot="${board.slot}" ${board.enabled&&frames[i]>frames[1-i]?'':'disabled'}>Match-Sieger: ${escape(name)}</button>`).join('')+'</div><p class="small">Vorzeitig beenden: Match-Sieger übernimmt den erreichten Frame-Stand.'+(value.currentDiscipline&&!board.assignment.disciplineId&&value.disciplineIndex<board.assignment.rules.disciplines.length-1?' Danach folgt die nächste gewählte Disziplin.':'')+'</p>';
+    return '<div class="monitorActions monitorFinishActions">'+board.assignment.names.map((name,i)=>`<button type="button" class="monitorMatchWinner" data-monitor-finish="${i}" data-monitor-slot="${board.slot}" ${board.enabled&&frames[i]>frames[1-i]?'':'disabled'}>Match-Sieger: ${escape(name)}</button>`).join('')+'</div><p class="small">Vorzeitig beenden: Zuerst den letzten Frame-Sieger erfassen. Match-Sieger übernimmt den erreichten Frame-Stand.'+(value.currentDiscipline&&!board.assignment.disciplineId?' Danach folgt die nächste gewählte Disziplin.':'')+'</p>';
   }
   function openPopup(board,player){
-    if(disciplineDialog.open||!board.enabled)return;
-    if(!board._local&&!boards.some(b=>b.assignment?.id===board.assignment.id&&b.enabled)) {status('Der Tisch wird noch verbunden. Bitte kurz warten.');return}
+    if(!board.enabled)return;
+    if(!board._local&&!boards.some(b=>b.assignment?.id===board.assignment.id)) {status('Der Tisch wird noch verbunden. Bitte kurz warten.');return}
     const current=model.derive(board.state,board.assignment.rules);
     if(current.currentDiscipline&&current.currentDiscipline.id!=='14'){winner(board,player);return;}
     popupBoard=board;popupPlayer=player;input().value='';
@@ -136,17 +91,16 @@
   function card(board,compact=false){
     if(!board?.assignment)return `<article class="monitorCard"><h3>Tisch ${board?.slot??''}</h3><p>Warten auf eine gestartete Partie.</p></article>`;
     const value=model.derive(board.state,board.assignment.rules);
-    if(!board._correction)observeDiscipline(board,value);
     if(board.assignment.rules.sport==='pool')return poolCard(board,value);
     return `<article class="monitorCard frameLimitTarget ${compact?'monitorCompact':''}"><h3>Tisch ${board.tableNumber} · ${value.complete?'Partie beendet':'Frame '+(value.frames[0]+value.frames[1]+1)}</h3>
     <div class="monitorPlayers">${board.assignment.names.map((name,i)=>`<div class="monitorPlayerColumn"><button type="button" class="monitorScoreButton" data-monitor-player="${i}" data-monitor-slot="${board.slot}" ${board.enabled&&!value.complete?'':'disabled'}><span class="monitorName">${escape(name)}</span><strong class="monitorPoints">${value.scores[i]}</strong><span>Frames <b>${value.frames[i]}</b></span><span>HB: ${highestBreak(value.breaks[i])}</span></button><button type="button" class="monitorFrameWinner" data-monitor-winner="${i}" data-monitor-slot="${board.slot}" ${board.enabled&&!value.complete?'':'disabled'}>Frame-Sieger: ${escape(name)}</button></div>`).join('')}</div>
-    ${finishButtons(board,value)}<div>${frameWarningMarkup(board)}<button type="button" data-monitor-warning-off="${board.slot}" hidden>Warnung aus</button></div><p class="small">${board.assignment.rules.framesPerMatch!=null?(board.assignment.rules.bestOf?'BO '+board.assignment.rules.framesPerMatch:board.assignment.rules.framesPerMatch+' Frames insgesamt'):'Bis '+board.assignment.rules.target+' Gewinnframes'}${value.complete?' · Ergebnis '+value.frames.join(':'):''}</p>
+    ${finishButtons(board,value)}<div>${frameWarningMarkup(board)}<button type="button" data-monitor-warning-off="${board.slot}" hidden>Warnung aus</button></div><p class="small">${board.assignment.rules.framesPerMatch!=null?board.assignment.rules.framesPerMatch+' Frames insgesamt':'Bis '+board.assignment.rules.target+' Gewinnframes'}${value.complete?' · Ergebnis '+value.frames.join(':'):''}</p>
     <div class="monitorActions"><button type="button" data-monitor-undo="${board.slot}" ${board.state.cursor&&board.enabled?'':'disabled'}>↶ Zurück</button><button type="button" data-monitor-redo="${board.slot}" ${board.state.cursor<board.state.events.length&&board.enabled?'':'disabled'}>Vor ↷</button></div>
 </article>`;
   }
   function poolCard(board,value){
     const d=value.currentDiscipline,points=d.id==='14',current=value.disciplineFrames;
-    return `<article class="monitorCard frameLimitTarget"><h3>Tisch ${board.tableNumber}${board.assignment.poolRound?' · Runde '+board.assignment.poolRound:''} · ${escape(d.label)} · ${value.complete?(board.assignment.disciplineId?'Disziplin beendet':'Partie beendet'):'Frame '+(current[0]+current[1]+1)}</h3><p>${board.assignment.disciplineId?'Disziplinergebnis':'Gesamtergebnis'} <strong>${value.frames.join(' : ')}</strong> · ${points?'Ziel '+d.targetPoints+' Punkte':(board.assignment.rules.bestOf?'BO '+(board.assignment.rules.rotation?board.assignment.rules.framesPerMatch:d.frames):d.frames+' Frames insgesamt')}</p>${value.targetReached?'<p role="status" class="poolTargetReached">Punkte erreicht – Sieger bestätigen</p>':''}<div class="monitorPlayers">${board.assignment.names.map((name,i)=>`<div class="monitorPlayerColumn"><button type="button" class="monitorScoreButton" data-monitor-player="${i}" data-monitor-slot="${board.slot}" ${board.enabled&&!value.complete?'':'disabled'}><span class="monitorName">${escape(name)}</span><strong class="monitorPoints">${points?value.scores[i]:current[i]}</strong><span>${points?'Punkte':'Frames · '+escape(d.label)}</span>${points?`<span>HB ${highestBreak(value.breaks[i])}</span>`:''}</button>${points?`<button type="button" class="monitorFrameWinner" data-monitor-winner="${i}" data-monitor-slot="${board.slot}" ${board.enabled&&!value.complete?'':'disabled'}>Frame-Sieger: ${escape(name)}</button>`:''}${points&&!value.complete?`<button type="button" data-pool-foul="${i}" data-monitor-slot="${board.slot}" ${board.enabled?'':'disabled'}>Foul −1 Punkt</button><button type="button" data-pool-penalty="${i}" data-monitor-slot="${board.slot}" ${board.enabled?'':'disabled'}>Zusatzstrafe −15</button>`:''}</div>`).join('')}</div>${finishButtons(board,value)}<p class="small">${points?'Namen antippen für Punkte / Break.':'Namen antippen, um einen Frame zu vergeben.'}</p><div>${frameWarningMarkup(board)}<button type="button" data-monitor-warning-off="${board.slot}" hidden>Warnung aus</button></div><div class="monitorActions"><button type="button" data-monitor-undo="${board.slot}" ${board.state.cursor&&board.enabled?'':'disabled'}>↶ Zurück</button><button type="button" data-monitor-redo="${board.slot}" ${board.state.cursor<board.state.events.length&&board.enabled?'':'disabled'}>Vor ↷</button></div>${window.ClubSport.history(value,board.assignment.names)}</article>`;
+    return `<article class="monitorCard frameLimitTarget"><h3>Tisch ${board.tableNumber}${board.assignment.poolRound?' · Runde '+board.assignment.poolRound:''} · ${escape(d.label)} · ${value.complete?(board.assignment.disciplineId?'Disziplin beendet':'Partie beendet'):'Frame '+(current[0]+current[1]+1)}</h3><p>${board.assignment.disciplineId?'Disziplinergebnis':'Gesamtergebnis'} <strong>${value.frames.join(' : ')}</strong> · ${points?'Ziel '+d.targetPoints+' Punkte':d.frames+' Frames insgesamt'}</p>${value.targetReached?'<p role="status" class="poolTargetReached">Punkte erreicht – Sieger bestätigen</p>':''}<div class="monitorPlayers">${board.assignment.names.map((name,i)=>`<div class="monitorPlayerColumn"><button type="button" class="monitorScoreButton" data-monitor-player="${i}" data-monitor-slot="${board.slot}" ${board.enabled&&!value.complete?'':'disabled'}><span class="monitorName">${escape(name)}</span><strong class="monitorPoints">${points?value.scores[i]:current[i]}</strong><span>${points?'Punkte':'Frames · '+escape(d.label)}</span>${points?`<span>HB ${highestBreak(value.breaks[i])}</span>`:''}</button><button type="button" class="monitorFrameWinner" data-monitor-winner="${i}" data-monitor-slot="${board.slot}" ${board.enabled&&!value.complete?'':'disabled'}>Frame-Sieger: ${escape(name)}</button>${points&&!value.complete?`<button type="button" data-pool-foul="${i}" data-monitor-slot="${board.slot}" ${board.enabled?'':'disabled'}>Foul −1 Punkt</button><button type="button" data-pool-penalty="${i}" data-monitor-slot="${board.slot}" ${board.enabled?'':'disabled'}>Zusatzstrafe −15</button>`:''}</div>`).join('')}</div>${finishButtons(board,value)}<p class="small">${points?'Namen antippen für Punkte / Break.':'Namen oder Frame-Sieger antippen, um einen Frame zu vergeben.'}</p><div>${frameWarningMarkup(board)}<button type="button" data-monitor-warning-off="${board.slot}" hidden>Warnung aus</button></div><div class="monitorActions"><button type="button" data-monitor-undo="${board.slot}" ${board.state.cursor&&board.enabled?'':'disabled'}>↶ Zurück</button><button type="button" data-monitor-redo="${board.slot}" ${board.state.cursor<board.state.events.length&&board.enabled?'':'disabled'}>Vor ↷</button></div>${window.ClubSport.history(value,board.assignment.names)}</article>`;
   }
   const localWarningStorageKey='snooker-table-local-warning-v1';
   let localWarningMute='';
@@ -166,7 +120,7 @@
     return send(board,{type:'warningOff'});
   }
   function bind(container,list){
-    for(const [attribute,amount] of [['foul',1],['penalty',15]])container.querySelectorAll('[data-pool-'+attribute+']').forEach(b=>b.onclick=()=>{const board=list.find(x=>x.slot===Number(b.dataset.monitorSlot));if(board)send(board,{type:'foul',player:Number(b.dataset[attribute==='foul'?'poolFoul':'poolPenalty']),value:amount})});
+    for(const [attribute,amount] of [['foul',1],['penalty',15]])container.querySelectorAll('[data-pool-'+attribute+']').forEach(b=>b.onclick=()=>{const board=list.find(x=>x.slot===Number(b.dataset.monitorSlot));if(board&&(!board.assignment.id.startsWith('single:')||confirm(amount+' Strafpunkt(e) abziehen?')))send(board,{type:'foul',player:Number(b.dataset[attribute==='foul'?'poolFoul':'poolPenalty']),value:amount})});
     container.querySelectorAll('[data-monitor-warning-off]').forEach(b=>b.onclick=()=>{const board=list.find(x=>x.slot===Number(b.dataset.monitorWarningOff));if(board)muteWarning(board)});
     container.querySelectorAll('[data-monitor-player]').forEach(b=>b.onclick=()=>{const board=list.find(x=>x.slot===Number(b.dataset.monitorSlot));if(board)openPopup(board,Number(b.dataset.monitorPlayer))});
     container.querySelectorAll('[data-monitor-winner]').forEach(b=>b.onclick=()=>{const board=list.find(x=>x.slot===Number(b.dataset.monitorSlot));if(board)winner(board,Number(b.dataset.monitorWinner))});
@@ -205,41 +159,15 @@
   }
   function poolOverviewRow(board,value,names){const d=value.currentDiscipline,points=d.id==='14',score=points?value.scores:value.disciplineFrames;return `<button type="button" class="monitorRow frameLimitTarget" data-monitor-detail="${board.slot}"><span class="monitorRowInfo"><span class="monitorRowTable">Tisch ${board.tableNumber}<span class="monitorRowPhase">${(board.assignment.poolRound?'R'+board.assignment.poolRound+' · ':'')+(value.complete?(board.assignment.disciplineId?escape(d.label)+' · beendet':'Beendet'):escape(d.label))}</span></span><span class="monitorRowNames">${names.join(' – ')}</span><span class="monitorRowMeta">${board.assignment.disciplineId?'Frames':'Gesamt'} <b>${value.frames.join(' : ')}</b>${points?'<span>HB '+value.breaks.map(highestBreak).join(' : ')+'</span>':''}</span>${clockMarkup(board,value)}${frameWarningMarkup(board)}</span><strong class="monitorRowScore">${score[0]}<span>:</span>${score[1]}</strong></button>`}
   const detail=document.createElement('dialog');detail.id='monitorDetailDialog';detail.className='tournamentDialog monitorDetailDialog';document.body.append(detail);
-  function closeDetail(){correction=null;detailSlot=null;closePopup();if(detail.open)detail.close()}
-  async function prepareMatch(data,r,m){
-    const service=window.snookerTableSync,match=data.rounds[r].matches[m];
-    if(service?.role!=='owner'||!service.sync)return;
-    const expected=assignment(data,r,m,match).id;
-    try{
-      if(service.prepareScore)await service.prepareScore(data,r,m);
-      else{
-        const result=await service.sync(data,{slots:[match.table]});
-        const failure=result?.errors?.find(item=>item.slot===match.table||item.slot==null);
-        if(failure)throw Error(failure.message);
-        await service.refresh?.(match.table);
-      }
-      if(service.role!=='owner')return;
-      if(Array.isArray(service.boards))boards=service.boards;
-      const latest=bridge.current,live=latest?.rounds?.[r]?.matches?.[m];
-      if(live&&detailSlot===match.table&&assignment(latest,r,m,live).id===expected)renderDetail([forMatch(latest,r,m,live)]);
-    }catch(err){status('Tischverbindung: '+err.message);}
-  }
+  function closeDetail(){detailSlot=null;if(detail.open)detail.close()}
   function renderDetail(list){
     if(detailSlot===null)return;
-    if(correction)list=[correction.board];
     const board=list.find(b=>b.slot===detailSlot);if(!board?.assignment){closeDetail();return}
-    detail.innerHTML='<button type="button" data-detail-close>← Zur Übersicht</button><p data-monitor-message role="status">'+escape(message)+'</p>'+card(board);
+    detail.innerHTML='<button type="button" data-detail-close>← Zur Übersicht</button>'+card(board);
     detail.querySelector('[data-detail-close]').onclick=closeDetail;bind(detail,[board]);
-    if(correction){
-      detail.querySelector('[data-detail-close]').textContent='Abbrechen';
-      const info=document.createElement('p');info.textContent='Älteres Ergebnis korrigieren: Mit Zurück die falsche Eingabe zurücknehmen und richtig eintragen. Erst Speichern übernimmt die Änderung. Die laufende Tischpartie bleibt bestehen.';detail.prepend(info);
-      const save=document.createElement('button');save.type='button';save.className='primary';save.textContent='Korrektur speichern';save.setAttribute('data-correction-save','');save.disabled=!model.derive(board.state,board.assignment.rules).complete;
-      save.onclick=()=>{try{bridge.correctArchivedBoard(correction.board,correction.original);closeDetail();status('Korrigiertes Ergebnis gespeichert.');reconcile();}catch(err){status(err.message)}};detail.append(save);
-    }
-    if(!correction&&window.snookerTableSync?.role==='owner'&&!boards.some(b=>b.assignment?.id===board.assignment.id&&b.enabled)){
+    if(window.snookerTableSync?.role==='owner'&&!boards.some(b=>b.assignment?.id===board.assignment.id)){
       for(const button of detail.querySelectorAll('button'))if(!button.hasAttribute('data-detail-close'))button.disabled=true;
-      const notice=document.createElement('p');notice.setAttribute('role','status');notice.textContent=window.snookerTableSync.syncError?.(board.slot)||'Tischverbindung wird vorbereitet. Die Eingabe wird nach der Synchronisierung freigegeben.';detail.prepend(notice);
-      const retry=document.createElement('button');retry.type='button';retry.textContent='Tischverbindung erneut laden';retry.onclick=()=>{const data=bridge.current;if(data)prepareMatch(data,board.assignment.round,board.assignment.index);};detail.prepend(retry);
+      const notice=document.createElement('p');notice.setAttribute('role','status');notice.textContent='Tischverbindung wird vorbereitet. Die Eingabe wird nach der Synchronisierung freigegeben.';detail.prepend(notice);
     }
   }
   detail.oncancel=e=>{e.preventDefault();closeDetail()};detail.addEventListener('click',e=>{if(e.target===detail)closeDetail()});
@@ -261,8 +189,7 @@
   function renderTable(){
     if(!tableSlot)return;
     const board=boards.find(b=>b.slot===tableSlot);
-    tablePage.innerHTML=`<div class="monitorTableHeader"><h2>Tisch ${tableSlot}</h2>${window.snookerViewerReturnUrl?.()?'<button type="button" data-watch-return>Turnier ansehen</button>':''}<button type="button" data-table-leave>Tisch verlassen</button><button type="button" data-table-refresh>↻ Aktualisieren</button><button type="button" data-table-full>Vollbild ${document.body.classList.contains('tableMonitorFullscreen')?'aus':'an'}</button></div><p data-monitor-message role="status">${escape(message||(navigator.onLine?'Tischverbindung wird hergestellt …':'Offline – für den Tischbetrieb bitte Internet verbinden.'))}</p>${landing?'<button type="button" class="primary" data-table-return>Zur Partie</button>':card(board??{slot:tableSlot})}`;
-    tablePage.querySelector('[data-watch-return]')?.addEventListener('click',()=>{location.href=window.snookerViewerReturnUrl();});
+    tablePage.innerHTML=`<div class="monitorTableHeader"><h2>Tisch ${tableSlot}</h2><button type="button" data-table-leave>Tisch verlassen</button><button type="button" data-table-refresh>↻ Aktualisieren</button><button type="button" data-table-full>Vollbild ${document.body.classList.contains('tableMonitorFullscreen')?'aus':'an'}</button></div><p data-monitor-message role="status">${escape(message||(navigator.onLine?'Tischverbindung wird hergestellt …':'Offline – für den Tischbetrieb bitte Internet verbinden.'))}</p>${landing?'<button type="button" class="primary" data-table-return>Zur Partie</button>':card(board??{slot:tableSlot})}`;
     if(board?.assignment)bind(tablePage,[board]);updateFrameWarnings();
     tablePage.querySelector('[data-table-leave]').onclick=async()=>{if(!confirm('Tischverbindung auf diesem Gerät beenden und Tisch freigeben?'))return;try{await window.snookerTableBackend.leave()}catch(err){status('Trennen fehlgeschlagen. Bitte Internetverbindung prüfen oder die Verbindung beim Spielleiter zurücksetzen lassen. '+err.message)}};
     tablePage.querySelector('[data-table-refresh]').onclick=async e=>{
@@ -284,8 +211,7 @@
     if(tableSlot){renderTable();return}
     if(bridge.canApply)for(const board of boards){try{bridge.applyBoard(board)}catch(err){status(err.message)}}
     if(window.PoolSingle?.active)window.PoolSingle.renderBoard();
-    if(correction)renderDetail([correction.board]);
-    else if(detailSlot!==null){const data=bridge.current;const all=(data?.rounds??[]).flatMap((round,r)=>round.matches.map((match,m)=>({match,r,m}))).filter(x=>x.match.table===detailSlot&&x.match.startedAt);const current=all.find(x=>!x.match.result)??all.at(-1);if(current)renderDetail([forMatch(data,current.r,current.m,current.match)]);else closeDetail();}
+    if(detailSlot!==null){const data=bridge.current;const all=(data?.rounds??[]).flatMap((round,r)=>round.matches.map((match,m)=>({match,r,m}))).filter(x=>x.match.table===detailSlot&&x.match.startedAt);const current=all.find(x=>!x.match.result)??all.at(-1);if(current)renderDetail([forMatch(data,current.r,current.m,current.match)]);else closeDetail();}
     bridge.refreshHistory?.();
     const overview=document.getElementById('tournamentMonitors');if(overview&&bridge.current&&!window.PoolSingle?.active)renderOverview(overview,bridge.current);
   }
@@ -304,10 +230,9 @@
   }
   window.snookerMonitors=Object.freeze({activateTable,renderOverview,reconcile,
     renderSingle(container,board){container.innerHTML=card(board);bind(container,[board]);updateFrameWarnings()},
-    openMatch(data,r,m,match){const board=forMatch(data,r,m,match);if(match.result&&(boards.some(b=>b.slot===board.slot&&b.assignment?.id!==board.assignment.id)||data.rounds.some(round=>round.matches.some(other=>other!==match&&other.table===match.table&&other.startedAt>match.startedAt)))){if(window.ClubKnockout?.locked(data,match))return;correction={board:{...board,_local:true,_correction:true,state:JSON.parse(JSON.stringify(board.state))},original:JSON.stringify(match)};}else correction=null;detailSlot=board.slot;renderDetail([board]);if(!detail.open)detail.showModal();if(!match.result&&!data.ended&&!boards.some(b=>b.assignment?.id===board.assignment.id&&b.enabled))void prepareMatch(data,r,m);},
-    canStep(direction){return !disciplineDialog.open&&historyBoards(direction).length>0},
+    openMatch(data,r,m,match){const board=forMatch(data,r,m,match);const current=boards.find(b=>b.slot===board.slot);if(match.result&&current&&current.assignment?.id!==board.assignment.id){status('Dieser Tisch zeigt bereits eine andere Partie. Die alte Spielhistorie bleibt einsehbar.');alert('Diese Partie ist archiviert. Korrekturen nur vor dem nächsten Tischmatch durchführen.');return;}detailSlot=board.slot;renderDetail([board]);if(!detail.open)detail.showModal();},
+    canStep(direction){return historyBoards(direction).length>0},
     async step(direction){
-      if(disciplineDialog.open)throw Error('Bitte zuerst die nächste Disziplin bestätigen.');
       if(window.snookerTableSync?.role==='owner')await window.snookerTableSync.idle();
       const entry=historyBoards(direction)[0];if(!entry)throw Error('Keine Eingabe zum Zurücknehmen oder Wiederholen.');
       const board=entry.board,action={type:direction<0?'undo':'redo'};
@@ -322,7 +247,7 @@
       const data=bridge.current;if(!data)return;
       const [r,m]=index.split(':').map(Number),match=data.rounds[r]?.matches[m];if(!match?.table)return;
       const board=forMatch(data,r,m,match);
-      if(!board._local&&!boards.some(b=>b.assignment?.id===board.assignment.id&&b.enabled))throw Error('Tischverbindung wird vorbereitet. Bitte kurz warten.');
+      if(!board._local&&!boards.some(b=>b.assignment?.id===board.assignment.id))throw Error('Tischverbindung wird vorbereitet. Bitte kurz warten.');
       if(board._local)return;
       return await window.snookerTableSync.command(board.slot,board.assignment.id,board.state.revision,{type:'manual',...result});
     }

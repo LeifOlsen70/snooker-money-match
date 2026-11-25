@@ -25,8 +25,7 @@
   const fallbackJoin=document.createElement('button');fallbackJoin.type='button';fallbackJoin.textContent='Mit Tischcode beitreten';fallbackJoin.onclick=()=>{closeMenu();document.getElementById('tableDeviceSetup').click()};
   const leaveTable=document.createElement('button');leaveTable.type='button';leaveTable.textContent='Tisch verlassen';leaveTable.onclick=()=>{closeMenu();document.querySelector('#tableMode [data-table-leave]')?.click()};
   const dismissTable=document.createElement('button');dismissTable.type='button';dismissTable.textContent='Tischgerät abmelden';dismissTable.onclick=()=>{closeMenu();window.snookerDismissTable()};
-  const spectatorReturn=document.createElement('button');spectatorReturn.type='button';spectatorReturn.textContent='Turnier ansehen';spectatorReturn.onclick=()=>{const url=window.snookerViewerReturnUrl?.();if(url)location.href=url;};
-  menu.append(fallbackLogin,fallbackJoin,leaveTable,dismissTable,spectatorReturn);document.body.append(menu);
+  menu.append(fallbackLogin,fallbackJoin,leaveTable,dismissTable);document.body.append(menu);
   window.KaiAudio?.mount(menu);
   const menuToggle=document.getElementById('appMenuToggle');
   function closeMenu(){if(menu.open)menu.close();menuToggle.setAttribute('aria-expanded','false')}
@@ -95,7 +94,6 @@
     const single = document.getElementById('singleMode');
     const tournament = document.getElementById('tournamentMode');
     const tableDevice=body.classList.contains('tableDeviceMode');
-    spectatorReturn.hidden=!window.snookerViewerReturnUrl?.();
     home.hidden=!isVisible(single)&&!isVisible(tournament)&&!tableDevice;
     fallbackLogin.hidden=tableDevice||!accountBar.hidden;fallbackJoin.hidden=tableDevice||!accountBar.hidden;leaveTable.hidden=!tableDevice;
     dismissTable.hidden=tableDevice||window.snookerTableSync?.role!=='owner';

@@ -1,10 +1,10 @@
 <!doctype html>
 <html lang="de">
-<head><meta name="robots" content="noindex">
+<head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#0f5f37">
-  <meta name="application-version" content="9.06">
+  <meta name="application-version" content="8.14">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="Snooker Match">
@@ -331,7 +331,7 @@ body.snookerFullscreenScore #scorerPage.displayOnly{background:#090613!important
 .appInfoLink {display:inline-block;margin:0 0 14px;padding:10px 16px;border:1px solid #a98b49;border-radius:12px;color:#f3ecd7;background:#382045;text-decoration:none;font-weight:700}
 body.snookerFullscreenTournament .appInfoLink,body.snookerFullscreenScore .appInfoLink {display:none}
 
-/* v8.20: points fill the scoreboard; entry opens in a local modal. */
+/* v8.14: points fill the scoreboard; entry opens in a local modal. */
 #scorerPage:not(.displayOnly) .scorerGrid {
   flex:initial!important;
   min-height:clamp(320px,55dvh,650px);
@@ -372,10 +372,10 @@ body.snookerFullscreenTournament .appInfoLink,body.snookerFullscreenScore .appIn
 #accessAdminDialog .accessActions{display:flex;gap:8px;flex-wrap:wrap}
 #accessGateDialog button,#accessAdminDialog button{padding:11px;border-radius:8px;cursor:pointer}
 </style>
-  <link rel="stylesheet" href="tournament.css?v=9.13">
-<script src="knockout.js?v=9.13"></script><script src="pool-planner.js?v=9.13"></script><script src="sports.js?v=9.13"></script><link rel="stylesheet" href="pool.css?v=9.13"></head>
+  <link rel="stylesheet" href="tournament.css?v=8.14">
+<script src="pool-planner.js?v=8.14"></script><script src="sports.js?v=8.14"></script><link rel="stylesheet" href="pool.css?v=8.14"></head>
 <body class="modeHome">
-<div id="appVersionTag" aria-label="App-Version 9.13">v9.13</div>
+<div id="appVersionTag" aria-label="App-Version 8.14">v8.14</div>
 <div class="app">
   <h1 class="clubBrand" aria-label="Flensburger Snooker Club – Snooker Money Match"><img src="flensburger-snooker-club.png" alt="Flensburger Snooker Club" width="430" height="125"><span class="visuallyHidden">Snooker Money Match</span></h1><div id="offlineStatus" class="hidden" aria-live="polite"></div>
 
@@ -386,7 +386,6 @@ body.snookerFullscreenTournament .appInfoLink,body.snookerFullscreenScore .appIn
       <button type="button" class="primary" id="openSingle">Einzel</button>
       <button type="button" class="primary" id="openClubLeague">Club Liga</button>
       <button type="button" class="primary" id="openFreeTournament">Freies Turnier</button>
-      <button type="button" class="primary" id="openSpectator">Turnier verfolgen</button>
       <a class="primary homeInfoChoice" href="infos.html">Allgemeine Infos &amp; Regeln</a>
     </div>
   </section>
@@ -396,9 +395,8 @@ body.snookerFullscreenTournament .appInfoLink,body.snookerFullscreenScore .appIn
 <section id="setup" class="card">
     <h2>Neues Match</h2>
 
-    <label for="target">Best of</label>
-    <select id="target"><option value="1">BO 1</option><option value="2">BO 2</option><option value="3">BO 3</option><option value="4">BO 4</option><option value="5" selected>BO 5</option><option value="6">BO 6</option><option value="7">BO 7</option><option value="8">BO 8</option><option value="9">BO 9</option><option value="10">BO 10</option><option value="11">BO 11</option><option value="12">BO 12</option><option value="13">BO 13</option><option value="14">BO 14</option><option value="15">BO 15</option><option value="16">BO 16</option><option value="17">BO 17</option><option value="18">BO 18</option><option value="19">BO 19</option><option value="20">BO 20</option><option value="21">BO 21</option><option value="22">BO 22</option><option value="23">BO 23</option><option value="24">BO 24</option><option value="25">BO 25</option><option value="26">BO 26</option><option value="27">BO 27</option><option value="28">BO 28</option><option value="29">BO 29</option><option value="30">BO 30</option><option value="31">BO 31</option><option value="32">BO 32</option><option value="33">BO 33</option><option value="34">BO 34</option><option value="35">BO 35</option><option value="36">BO 36</option><option value="37">BO 37</option><option value="38">BO 38</option><option value="39">BO 39</option><option value="40">BO 40</option><option value="41">BO 41</option><option value="42">BO 42</option><option value="43">BO 43</option><option value="44">BO 44</option><option value="45">BO 45</option><option value="46">BO 46</option><option value="47">BO 47</option><option value="48">BO 48</option><option value="49">BO 49</option><option value="50">BO 50</option></select>
-    <p class="small muted">BO 5 endet bei drei gewonnenen Frames. Gerade Werte erlauben ein Unentschieden.</p>
+    <label for="target">Frames bis zum Gesamtsieg</label>
+    <input id="target" type="number" min="1" max="50" value="5" inputmode="numeric">
 
     <label for="prize">Siegprämie (€)</label>
     <input id="prize" type="number" min="0" step="0.01" value="50" inputmode="decimal">
@@ -520,10 +518,10 @@ body.snookerFullscreenTournament .appInfoLink,body.snookerFullscreenScore .appIn
 <button type="button" id="accountGuest">Ohne Anmeldung fortfahren</button>
 <button type="button" id="accountCancel">Abbrechen</button>
 </div></form></dialog>
-<script src="table-score.js?v=9.13"></script>
-<script src="table-access.js?v=9.13"></script>
-<script src="account-access.js?v=9.13"></script><script src="player-picker.js?v=9.13"></script><script src="kai-audio.js?v=9.13"></script><link rel="stylesheet" href="player-picker.css?v=9.13">
-<script src="access-ui.js?v=9.13"></script>
+<script src="table-score.js?v=8.14"></script>
+<script src="table-access.js?v=8.14"></script>
+<script src="account-access.js?v=8.14"></script><script src="player-picker.js?v=8.14"></script><script src="kai-audio.js?v=8.14"></script><link rel="stylesheet" href="player-picker.css?v=8.14">
+<script src="access-ui.js?v=8.14"></script>
 
 <script>
 const localStorage = window.snookerStorage;
@@ -682,9 +680,7 @@ function startMatch(){
   const names = [...document.querySelectorAll('.name')].map((x,i)=>x.value.trim() || `Spieler ${i+1}`);
   window.ClubPlayerPicker.remember(names);
   state = {
-    boFrames: Math.max(1, Number($('target').value) || 1),
-    target: Math.floor(Math.max(1, Number($('target').value) || 1)/2)+1,
-    draw: false,
+    target: Math.max(1, Number($('target').value) || 1),
     prize: Math.max(0, Number($('prize').value) || 0),
     players: names.map(name=>({name,frames:0,breakMoney:0,breaks:[]})),
     history: [],
@@ -729,7 +725,6 @@ function startNextMatchSameSettings(){
   state.liveFrameScores=state.players.map(()=>0);
   state.selected=null;
   state.winner=null;
-  state.draw=false;
 }
 
 async function saveGameToFile(){
@@ -786,8 +781,6 @@ function loadGameFromFile(event){
       }
       state = {
         target:Number(obj.target),
-        ...(Number.isInteger(obj.boFrames)&&obj.boFrames>=1&&obj.boFrames<=50?{boFrames:obj.boFrames}:{}),
-        draw:obj.draw===true,
         prize:Number(obj.prize)||0,
         players:obj.players,
         history:Array.isArray(obj.history)?obj.history:[],
@@ -815,19 +808,13 @@ let lastMatchTransition=null;
 function archiveAndRestart(){
  const previous=JSON.parse(JSON.stringify(state));
  if(!Array.isArray(state.completedMatches))state.completedMatches=[];
- const record={number:state.completedMatches.length+1,target:state.target,prize:state.prize,winnerName:state.players[state.winner]?.name??'Unentschieden',draw:state.draw===true,...(state.boFrames?{boFrames:state.boFrames}:{}),players:state.players.map((p,i)=>({...p,net:net(i)}))};
+ const record={number:state.completedMatches.length+1,target:state.target,prize:state.prize,winnerName:state.players[state.winner].name,players:state.players.map((p,i)=>({...p,net:net(i)}))};
  state.completedMatches.push(record);
  startNextMatchSameSettings();
  lastMatchTransition={before:previous,after:JSON.parse(JSON.stringify(state))};
 }
-function singleMatchOutcome(){
-  const frames=state.players.map(p=>p.frames),max=Math.max(...frames),total=frames.reduce((a,b)=>a+b,0);
-  if(!state.boFrames)return {complete:max>=state.target,winner:max>=state.target?frames.indexOf(max):null};
-  const complete=max>=state.target||total>=state.boFrames;
-  return {complete,winner:complete&&frames.filter(n=>n===max).length===1?frames.indexOf(max):null};
-}
 function awardFrame(playerIndex){
-  if(!state || state.winner !== null || state.draw) return;
+  if(!state || state.winner !== null) return;
   if(!Number.isInteger(playerIndex) || playerIndex < 0 || playerIndex >= state.players.length) return;
   ensureScorer();
   const previousFrameScores = [...state.liveFrameScores];
@@ -835,10 +822,8 @@ function awardFrame(playerIndex){
   clearRedo();
   state.history.push({type:'frame', playerIndex, previousFrameScores});
   state.liveFrameScores = state.players.map(()=>0);
-  const outcome=singleMatchOutcome();
-  if(outcome.complete){
-    state.winner = outcome.winner;
-    state.draw = outcome.winner===null;
+  if(state.players[playerIndex].frames >= state.target){
+    state.winner = playerIndex;
     state.selected = null;
     archiveAndRestart();
     clearRedo();
@@ -868,7 +853,6 @@ function undo(){
   if(action.type === 'frame'){
     state.players[action.playerIndex].frames = Math.max(0, state.players[action.playerIndex].frames-1);
     state.winner = null;
-    state.draw = false;
     if(Array.isArray(action.previousFrameScores))state.liveFrameScores=action.previousFrameScores;
   }
   state.selected = null;
@@ -892,7 +876,7 @@ function redo(){
   }else if(action.type==='frame'){
     state.players[action.playerIndex].frames+=1;
     state.liveFrameScores=state.players.map(()=>0);
-    const outcome=singleMatchOutcome();state.winner=outcome.winner;state.draw=outcome.complete&&outcome.winner===null;
+    if(state.players[action.playerIndex].frames>=state.target)state.winner=action.playerIndex;
   }
   state.history.push(action);
   state.selected=null;
@@ -941,7 +925,7 @@ async function saveSinglePdf(){
       ]);
       sections.push({
         title,
-        note:`${match.boFrames?'BO '+match.boFrames:'Sieg bei '+match.target+' Frames'} · Siegprämie ${money(match.prize)}`,
+        note:`Sieg bei ${match.target} Frames · Siegprämie ${money(match.prize)}`,
         headers:['Spieler','Frames',...(liveScores ? ['Framepunkte'] : []),'Breakprämien','Saldo'],
         weights:liveScores ? [2.8,1,1.35,1.4,1.15] : [3,1,1.45,1.2],
         rows:playerRows
@@ -1072,9 +1056,9 @@ function render(){
   ensureScorer();
   if(activeView==='scorer')renderScorer();
 
-  $('matchSettingsInfo').innerHTML=`<strong>Match-Einstellungen:</strong> ${state.boFrames?'BO '+state.boFrames:state.target+' gewonnene Frames bis zum Sieg'} · Siegprämie ${Number(state.prize).toLocaleString('de-DE',{style:'currency',currency:'EUR'})}`;
+  $('matchSettingsInfo').innerHTML=`<strong>Match-Einstellungen:</strong> ${state.target} gewonnene Frames bis zum Sieg · Siegprämie ${Number(state.prize).toLocaleString('de-DE',{style:'currency',currency:'EUR'})}`;
   const played = state.players.reduce((s,p)=>s+p.frames,0);
-  $('frameTitle').textContent = state.winner===null&&!state.draw ? `Frame ${played+1}` : 'Match beendet';
+  $('frameTitle').textContent = state.winner===null ? `Frame ${played+1}` : 'Match beendet';
 
   $('score').innerHTML = state.players.map(p=>`
     <div class="scoreBox">
@@ -1084,7 +1068,7 @@ function render(){
   `).join('');
 
   $('winnerButtons').innerHTML = state.players.map((p,i)=>`
-    <button class="winnerBtn" data-winner="${i}" ${state.winner!==null||state.draw?'disabled':''}>
+    <button class="winnerBtn" data-winner="${i}" ${state.winner!==null?'disabled':''}>
       ${esc(p.name)}
     </button>
   `).join('');
@@ -1174,8 +1158,8 @@ function render(){
       </div>`;
     }).join('');
     return `<details style="margin:10px 0;border:1px solid #e5e7eb;border-radius:14px;padding:10px 12px">
-      <summary style="font-weight:800;cursor:pointer">Match ${m.number}: ${m.draw?'Unentschieden':'🏆 '+esc(m.winnerName)}</summary>
-      <div class="small muted" style="margin-top:8px">${m.boFrames?'BO '+m.boFrames:'Sieg bei '+m.target+' Frames'} · Siegprämie ${Number(m.prize).toLocaleString('de-DE',{style:'currency',currency:'EUR'})}</div>
+      <summary style="font-weight:800;cursor:pointer">Match ${m.number}: 🏆 ${esc(m.winnerName)}</summary>
+      <div class="small muted" style="margin-top:8px">Sieg bei ${m.target} Frames · Siegprämie ${Number(m.prize).toLocaleString('de-DE',{style:'currency',currency:'EUR'})}</div>
       ${rows}
     </details>`;
   }).join('') : '<div class="historyItem">Noch kein Match abgeschlossen.</div>';
@@ -1185,9 +1169,7 @@ function render(){
     return `<div class="historyItem">Break: ${esc(state.players[a.playerIndex].name)} – ${a.entry.points} Punkte</div>`;
   }).join('') || '<div class="historyItem">Noch keine Eingaben.</div>';
 
-  if(state.draw){
-    $('winnerCard').classList.remove('hidden');$('winnerText').textContent='Unentschieden – keine Siegprämie.';
-  }else if(state.winner !== null){
+  if(state.winner !== null){
     const w = state.players[state.winner];
     $('winnerCard').classList.remove('hidden');
     $('winnerText').innerHTML = `
@@ -1282,7 +1264,7 @@ if('serviceWorker' in navigator){
 }
 </script>
 <script>
-// v8.20: Give a meaningful error if an import or initialization blocks auth.
+// v8.14: Give a meaningful error if an import or initialization blocks auth.
 (function(){
   let ready=false;
   window.addEventListener('snooker-auth-handlers-ready',()=>{ready=true},{once:true});
@@ -1295,7 +1277,7 @@ if('serviceWorker' in navigator){
   });
 })();
 </script>
-<script type="module" src="firebase-sync.js?v=9.13" onerror="window.snookerAccount.connectionError('Firebase-Anmeldemodul konnte nicht geladen werden. Bitte Verbindung und Browser-Konsole prüfen.')"></script><script>
+<script type="module" src="firebase-sync.js?v=8.14" onerror="window.snookerAccount.connectionError('Firebase-Anmeldemodul konnte nicht geladen werden. Bitte Verbindung und Browser-Konsole prüfen.')"></script><script>
 // Geräteindividuelle Ansicht: nicht Teil des Matches und niemals Firebase-synchronisiert.
 (function(){
  const page=document.getElementById('scorerPage');
@@ -1313,11 +1295,10 @@ if('serviceWorker' in navigator){
  btn.addEventListener('click',()=>setDisplay(!page.classList.contains('displayOnly')));
 })();
 </script>
-<script src="pdf-export.js?v=9.13"></script>
-<script src="spectator-model.js?v=9.13"></script><script src="vendor/qrcode.js?v=9.13"></script><script src="spectator-share.js?v=9.13"></script><script src="partner-drag.js?v=9.13"></script><script src="tournament.js?v=9.13"></script>
-<script src="pool-single.js?v=9.13"></script>
-<script src="table-monitor.js?v=9.13"></script>
-<script src="app-navigation.js?v=9.13"></script>
-<script src="creator-return.js?v=9.13"></script><script src="vendor/jsQR.js?v=9.13"></script><script src="spectator-entry.js?v=9.13"></script>
+<script src="pdf-export.js?v=8.14"></script>
+<script src="partner-drag.js?v=8.14"></script><script src="tournament.js?v=8.14"></script>
+<script src="pool-single.js?v=8.14"></script>
+<script src="table-monitor.js?v=8.14"></script>
+<script src="app-navigation.js?v=8.14"></script>
 </body>
 </html>
