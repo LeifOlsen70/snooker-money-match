@@ -89,6 +89,7 @@
     if (account) raw.setItem(prefix(account.uid) + 'email', account.email || '');
     if (message) status(message);
     if (ready && pendingMode()) openMode(pendingMode());
+    if(ready)window.dispatchEvent(new CustomEvent('snooker-account-ready',{detail:{uid:account.uid}}));
   }
   function switchUser(account) {
     // A remembered Firebase session must never replace a local guest session.

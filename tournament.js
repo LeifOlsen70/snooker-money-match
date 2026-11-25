@@ -287,7 +287,8 @@
   }
 
   window.addEventListener('snooker-account-enter', ({detail}) => {
-    if (detail === 'single') showMode('single');
+    if(detail==='resumeTournament'){drafting=false;draftFreeTournament=null;openMatch=null;view='rounds';showMode(tournament?'tournament':'home');}
+    else if (detail === 'single') showMode('single');
     else if (detail === 'club') openTournamentType(false);
     else if (detail === 'free') openTournamentType(true);
   });

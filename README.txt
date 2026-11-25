@@ -1,3 +1,5 @@
+VERSION 9.12 – Erstellervorschau kehrt direkt zur Turnierübersicht zurück. Siehe VERSION_9_12_HINWEISE.txt.
+
 VERSION 9.11 – Echte Paarungsrunden im Zeit-/Endlosbetrieb; wartende Partien zuerst; nächste Runde nur bei freiem Tisch. Siehe VERSION_9_11_HINWEISE.txt.
 
 VERSION 9.10 – Freie Tische für eine vorgezogene nächste Runde nutzen. Siehe VERSION_9_10_HINWEISE.txt.

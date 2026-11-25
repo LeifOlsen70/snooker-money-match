@@ -12,11 +12,11 @@
   if(u.origin!==expected.origin||u.pathname!==expected.pathname||u.username||u.password||!['pool','snooker'].includes(u.searchParams.get('sport'))||!window.SnookerSpectator.validToken(u.hash.slice(1)))throw Error('Das ist kein gültiger Zuschauerlink dieser App.');
   return window.SnookerSpectator.url(u.hash.slice(1),u.searchParams.get('sport'),location.href);
  }
- let overlay=null,iframe=null;
- function closeViewer(){iframe?.remove();overlay?.remove();overlay=iframe=null;document.body.classList.remove('spectatorEmbeddedOpen');}
- function open(value){
+ let overlay=null,iframe=null,afterClose=null;
+ function closeViewer(){const callback=afterClose;afterClose=null;iframe?.remove();overlay?.remove();overlay=iframe=null;document.body.classList.remove('spectatorEmbeddedOpen');callback?.();}
+ function open(value,onClose=null){
   const url=new URL(parse(value));stop();dialog.close();closeViewer();
-  url.searchParams.set('embedded','1');
+  afterClose=onClose;url.searchParams.set('embedded','1');
   overlay=document.createElement('section');overlay.className='spectatorEmbedded';
   const back=document.createElement('button');back.type='button';back.className='secondary';back.textContent='← Zur App';back.onclick=closeViewer;
   iframe=document.createElement('iframe');iframe.title='Turnier verfolgen · nur ansehen';iframe.src=url.href;
@@ -54,5 +54,5 @@
  dialog.querySelector('form').onsubmit=event=>{event.preventDefault();try{open(dialog.querySelector('input').value);}catch(err){note.textContent=err.message;}};
  document.getElementById('openSpectator').onclick=()=>{stop();note.textContent='';dialog.showModal();};
  document.addEventListener('visibilitychange',()=>{if(document.hidden)stop();});window.addEventListener('pagehide',stop);
- window.SnookerSpectatorEntry=Object.freeze({parse});
+ window.SnookerSpectatorEntry=Object.freeze({parse,preview:open});
 })();

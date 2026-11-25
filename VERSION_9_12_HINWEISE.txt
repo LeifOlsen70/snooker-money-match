@@ -1,0 +1,11 @@
+Version 9.12 – Rückkehr aus der Vorschau
+
+„Turnier teilen > Vorschau öffnen“ bleibt jetzt im laufenden App-Fenster. „Zur App“ öffnet für den angemeldeten Ersteller direkt die vorhandenen Begegnungen im Reiter Runden. Es erscheint keine neue Turniererstellung. Turnierdaten werden dabei nicht verändert.
+
+Aus einem separaten Zuschauerfenster führen beide Zur-App-Links ebenfalls zum bestehenden Turnier zurück, sofern das normal angemeldete und freigegebene Benutzerkonto der Ersteller ist und dessen aktuelles Turnier übereinstimmt. Die Rückkehr wartet die reguläre Kontoanmeldung/Freigabe ab. Fremde Zuschauer und andere Konten erhalten dadurch keine Schreibrechte. Tischgeräte behalten ihren getrennten Zugang.
+
+Gilt für Snooker und Pool, Club Liga und Freies Turnier.
+
+Installation: Alle aktuellen App-Dateien hochladen, einschließlich creator-return.js. Firebase-Regeln und vendor unverändert. Keine Cloud Functions.
+
+Geprüft: Vorschau öffnen/schließen, bestehende Übersicht statt Setup, unveränderte Daten in vier Sport-/Turnierkombinationen. Separater Rückweg nach bestätigter Anmeldung, Eigentümer- und Turnierprüfung, fremde Konten/anderes Turnier ausgeschlossen. Zuschauer-DOM, Reiter und Live-Spielstände sowie Turniername und paarungsweise Framewertung weiter geprüft. Kein Test auf echtem iPhone/iPad. Version 8.20 bleibt unverändert.
