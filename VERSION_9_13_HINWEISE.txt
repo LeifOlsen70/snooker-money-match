@@ -1,0 +1,7 @@
+Version 9.13
+
+- Abgeschlossene Ergebnisse im laufenden Turnier separat korrigieren, auch wenn der Tisch bereits neu belegt ist. Zurück/neu eingeben, danach Korrektur speichern. Abbrechen verwirft den Entwurf.
+- K.-o.-Folgephasen bleiben geschützt.
+- Turnier verfolgen: Aktualisieren lädt die Live-Verbindungen neu; gewählter Reiter und Zuschauerlink bleiben erhalten.
+- Einheitliche Versionsanzeigen 9.13. Alte Versionshinweise zusammengefasst; optionale Löschliste beigefügt.
+- Alle App-Dateien hochladen. Firebase-Regeln und vendor-Inhalte unverändert.

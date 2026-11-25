@@ -1,10 +1,10 @@
 import {initializeApp} from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js';
 import {getAuth,signInAnonymously,signInWithEmailAndPassword,createUserWithEmailAndPassword,sendPasswordResetEmail,setPersistence,browserLocalPersistence,inMemoryPersistence,signOut,onAuthStateChanged} from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-auth.js';
 import {getFirestore,doc,getDoc,setDoc,onSnapshot,runTransaction,collection,getDocs,getDocsFromServer,getDocFromServer,updateDoc,serverTimestamp} from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore.js';
-import {createTableSync} from './table-sync.js?v=9.12';
-import {firebaseConfig as config} from './firebase-config.js?v=9.12';
-import {createTableConnection} from './table-connection.js?v=9.12';
-import {createSpectatorOwner} from './spectator-owner.js?v=9.12';
+import {createTableSync} from './table-sync.js?v=9.13';
+import {firebaseConfig as config} from './firebase-config.js?v=9.13';
+import {createTableConnection} from './table-connection.js?v=9.13';
+import {createSpectatorOwner} from './spectator-owner.js?v=9.13';
 const localStorage = window.snookerStorage;
 const app=initializeApp(config),auth=getAuth(app),db=getFirestore(app),e=id=>document.getElementById(id),msg=t=>e('fbStatus').textContent=t;
 let accessGranted=false;

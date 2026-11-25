@@ -1,0 +1,526 @@
+Historische Versionshinweise – keine zusätzlichen Upload-Dateien erforderlich.
+
+=== VERSION_7_66_HINWEISE.txt ===
+Snooker Money Match v7.66 – Anmeldung beim Start repariert
+
+- Die Anmeldeaktionen werden jetzt vor der asynchronen Firebase-Persistence-Initialisierung freigeschaltet.
+- Der Start wartet maximal sechs Sekunden auf den lokalen Auth-Speicher, statt unendlich bei „Anmeldung wird geladen“ hängen zu bleiben.
+- Bei fehlgeschlagenem Modulstart wird spätestens nach zehn Sekunden eine aussagekräftige Fehlermeldung angezeigt.
+- Bestehende Firebase-Zugangsregeln v7.65, Tischcodes, Saison- und Einzelspielstände bleiben unverändert.
+- E-Mail/Push-Benachrichtigungen sind weiterhin NICHT aktiv (Spark-Tarif).
+
+GitHub: ZIP entpacken, alle Dateien ins bestehende Repository hochladen und Commit auf main.
+Firebase: Regeln NICHT ersetzen, keine kostenpflichtigen Dienste aktivieren.
+
+Nicht live mit einem Firebase-Konto getestet; erst Administrator-Anmeldung und Tisch-Sync prüfen.
+
+
+=== VERSION_7_67_HINWEISE.txt ===
+Snooker Money Match v7.67 – Firebase Syntaxfehler behoben
+
+In firebase-sync.js war die Sortierung der Freigabeanfragen syntaktisch ungültig (Unexpected token ")"). Die fehlerhafte Zeile wurde ersetzt. Alle JavaScript-Dateien wurden mit Node.js auf Syntax geprüft.
+
+Firebase-Regeln nicht ändern. E-Mail und Push weiterhin nicht aktiv.
+
+
+=== VERSION_7_68_HINWEISE.txt ===
+Snooker Money Match v7.68 – Push-Registrierung TESTVERSION
+
+Basiert auf v7.67. Der öffentliche Firebase-VAPID-Schlüssel wurde eingefügt.
+Unter Benutzerfreigaben > Push auf diesem Gerät aktivieren wird ein Web-Push-Abonnement unter snookerAdminPush gespeichert. Wo möglich wird zusätzlich ein Firebase Cloud Messaging Token gespeichert.
+ACHTUNG: Der automatische Versand von Push-Benachrichtigungen ist NICHT eingerichtet. Der Button bestätigt nur die Speicherung des Abonnements; nicht die Zustellung.
+Die bestehende Firestore-Regel für snookerAdminPush reicht für die Speicherung durch das Admin-Konto.
+Es werden keine privaten VAPID-Schlüssel, Service-Account-Zugangsdaten oder kostenpflichtigen Dienste benötigt/aktiviert.
+Für iOS bitte die App über das Home-Bildschirm-Icon öffnen.
+Tischcode- und Turnierlogik unverändert.
+
+
+=== VERSION_7_70_HINWEISE.txt ===
+Version 7.70 – Freigabezaehler und Aktualisieren
+
+- Zahl offener (pending) Benutzeranfragen am Button Benutzerfreigaben beim Administrator; nur bei der App-Nutzung geladen, keine Push-Funktion.
+- Aktualisieren unter Benutzerfreigaben: erneuter Serverabruf der Freigaben und Tischstaende.
+- Auf dem Tischgeraet: Aktualisieren direkt in der Tisch-Leiste fuer einen frischen Serverabruf.
+- Bestehende Firestore-Live-Synchronisation bleibt aktiv. Aktualisieren beschleunigt keine noch nicht gesendete Aenderung, fragt lediglich den letzten Serverstand ab.
+- Firestore-Regeln unveraendert, keine Cloud Functions oder neuen Datenbanken.
+
+
+=== VERSION_7_71_HINWEISE.txt ===
+v7.71 – Score Monitor kompakt
+
+Drei Tischzeilen im Vollbild, Punkte rechts, Namen links, Frames und HB je Spieler. Nur das höchste Break ab 20 wird angezeigt. Tisch antippen für Eingabe/Details. Firebase-Regeln und Synchronisierung unverändert aus v7.70.
+
+
+=== VERSION_7_72_HINWEISE.txt ===
+v7.72 – Spielzeit und Löschen gesperrter Freigaben
+
+Spielzeit im Monitor sichtbar. Gesperrte Freigabeeinträge nach Warnabfrage löschbar. Firebase-Anmeldekonto bleibt für spätere Anmeldung und neue Freigabeanfrage erhalten. Keine Cloud Functions erforderlich. Die neue firestore.rules muss in Firebase veröffentlicht werden.
+
+
+=== VERSION_7_73_HINWEISE.txt ===
+v7.73 – Warnung je Frame
+
+Optionales Limit pro Frame in Minuten beim Anlegen, voreingestellt 30 Minuten; 0 = aus. Ergebnisbutton und Score-Monitor-Anzeige pulsieren bei Überschreitung. Frame-Sieg startet neue Warnzeit. Gesamtspielzeit bleibt bestehen. Kein automatisches Spielende. Alle Geräte aktualisieren. Regeln unverändert aus v7.72.
+
+
+=== VERSION_7_74_HINWEISE.txt ===
+v7.74 – Warnung abschalten und Undo/Redo
+
+Nur Warnhinweis bei Zeitüberschreitung, keine automatische Eingabeaufforderung. Warnung aus gilt je Frame, im nächsten Frame wieder aktiv. Kein Pulsieren von Zurück/Vor. Synchronisierungsbestätigungen erhalten die Undo/Redo-Historie. Alle Geräte aktualisieren. Firebase-Regeln unverändert.
+
+
+=== VERSION_7_75_HINWEISE.txt ===
+Ergänzung innerhalb v7.75 – unterschiedliche Warnabschaltung:
+- Am Tischgerät: „Warnung aus“ gilt nur lokal auf diesem Gerät für den aktuellen Frame, auch nach Neuladen. Keine Übertragung einer Abschaltung an die Spielleitung.
+- Am Spielleitergerät im Score Monitor oder in Runden: „Warnung aus“ wird für diesen Tisch und Frame an alle Geräte übertragen.
+- Im folgenden Frame ist die Warnung wieder aktiv. Versionsnummer und Firebase-Regeln bleiben unverändert.
+
+v7.75 – Zurück/Vor zwischen Geräten
+
+Zählwerk-Schritte nutzen im oberen Turniermenü dieselbe gemeinsame Ereignisliste wie das Tischgerät. Wiederholen bleibt synchron verfügbar. Alle Geräte aktualisieren. Firebase-Regeln unverändert.
+
+
+=== VERSION_7_76_HINWEISE.txt ===
+v7.76 – Menü und gemeinsame Bedienzeile
+
+Kontoaktionen und Startseite im ☰-Menü links unter dem Logo. Darunter Zurück – Aktualisieren – Vor. Untere Bedienbuttons entfernt; CSV/PDF bleiben an der Tabelle. Bestehendes Clublogo, Rechte und Firebase-Regeln unverändert.
+
+
+=== VERSION_7_77_HINWEISE.txt ===
+v8.00 – Vierstellige Zahlencodes und Gerätewechsel
+
+Neue Firestore-Regeln veröffentlichen. Zuerst Spielleitergerät aktualisieren und Turnier öffnen, dann Tischgeräte mit neuen Codes verbinden. Tisch verlassen gibt Verbindung frei. Spielleiter kann unter Tischcodes die Verbindung zurücksetzen, ohne Ergebnisse zu löschen. Pro Tisch ein aktives Eingabegerät.
+
+
+=== VERSION_7_78_HINWEISE.txt ===
+Version 8.00
+Menü: Tischgerät abmelden, mit Auswahl und Bestätigung. Nur Turnierersteller. Bestehende Verbindung wird serverseitig entzogen, Spielstand und zufälliger vierstelliger Code bleiben erhalten. Ein anderes Gerät kann anschließend beitreten. Firestore-Regeln unverändert gegenüber 7.77.
+
+
+=== VERSION_8_00_HINWEISE.txt ===
+8.00 – Gemeinsamer Einstieg Snooker / Poolbillard, grünes Pooldesign, getrennte Spielstände und Tischbereiche, Mehrfachauswahl 8/9/10-Ball und 14/1, Frame-Gesamtergebnis, Disziplin-/Frame-Historie, unabhängige Pool-Tabellen und Elo. Neue Firebase-Regeln erforderlich. Siehe README.txt.
+
+
+=== VERSION_8_01_HINWEISE.txt ===
+8.01 – Neue Pool-Turniere: jeder gegen jeden je Disziplin, gleitender Disziplin-/Rundenwechsel, Übersicht nach Runde und Disziplin, Pausieren, Gesamtwertung erst nach allen Disziplinen einer Paarung. Alte Pool-Turniere behalten den alten Ablauf. Snooker / Einzel unverändert. Firebase-Regeln identisch zu 8.00.
+
+
+=== VERSION_8_02_HINWEISE.txt ===
+8.02 – Pool-Anzeigen: Punkte erreicht – Sieger bestätigen in Signalfarbe, weiterhin Punkteingabe möglich. 14/1-Historie mit Punkte-Endständen und einer HB-Zeile, ohne vollständige Break-Liste. 8/9/10-Ball-Historie nur mit Disziplinergebnis, ohne Frame-Tabelle. Alle Protokolldaten bleiben gespeichert. Keine Firebase-Regeländerung.
+
+
+=== VERSION_8_03_HINWEISE.txt ===
+8.03 – Abgeschlossene Pool-Begegnungen bleiben zusätzlich als kompakte Ergebniskarten in der normalen Disziplinliste sichtbar. Bereich Abgeschlossen und Spielhistorie bleiben erhalten. Regeln unverändert.
+
+
+=== VERSION_8_04_HINWEISE.txt ===
+8.04 – Laufende Pool-Begegnungen bleiben direkt in ihrer Runden-/Disziplinliste bedienbar. Kein siehe oben und kein separater oberer Am-Tisch-Block. Tabellen, Planung, Historie und Firebase-Regeln unverändert.
+
+
+=== VERSION_8_05_HINWEISE.txt ===
+8.05 – Pool-Listen: Ergebnis korrigieren → Ergebnis eintragen → nächste startbereite Partien mit freien Tischnummern. Spielplanung und Firebase-Regeln unverändert.
+
+
+=== VERSION_8_06_HINWEISE.txt ===
+8.20 – Pool: aufgeklappte und zugeklappte Runden-/Disziplinabschnitte behalten ihren Zustand bei Neuzeichnen, Tischstart und Live-Aktualisierung. Lokaler Anzeigezustand, keine Änderung an Spielständen oder Firebase-Regeln.
+
+Ergebniseingabe beim Tischstart wartet auf die aktuelle Tischzuordnung und wird automatisch freigegeben. Keine irreführende Archivmeldung für laufende Partien.
+
+
+=== VERSION_8_07_HINWEISE.txt ===
+8.20 – Doppelturnier: Zwei separate Teampartner je Team aus der gespeicherten Namensliste oder als neue Einzelnamen. Teamnamen werden für Anzeige und Wertung erzeugt, aber nicht in die Namensliste aufgenommen. Mehrfachbelegung eines Spielers wird verhindert. Bestehende Turniere bleiben erhalten. Keine Änderung der Firebase-Regeln.
+
+
+=== VERSION_8_08_HINWEISE.txt ===
+8.20 – Pool-Doppelturnier: Partnernamen kurz antippen zum Bearbeiten. Zum Tauschen 450 ms halten und auf einen anderen Partnerplatz ziehen. Loslassen außerhalb eines Partnerfelds bricht ab. Getauscht werden nur die Plätze bei der Turniererstellung; gespeicherte Einzelnamen und bestehende Spiele bleiben erhalten. Keine neuen Firebase-Regeln.
+
+
+=== VERSION_8_09_HINWEISE.txt ===
+8.20 – Einzel → Doppel: vier separate Partnerfelder, Namensvorschläge aus der Spielerliste und Tausch per langem Halten und Ziehen. Neue Partner werden als Einzelnamen gespeichert. Benutzerverwaltung: Anfragedatum und Uhrzeit (Deutschland) aus createdAt. Alte Einträge ohne Zeitstempel werden gekennzeichnet. Firebase-Regeln unverändert.
+
+
+=== VERSION_8_10_HINWEISE.txt ===
+8.20 – Gemeinsame Namensliste je Benutzerkonto für Snooker und Pool (Einzel, Club Liga, Freies Turnier). Die Spielerliste wird beim Antippen eines Namensfeldes als Popup geöffnet. Neue Spieler können hinzugefügt und ausgewählt werden. Ausschließlich Admin Leif Olsen darf gespeicherte Namen ändern/löschen. Nur Platzzuordnung und Partnertausch stehen allen Nutzern offen. Vorhandene lokale und Cloud-Namenslisten werden einmalig zusammengeführt. Spielstände/Elo bleiben getrennt. WICHTIG: firestore.rules aus diesem Paket erneut veröffentlichen, um die Beschränkung auch serverseitig zu aktivieren.
+
+
+=== VERSION_8_11_HINWEISE.txt ===
+8.20 – Kai-Sprüche nur in Snooker Einzel bei bestätigter Eingabe von Kai: 1–9 / 10–19 / 20–29 / 30–39. Ab 40 und bei 0 stumm; Zurück/Vor und Synchronisierung spielen keine Sprüche. Standard stumm. Admin-Schalter unter Snooker → Einzel → Dreistrichemenü → Kai-Sprüche: Ton aus/an. Einstellung lokal je Gerät/Konto gespeichert, andere Nutzer sehen keinen Schalter. Vier bearbeitete Audiodateien werden offline mit der App zwischengespeichert. Firebase-Regeln unverändert gegenüber 8.10.
+
+
+=== VERSION_8_12_HINWEISE.txt ===
+8.20 – Kai-Audios nur bei Wechsel der Audio-Stufe. Erste passende Eingabe spielt; Wiederholungen derselben Stufe bleiben stumm. Wechsel in eine andere Stufe und Rückkehr spielen jeweils den passenden Spruch. Andere Spieler, Eingaben ab 40 sowie Zurück/Vor lösen keine Audio aus. Neues Match beginnt ohne vorige Stufe. Standard stumm und Admin-Menüschalter unverändert. Firebase-Regeln unverändert.
+
+
+=== VERSION_8_13_HINWEISE.txt ===
+8.20 – Pool-Turniere (Club Liga / Freies Turnier): Auswahl Spielablauf mit Disziplinweise (bisheriger Standard) oder Paarungsweise (jede Paarung spielt alle gewählten Disziplinen am Tisch nacheinander wie im ursprünglichen Ablauf). Nur bei neuen Turnieren wählbar; bestehende Turniere werden nicht umgestellt. Einzel-Spielabend und Snooker unverändert. Disziplinen-Historie und Gesamtergebnis bleiben erhalten. Audio-Dateien wie bisher (höhere Stimme); Firebase-Regeln unverändert.
+
+
+=== VERSION_8_14_HINWEISE.txt ===
+8.20 – Turniere Snooker und Pool: Punkte und Frame-Sieger ohne Rückfrage direkt erfassen. Ergebnis eintragen in der Rundenliste öffnet nun auch bei Snooker das direkte Tischzählwerk. Zusätzliche Match-Sieger-Buttons beenden vorzeitig mit dem tatsächlich erreichten Frame-Stand. Zuerst den letzten Frame-Sieger erfassen; Match-Sieger ist nur für den führenden Spieler aktiv. In Pool Paarungsweise endet die aktuelle Disziplin und die nächste folgt. Bei Disziplinweise wird die Begegnung abgeschlossen und der Tisch frei. Keine fiktiven Frames. Historie, Tabellen, Elo, Live-Übertragung und Zurück/Vor berücksichtigen den vorzeitigen Abschluss. Bei Pool wird das wirkungslose obere Frame-Feld vollständig ausgeblendet. Alle Tischgeräte aktualisieren. Audios und Firebase-Regeln unverändert.
+
+
+=== VERSION_8_20_HINWEISE.txt ===
+8.20 – Kurzer privater Nutzungshinweis in beiden Infoseiten. Geldprämien und Abrechnung aus den allgemeinen Snooker-Infos entfernt; Spielfunktionen unverändert. noindex auf allen vier HTML-Seiten. Turnierfelder oben ausgerichtet. Bereits in anderen Namensfeldern ausgewählte Spieler werden im Popup abgedunkelt und mit „bereits ausgewählt“ markiert, bleiben auswählbar. Firebase-Regeln unverändert.
+
+
+=== VERSION_9_01_HINWEISE.txt ===
+VERSION 9.01 – Korrektur der Formularanzeige
+
+Eine allgemeine Layoutregel konnte die ausgeblendeten Felder wieder sichtbar machen.
+Korrigiert in Pool und Snooker, jeweils Club Liga und freiem Turnier:
+- Anzahl Leben und K.-o.-Best-of ausschließlich bei K.-o.
+- Zeitmodus: Endzeit, bisheriges Best-of / Disziplinen und Freilospunkte.
+- Rundenmodus: Rundenzahl, bisheriges Best-of / Disziplinen und Freilospunkte.
+- Keine doppelte Best-of-Auswahl bei Snooker.
+- K.-o.-Leben und K.-o.-Best-of außerhalb K.-o. zusätzlich deaktiviert.
+- Wechsel zurück zu Zeit oder Runden blendet die K.-o.-Felder wieder aus.
+
+Gesamten ZIP-Inhalt wie gewohnt hochladen, dann auf allen Geräten aktualisieren.
+Version 9.01 kontrollieren. Firebase-Regeln bleiben unverändert.
+8.20 bleibt die letzte bestätigte gültige Rückfallversion.
+
+
+=== VERSION_9_02_HINWEISE.txt ===
+VERSION 9.02 – Shoot-out nur für unklare Halbfinalteilnahme
+
+Die vier Halbfinalisten werden anhand der eingefrorenen Tabelle bestimmt.
+Shoot-outs werden ausschließlich benötigt, wenn eine Gleichstandsgruppe über die Grenze
+zwischen qualifiziert und nicht qualifiziert reicht.
+
+Beispiele:
+- Platz 1/2 gleich und Platz 3/4 gleich: alle vier sicher dabei, kein Shoot-out.
+- Drei Spieler sicher, Plätze 4–6 gleich: ein Shoot-out-Sieger rückt nach.
+- Zwei Spieler sicher, Plätze 3–5 gleich: zwei Nachrücker ermitteln; danach sofort Halbfinale.
+- Gleichstand vollständig unterhalb der ersten vier: kein Shoot-out.
+- Gleiche Werte innerhalb bereits sicher Qualifizierter: angezeigte Tabellenreihenfolge
+  bleibt die Setzreihenfolge. Kein zusätzliches Spiel allein für die Reihenfolge.
+- Weiterhin Halbfinale 1 gegen 4 und 2 gegen 3, Finale und kleines Finale.
+
+Die Anzeige benennt die Anzahl noch freier Halbfinalplätze.
+Vorrundenpunkte werden durch Shoot-outs nicht verändert.
+
+Bereits vorbereitete Finalrunden aus 9.0/9.01 mit überflüssigen Shoot-outs werden
+beim Öffnen korrigiert. Vorrundenergebnisse bleiben erhalten.
+Schon begonnene Halbfinals und ihre Ergebnisse bleiben unverändert.
+
+ZIP vollständig entpacken und gesamten Inhalt wie gewohnt hochladen.
+Anschließend auf allen Geräten aktualisieren und Version 9.02 kontrollieren.
+Keine Änderungen an Firebase-Regeln erforderlich.
+8.20 bleibt die letzte bestätigte gültige Rückfallversion.
+
+
+=== VERSION_9_03_HINWEISE.txt ===
+VERSION 9.03 – Startbereite Partien immer oben
+
+Neue Anordnung in Pool und Snooker, jeweils Club Liga und freies Turnier:
+1. Startbereit
+2. Am Tisch
+3. Wartend / pausiert
+4. Abgeschlossen – unten, zunächst eingeklappt
+
+Gilt für K.-o., Doppel-K.-o., Finalrunde sowie Zeit- und Rundenmodus.
+Auch Pool mit disziplinweisem oder paarungsweisem Ablauf zeigt die startbereiten Partien zuerst.
+Neue Halbfinals und Finals stehen vor der bisherigen Spielhistorie.
+Abgeschlossene Partien bleiben zum Ansehen und zulässigen Korrigieren aufklappbar.
+An Spielständen, Paarungslogik, Shoot-outs oder Saisonwertung wurde nichts geändert.
+Laufende Turniere müssen nicht neu angelegt werden.
+
+Gesamten ZIP-Inhalt wie gewohnt hochladen und auf allen Geräten aktualisieren.
+Version 9.03 kontrollieren. Keine Firebase-Regeländerung nötig.
+Version 8.20 bleibt die letzte bestätigte gültige Rückfallversion.
+
+
+=== VERSION_9_04_HINWEISE.txt ===
+VERSION 9.04 – Rang- und Punkteanzeige der Finalrunde
+
+Korrektur in Pool und Snooker, jeweils Club Liga und freiem Turnier:
+- Die vier Halbfinalisten werden nicht mehr pauschal auf Platz 1 angezeigt.
+- Während einer optionalen Finalrunde zeigt „Vorrundentabelle“ den unveränderten
+  Stand bei Abschluss der Vorrunde: Plätze, Matchpunkte, Freilospunkte, Spiele,
+  Siege, Remis und Frame-Differenz.
+- Erst nach Finale UND Spiel um Platz 3 zeigt „Abschlusstabelle“ die Endplätze.
+- In der Abschlusstabelle bleiben die Freilospunkte erhalten. Matchpunkte aus den
+  Platzierungsspielen kommen hinzu. Saisonpunkte werden nach Endplatzierung berechnet.
+- Bei laufendem K.-o. kennzeichnet „–“ die noch offenen Endplätze.
+  Bereits ausgeschiedene Spieler behalten ihre feststehenden gemeinsamen Plätze.
+- Geteilte Plätze nach Ausscheidungsrunde und die vereinbarte Saisonpunkteteilung bleiben erhalten.
+- Export übernimmt den sichtbaren Tabellentitel.
+
+Vorhandene Turnierstände bleiben erhalten. Keine neue Turnieranlage erforderlich.
+ZIP vollständig entpacken und gesamten Inhalt hochladen.
+Anschließend auf allen Geräten aktualisieren und Version 9.04 kontrollieren.
+Keine Änderung an Firebase-Regeln erforderlich.
+8.20 bleibt die letzte bestätigte gültige Rückfallversion.
+
+
+=== VERSION_9_05_HINWEISE.txt ===
+VERSION 9.05 – Tatsächliche Rangfolge der Vorrundentabelle
+
+Die Vorrundenrangfolge wird auch bei bereits vorbereiteten/gespeicherten Finalrunden
+frisch aus den eingefrorenen Vorrundenergebnissen berechnet. Gespeicherte Anzeigeplätze
+oder eine falsche Reihenfolge in einer Tabellenkopie sind nicht maßgeblich.
+
+Reihenfolge: Punkte → Frame-Differenz → direkter Vergleich.
+Bei verbleibendem Gleichstand gemeinsamer Rang; nachfolgende Plätze werden übersprungen.
+
+Beispiel:
+Markus: 4 Punkte, +2 → Platz 1.
+Kai und Helmut: je 4 Punkte, +1 → Plätze 2/3 nach direktem Vergleich;
+fehlt eine Entscheidung im direkten Vergleich, beide gemeinsam auf Platz 2.
+Wolle B: 2 Punkte, 0 → Platz 4.
+
+Für sicher qualifizierte Spieler entsteht daraus kein Shoot-out.
+Die bestehende Halbfinal-/Finalphase wird nicht neu gestartet.
+Nach vollständig ausgespielter Finalrunde zählen deren Endplätze.
+Freilospunkte bleiben erhalten. Saisonwertung und Startbereit-Sortierung bleiben erhalten.
+
+In Pool und Snooker, jeweils Club Liga und freiem Turnier geprüft, einschließlich
+beider möglicher direkten Vergleichsergebnisse, fehlendem direkten Vergleich,
+Speichern/Laden und absichtlich falsch gespeicherten Anzeigeplätzen.
+
+Gesamten ZIP-Inhalt hochladen, alle Geräte aktualisieren und Version 9.05 kontrollieren.
+Keine neue Turnieranlage oder Firebase-Regeländerung nötig.
+8.20 bleibt die letzte bestätigte gültige Rückfallversion.
+
+
+=== VERSION_9_06_HINWEISE.txt ===
+VERSION 9.06 – Club-Liga-Dateien mit älteren geparkten Turnieren laden
+
+Ursache: Eine gültige Club-Liga-Sicherung kann zusätzlich ein geparktes freies
+Gruppen-/K.-o.-Turnier aus der früheren Turnierlogik enthalten. Die vorherige Prüfung
+lehnte dadurch die gesamte Sicherung ab, obwohl Club-Liga und Saisonarchive gültig waren.
+
+Korrektur:
+- Beide Ladewege erkennen diese zusätzlich enthaltenen älteren freien Turniere.
+- Club-Liga, Ergebnisse, Jahres-/Saisonarchive und Elo werden unverändert übernommen.
+- Das alte freie Turnier wird vollständig als separate ältere Sicherung erhalten.
+- Im Sicherungsbereich lässt sich diese ältere Sicherung separat speichern.
+- Es wird nicht als aktuelles 9.x-Turnier gestartet und nicht in die Club-Saison eingerechnet.
+- Auch beim Anlegen des nächsten Club-Liga-Spieltags bleibt die ältere Sicherung erhalten.
+- Leseprobleme mit iCloud, leere Dateien, ungültiges JSON und falsche Sicherungsarten
+  erhalten unterscheidbare Fehlermeldungen. Fehlgeschlagene Datenprüfungen ersetzen keine Daten.
+
+Installation: Gesamten ZIP-Inhalt wie gewohnt hochladen und alle Geräte aktualisieren.
+Danach die ursprüngliche Club-Liga-JSON erneut laden. Kein neuer Saisonstart nötig.
+Keine Firebase-Regeländerung nötig. 8.20 bleibt die bestätigte Rückfallversion.
+
+Reparierte persönliche Sicherungen ausschließlich in der App laden.
+Persönliche Turnier-JSON-Dateien nicht ins GitHub-Projekt hochladen.
+
+
+=== VERSION_9_07_HINWEISE.txt ===
+Version 9.07 – Turnier teilen und Zuschauerzugang
+
+Einrichtung (einmalig)
+1. Die Webdateien aus Club907.zip wie bisher vollständig in das GitHub-Repository hochladen. Die ZIP enthält alle Dateien der App. Keine persönlichen Sicherungsdateien hochladen.
+2. In Firebase > Firestore Database > Regeln den bisherigen Regeltext sichern, anschließend durch den vollständigen Inhalt der beiliegenden firestore.rules ersetzen und veröffentlichen. Ein GitHub-Upload aktualisiert die Firebase-Regeln NICHT.
+3. Firebase > Authentication > Anmeldemethode: E-Mail/Passwort und Anonym müssen aktiviert sein. Anonym wird bereits für die Tischgeräte verwendet.
+4. Keine Cloud Functions und kein zusätzlicher Anbieter erforderlich. Der Firebase-Tarif muss für diese Ergänzung nicht gewechselt werden.
+5. App auf allen Geräten aktualisieren. Alte, noch geöffnete Versionen schließen und neu öffnen.
+
+Turnierleitung
+- Snooker und Pool; Club Liga und Freies Turnier; nach Runden, nach Zeit, K.-o. mit einem oder zwei Leben sowie optionale Finalrunde.
+- Im laufenden oder beendeten Turnier den neuen Reiter „Turnier teilen“ öffnen.
+- „Zuschauerlink erstellen“: Link kopieren/teilen oder QR-Code scannen lassen. „Vorschau öffnen“ zeigt die separate Zuschaueransicht.
+- Link und QR-Code gewähren ausschließlich Leserechte für dieses Turnier. Sie enthalten keinen Tischcode.
+- „Zuschauerzugang deaktivieren“ entzieht den Zugriff auf Turnierdaten. Erneutes Aktivieren erzeugt einen neuen Link; der alte bleibt deaktiviert.
+- Bei Wechsel zu einem anderen Turnier wird der alte aktive Zuschauerzugang deaktiviert. Die Freigabe gilt für das derzeit synchronisierte Turnier des jeweiligen Kontos und Spielbereichs.
+- Anmeldung und Benutzerfreigabe für Spielleiter bleiben unverändert (E-Mail und Passwort).
+
+Zuschauer
+- Keine Registrierung: Zuschauerlink öffnen oder QR-Code scannen.
+- Reiter „Begegnungen“, „Live-Spielstände“ und „Tabelle“. Jeder Zuschauer wählt seine Ansicht unabhängig von der Turnierleitung.
+- Live-Spielstände kommen auch direkt vom verbundenen Tischgerät, während die Turnierleitung kurz offline ist. Tabellen und Folgepaarungen werden durch die Turnierleitung bestätigt bzw. weitergeführt. Für einen vollständigen Turnierbetrieb sollte deren App geöffnet und online bleiben.
+- Es werden nur die Daten dieses Turniers veröffentlicht. Keine Kontodaten, gespeicherte Namenliste, Saisonarchive, geparkte Turniere oder Tischcodes.
+- Wer den Link weitergegeben bekommt, kann ebenfalls dieses Turnier ansehen. Der Link ist deshalb wie besprochen für den privaten Teilnehmerkreis bestimmt.
+
+Dasselbe Handy als Tischgerät
+- Unter „Tischgerät“ > „Als Tischgerät verbinden“ den zusätzlichen vierstelligen Tischcode eingeben.
+- Der Tischcode muss zum angezeigten Turnier und Spielbereich gehören.
+- Pro Tisch ist genau eine aktive Gerätekennung möglich. Gleichzeitige Beitritte werden atomar begrenzt. Mehrere Tabs desselben Browserprofils teilen die Gerätekennung; es handelt sich nicht um eine Hardware-Geräteerkennung.
+- Das verbundene Gerät darf nur die zugewiesene Partie bedienen. „Turnier ansehen“ führt zurück zur Leseansicht, die Tischverbindung bleibt dabei bestehen.
+- „Zur Tisch-Eingabe“ führt wieder zur Partie.
+- Erst „Tisch verlassen“ oder das Abmelden/Zurücksetzen durch die Turnierleitung gibt den Tisch für ein anderes Gerät frei. Der bisherige Tischcode bleibt dabei erhalten; dessen interne Berechtigung wird beim Zurücksetzen erneuert.
+- Nach Trennung oder Entzug der Tischberechtigung wird auf demselben Tab zur Zuschaueransicht zurückgekehrt, sofern von dort verbunden wurde.
+
+Validierung vor Auslieferung
+- Neue Firebase-Regeln im lokalen Firestore-Emulator geprüft: 16 Kombinationen beider Spielbereiche, Club/Frei, Runden/Zeit/K.-o./Doppel-K.-o.
+- Zuschauer-Schreibversuche, private Datenzugriffe und Auflisten fremder Zuschauerlinks abgewiesen.
+- Konkurrenz um Tischcode, Live-Spielstand, Trennen/Zurücksetzen, erneuter Beitritt und Entzug des Zuschauerlinks geprüft.
+- Zuschauerreiter und Live-Aktualisierungen am tatsächlichen HTML-DOM sowie QR-Codes durch Rücklesen geprüft.
+- Bestehende Turnierlogik einschließlich 624 kompletter K.-o.-Turniere sowie Ranking/Shoot-out/Finalrunde weiter geprüft.
+- Keine Änderungen im produktiven Firebase-Projekt veröffentlicht. Kein Test auf einem echten iPhone/iPad erfolgt. Nach Einrichtung vor dem nächsten echten Turnier mit zwei Geräten kurz prüfen.
+
+Rückfallversion
+Version 8.20 bleibt die vom Nutzer bestätigte letzte gültige Rückfallversion und wurde nicht geändert. Version 9.06 bleibt ebenfalls als vorheriger Arbeitsstand erhalten.
+
+
+=== VERSION_9_08_HINWEISE.txt ===
+Version 9.08 – Turnier direkt in der App verfolgen
+
+Startseite Snooker oder Pool: „Turnier verfolgen“.
+QR-Code scannen (Kamera erlauben) oder vollständigen Zuschauerlink einfügen.
+Die Zuschaueransicht öffnet sich innerhalb der App mit ihren bisherigen Reitern. „Zur App“ schließt die Ansicht. Auch Links des jeweils anderen Spielbereichs werden unterstützt.
+
+Der Scanner verarbeitet Kamerabilder lokal; es werden keine Bilder hochgeladen. Beim Schließen, Ansichtswechsel oder Verlassen der App wird die Kamera gestoppt. Link-Einfügen bleibt bei fehlender Kamera oder verweigerter Freigabe möglich.
+
+Zusätzlicher Tischcode erlaubt weiterhin nur die zugewiesene Partie. Der Wechsel zur Tisch-Eingabe erfolgt im selben App-Fenster.
+
+Installation: Alle Dateien und Unterordner auf GitHub aktualisieren.
+Firebase-Regeln identisch zu Version 9.07: Wenn diese bereits veröffentlicht sind, keine weitere Änderung nötig. Beim Update von 9.06 oder älter die beiliegende firestore.rules einmalig in Firebase veröffentlichen; siehe VERSION_9_07_HINWEISE.txt. Keine Cloud Functions erforderlich.
+
+Geprüft: Linkprüfung, Kamera-Start/-Stopp, verzögerte Kamerafreigabe nach Schließen, QR-Erkennung, eingebettete Ansicht, Rückkehr, Zuschauerreiter und Live-Aktualisierung. Kein Test auf einem echten iPhone/iPad.
+Version 8.20 bleibt unverändert als Rückfallversion erhalten.
+
+
+=== VERSION_9_09_HINWEISE.txt ===
+Version 9.09
+
+Freies Turnier: Optionales Feld Turniername in Snooker und Pool. Der Name wird gespeichert und in Turnierkopf, Tabelle, Tabellenexporten und Zuschaueransicht angezeigt. Ohne Eingabe bleibt die bisherige Bezeichnung erhalten.
+
+Pool paarungsweise: Alle gewählten Disziplinen werden durchgespielt. Die Summe der gewonnenen Frames entscheidet die Begegnung. Beispiel 2:3 + 2:3 + 3:0 = 7:6: Sieger 2 Tabellenpunkte, Verlierer 0. Unentschieden ergibt je 1 Punkt. Die bisherige Zählung erfüllt diese Regel bereits; sie wurde gezielt getestet und verständlicher beschriftet. Keine Wertung nach der Anzahl gewonnener Disziplinen.
+Tabellenreihenfolge bleibt Punkte, Frame-Differenz, direkter Vergleich. Disziplinweise und K.-o.-Ablauf unverändert. Keine zusätzliche Auswahl einer Frame-Tabellenwertung.
+
+Zuschaueransicht: Sichtbarer Zurück-zur-App-Button oben. Innerhalb der App wird der bereits vorhandene obere Zurück-Button benutzt, um Doppelungen zu vermeiden. Footer-Link bleibt erhalten.
+Alle aktuellen Versionsanzeigen 9.09.
+
+Installation: Alle Dateien und Unterordner der ZIP hochladen. Firebase-Regeln unverändert zu 9.07/9.08. Sind diese bereits veröffentlicht, keine erneute Einrichtung erforderlich. Keine Cloud Functions.
+
+Geprüft: Beispielsieg 7:6 inklusive 2/0 Tabellenpunkten, Namenseingabe nur beim freien Turnier, beide Sportbereiche, Speicherung und Wiederladen, Zuschaueransicht und Reiter, Ranking- und K.-o.-Regression. Kein Live-Test auf echtem iPhone/iPad. Rückfallversion 8.20 unverändert.
+
+
+=== VERSION_9_0_HINWEISE.txt ===
+VERSION 9.0 – auf Basis der unveränderten Version 8.20
+
+RÜCKFALLVERSION
+Version 8.20 bleibt die letzte vom Nutzer bestätigte gültige Rückfallversion.
+Die Versionen 8.21–8.27 dienen nicht als Grundlage dieser Ausgabe.
+Version 9.0 enthält eine neu getrennte K.-o.-Logik, keinen Turnierbaum.
+
+NEU – in Pool und Snooker, jeweils Club Liga UND freies Turnier
+- Turniermodus: feste Rundenzahl, nach Zeit oder K.-o.
+- K.-o.: 4 bis 16 Spieler/Teams; Auswahl 1 oder 2 Leben.
+- Eine Matchniederlage kostet ein Leben. Ein verlorener Frame allein nicht.
+- 2 Leben: Gewinnerrunde und Verliererrunde; genau vier bleiben für die Finalphase.
+- Zwei ungeschlagene Spieler warten, bis zwei Spieler aus der Verliererrunde feststehen.
+- Halbfinale dann über Kreuz; ab Halbfinale keine weiteren Leben.
+- Finale um Platz 1/2 und kleines Finale um Platz 3/4.
+- Bei vier Startern beginnt das Turnier sofort im Halbfinale.
+- Nur ungerade Best-of-Werte im K.-o. und in der Finalrunde.
+- Pool: ein Frame pro gewählter Disziplin, dann nächste; Auswahl wiederholt sich bis BO entschieden ist.
+- 14/1 behält Zielpunkte. Im bisherigen Zeit-/Rundenmodus bleibt die Spieleanzahl erhalten.
+- Freilose ohne erspielten Sieg oder Lebensverlust. Auswahl: Siegquote, Frame-Differenz je Match,
+  bei gleichen Werten bisherige Freilose und gespeicherte Losreihenfolge.
+- Zusatzreiter „Spieler übrig“ bei zwei Leben: Gewinner- und Verliererrunde nebeneinander.
+- Kein Turnierbaum und keine Gruppenphase.
+
+ZEIT / RUNDEN – OPTIONALE FINALRUNDE
+- Bei „Turnier beenden“ ab vier Teilnehmern Abfrage nach einer Finalrunde.
+- Bereits laufende Matches zuerst abschließen; neue Starts sind bis dahin gesperrt.
+- Anschließend aktuelle Tabelle einfrieren: Punkte, Differenz, direkter Vergleich.
+- Relevante Gleichstände werden per Shoot-out entschieden.
+- Die App legt keine Shoot-out-Spielweise fest: ausschließlich Sieger auswählen.
+- Bei mehreren gleichen Spielern folgen weitere Siegerauswahlen für die benötigten Plätze.
+- Halbfinale: 1 gegen 4, 2 gegen 3. Anschließend Finale und Spiel um Platz 3.
+- BO der Finalrunde separat wählen.
+
+SAISONWERTUNG CLUB LIGA
+- Punkte nach bisheriger Teilnehmerstaffel (bei 8 Teilnehmern 8 bis 1 Punkte).
+- Gleiche Ausscheidungsrunde = gemeinsam belegte Plätze und deren durchschnittliche Punkte.
+- Beispiel Plätze 7/8: je 1,5 Punkte. Plätze 5–8: je 2,5 Punkte.
+- Bei den neuen K.-o.-/Finalrunden erst nach vollständig ausgespielten Platzierungsspielen.
+- Ein Abbruch einer neuen K.-o.-/Finalrunde vergibt keine vorläufigen Saisonpunkte.
+- Freie Turniere werden nicht in die Club-Saison übernommen.
+
+INSTALLATION
+ZIP entpacken und den Inhalt wie gewohnt ins GitHub-Projekt hochladen/ersetzen.
+Die Dateien müssen direkt auf der bisherigen Ebene liegen, nicht in einem zusätzlichen Club900-Ordner.
+„knockout.js“ ist neu und muss mit hochgeladen werden.
+Enthaltene Ordner (insbesondere audio und functions) in ihrer Struktur beibehalten.
+Firebase-Regeln und Cloud Functions sind gegenüber 8.20 unverändert; keine Veröffentlichung nötig.
+Danach auf allen verwendeten Geräten die App aktualisieren und Version 9.0 kontrollieren.
+Vor dem Test vorhandene Turnier-/Saisondaten über die App sichern.
+
+RÜCKKEHR ZU 8.20
+Die ursprüngliche Club820.zip bleibt unverändert erhalten.
+Zum Rückwechsel deren Dateien hochladen und alle Geräte aktualisieren.
+Neue 9.0-K.-o.-Sicherungen benötigen 9.0; für 8.20 eine vorherige 8.20-Sicherung verwenden.
+
+PRÜFUNGEN
+624 vollständige K.-o.-Abläufe mit 4–16 Teilnehmern, beiden Sportarten, beiden Leben-Varianten
+und unterschiedlichen ungeraden Best-of-Werten. Zwischenstände, Rangpunkte und Wiederladen geprüft.
+Bedienungsprüfungen mit Formularen, Ergebniseingaben, Finalrundenanforderung, Shoot-outs,
+Korrektur/Undo/Redo und echten 8.20-Sicherungen. Tischtransport mit nachgebildetem Firebase-Backend
+für Organisator/Tischgerät geprüft. Keine Live-Prüfung mit den persönlichen Firebase-Daten
+oder realen iPhone-/iPad-Geräten vorgenommen.
+
+
+=== VERSION_9_10_HINWEISE.txt ===
+Version 9.10 – Freier Tisch, nächste Runde
+
+Pool disziplinweise: Ein freier Tisch kann vor Ende älterer Runden für eine neue Runde genutzt werden, sofern eine startfähige Paarung aus zwei freien Spielern möglich ist und die Endzeit bzw. Rundenzahl dies zulässt. Wartende Gegner in älteren Runden reservieren einen freien Spieler nicht mehr pauschal für die gesamte Runde.
+
+Alle Tische belegt: Keine neue Runde. Laufende Spieler werden nicht doppelt eingeteilt. Dieselbe offene Paarung wird nicht parallel wiederholt. Die Disziplinreihenfolge einer Runde bleibt erhalten. Nach Endzeit, Turnierende oder Anforderung zum Abschluss wird keine neue Runde angeboten. Bereits startfähige Partien lassen sich wie bisher starten. Neue Runde weiterhin bewusst über den Button starten.
+
+Wer eine neue Runde vorzieht, kann dort erneut auf einen bereits gespielten Gegner treffen, während andere Paarungen älterer Runden noch warten. Dies entspricht dem gewünschten gleitenden Weiterbetrieb bei freien Tischen.
+
+Bestehende Turniere müssen nicht neu erstellt werden. Speichern und Wiederladen unterstützen die überlappenden Runden. Tabellenwertung, paarungsweise Frame-Summe, Turniername, Zuschauerzugang und K.-o. bleiben bestehen.
+
+Installation: Aktualisierte App-Dateien hochladen. Firebase-Regeln und vendor unverändert; keine erneute Einrichtung erforderlich.
+Geprüft: Nachgestellter Fall mit 6 Spielern und 3 Tischen, zwei laufenden Partien und einem freien Tisch; zwei freie Spieler erhalten die nächste Runde. Doppelbelegung und Endzeit-Sperre sowie Wiederladen geprüft. Weitere Turnier- und Zuschauertests durchgeführt. Kein Test im echten laufenden Turnier oder auf einem iPhone. Version 8.20 unverändert.
+
+
+=== VERSION_9_11_HINWEISE.txt ===
+Version 9.11 – Zeit/Endlos: echte Runden
+
+Gilt für Club Liga und Freies Turnier, Snooker und Pool, Einzel- und Doppelteilnehmer, Pool paarungsweise und disziplinweise.
+
+Eine Runde enthält eine Paarung je Spieler (bei ungerader Anzahl ein Freilos). Bei 10 Spielern sind dies fünf Paarungen; drei Tische erlauben zunächst drei laufende Partien. Bei Pool disziplinweise enthält jede Paarung je ein Spiel in jeder gewählten Disziplin.
+
+Wartende, startfähige Partien haben Vorrang. Erst wenn keine solche Partie mehr wartet UND mindestens ein Tisch frei ist, wird eine nächste Runde angeboten, sofern diese zulässig ist. Laufende Spieler werden niemals doppelt eingesetzt. Neue Runde weiterhin bewusst per Button starten, nicht automatisch. Alle Tische besetzt: keine neue Runde. Endzeit/Turnierende/Abschlussanforderung sperren weitere Runden.
+
+Pool disziplinweise im Zeitbetrieb verwendet nun echte Paarungsrunden. Bei sechs Spielern fünf Runden pro Jeder-gegen-jeden-Durchgang; bei zehn Spielern neun. Erste Auslosung zufällig. Jeder Gegner kommt je Durchgang genau einmal vor. Nächste passende Paarungsrunde bevorzugt verfügbare Spieler. Ein neuer Durchgang beginnt erst nach Abschluss des vorherigen.
+
+Bestehende Zeit-Turniere mit der alten großen Pool-Runde werden beim Öffnen automatisch aufgeteilt. Gespeicherte Ergebnisse und aktive Gerätekennungen werden erhalten. Alle beteiligten Spielleitergeräte/Browser auf 9.11 aktualisieren, damit eine ältere Version nicht wieder den alten Plan lädt. Vor dem Update wie üblich eine JSON-Sicherung aufbewahren.
+
+Die ursprüngliche Sicherung Golden 9Ball wurde verlustfrei geprüft: 15 Paarungen werden fünf Runden, neun Ergebnisse und zwei laufende Partien bleiben erhalten. Bereits in der alten Reihenfolge gespielte Begegnungen werden nicht neu ausgelost oder rückwirkend verändert. Deshalb kann eine bereits bestehende Wartepause zunächst bestehen bleiben, wenn die beiden freien Spieler schon gegeneinander gespielt haben. Neue Turniere starten direkt mit der neuen Rundenplanung.
+
+K.-o., Tabellenwertung nach 2/1/0, Frame-Summen beim paarungsweisen Poolspiel, Turniername und Zuschauerzugang bleiben erhalten. Firebase-Regeln und vendor unverändert. Keine Cloud Functions. Alle App-Dateien auf GitHub aktualisieren.
+
+Prüfungen: komplette neue Jeder-gegen-jeden-Durchgänge mit geraden/ungeraden Teilnehmerzahlen und einer/drei Disziplinen; keine Wiederholungen im Durchgang; tatsächliche Bedienung mit 10 Spielern/3 Tischen in allen Zeitvarianten; Übernahme der Originaldatei; Tischcode und zwischenzeitliche Tischeingaben bei Umstellung erhalten; Folgeeingabe am Tischgerät möglich; 624 komplette K.-o.-Turniere und Ranking-/Zuschauerregression. Kein Test auf einem echten iPhone/iPad.
+
+Version 8.20 bleibt unveränderte Rückfallversion.
+
+
+=== VERSION_9_12_HINWEISE.txt ===
+Version 9.12 – Rückkehr aus der Vorschau
+
+„Turnier teilen > Vorschau öffnen“ bleibt jetzt im laufenden App-Fenster. „Zur App“ öffnet für den angemeldeten Ersteller direkt die vorhandenen Begegnungen im Reiter Runden. Es erscheint keine neue Turniererstellung. Turnierdaten werden dabei nicht verändert.
+
+Aus einem separaten Zuschauerfenster führen beide Zur-App-Links ebenfalls zum bestehenden Turnier zurück, sofern das normal angemeldete und freigegebene Benutzerkonto der Ersteller ist und dessen aktuelles Turnier übereinstimmt. Die Rückkehr wartet die reguläre Kontoanmeldung/Freigabe ab. Fremde Zuschauer und andere Konten erhalten dadurch keine Schreibrechte. Tischgeräte behalten ihren getrennten Zugang.
+
+Gilt für Snooker und Pool, Club Liga und Freies Turnier.
+
+Installation: Alle aktuellen App-Dateien hochladen, einschließlich creator-return.js. Firebase-Regeln und vendor unverändert. Keine Cloud Functions.
+
+Geprüft: Vorschau öffnen/schließen, bestehende Übersicht statt Setup, unveränderte Daten in vier Sport-/Turnierkombinationen. Separater Rückweg nach bestätigter Anmeldung, Eigentümer- und Turnierprüfung, fremde Konten/anderes Turnier ausgeschlossen. Zuschauer-DOM, Reiter und Live-Spielstände sowie Turniername und paarungsweise Framewertung weiter geprüft. Kein Test auf echtem iPhone/iPad. Version 8.20 bleibt unverändert.
+
+
+=== BASIS_8_20.txt ===
+Projektstand, bestätigt am 22.11.2026:
+Die letzte vom Nutzer bestätigte gültige Rückfallversion ist 8.20 (Club820.zip).
+Version 9.0 wurde ausschließlich darauf aufgebaut. 8.20 nicht überschreiben.
+
+
+=== SICHERHEIT_V7_63.txt ===
+Snooker Money Match v7.63 — Einmalige Tischcode-Zuordnung
+
+WICHTIG: Die Datei firestore.rules muss vor dem Test vollständig in Firebase Console > Firestore Database > Regeln veröffentlicht werden. Nur die neue ZIP-Datei auf GitHub hochzuladen reicht nicht.
+
+- Erstes Gerät reserviert seinen Tischcode in einer Firestore-Transaktion exklusiv für seine anonyme Gerätekennung.
+- Zweites Gerät mit gleichem Code wird abgewiesen, auch bei gleichzeitigen Anmeldeversuchen.
+- Dasselbe Gerät darf nach Neuladen wieder verbinden, solange die anonyme Firebase-Anmeldung im Browser erhalten bleibt.
+- Turnierleiterkonto kann die Tischstände wie bisher sehen und erhält die Ergebnisse in seinem privaten Cloud-Turnier. Andere Spielleiterkonten erhalten keine automatische Übertragung.
+- Bei Browserdaten-Löschung, Gerätewechsel oder verlorenem Login muss die Turnierleitung einen neuen Tischcode vergeben; hierfür ist eine entsprechende Reset-/Neuzuordnungsfunktion noch NICHT implementiert. Ein neues Turnier erzeugt neue Codes.
+- Sicherheitsgrenze: Dies sperrt Fremdgeräte am Tisch, bindet jedoch das Spielleiterkonto nicht an ein einzelnes physisches Gerät. Alle mit demselben Spielleiterkonto angemeldeten Geräte können dessen Daten sehen.
+- Bestehende Tischverbindungen aus v7.62 müssen gegebenenfalls mit ihrem ursprünglichen Code erneut beitreten, um ihn zu reservieren.

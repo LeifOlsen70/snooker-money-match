@@ -32,7 +32,7 @@ export function createSpectatorOwner({auth,db,doc,getDocFromServer,runTransactio
     if(scheduled)return;scheduled=true;
     queue=queue.catch(()=>{}).then(async()=>{
       scheduled=false;
-      try{await publish();error='';}catch(err){error=err.code==='permission-denied'?'Zuschauerzugang noch nicht freigeschaltet. Bitte die Firebase-Regeln aus Version 9.12 veröffentlichen.':err.message;}
+      try{await publish();error='';}catch(err){error=err.code==='permission-denied'?'Zuschauerzugang noch nicht freigeschaltet. Bitte die Firebase-Regeln aus Version 9.13 veröffentlichen.':err.message;}
       notify();
     });
     return queue;

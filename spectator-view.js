@@ -1,8 +1,8 @@
 import {initializeApp} from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js';
 import {getAuth,setPersistence,browserLocalPersistence,signInAnonymously,signOut} from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-auth.js';
 import {getFirestore,doc,getDoc,onSnapshot,runTransaction} from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore.js';
-import {firebaseConfig} from './firebase-config.js?v=9.12';
-import {createTableConnection} from './table-connection.js?v=9.12';
+import {firebaseConfig} from './firebase-config.js?v=9.13';
+import {createTableConnection} from './table-connection.js?v=9.13';
 const model=window.SnookerSpectator,pool=new URLSearchParams(location.search).get('sport')==='pool',sport=pool?'pool':'snooker',token=location.hash.slice(1),e=id=>document.getElementById(id);
 const app=initializeApp(firebaseConfig,pool?'pool-code-device-v1':'table-code-device-v2'),auth=getAuth(app),db=getFirestore(app);
 let data=null,meta=null,view='matches',boards=new Map(),stops=[],rootStop=null,connected=false;
@@ -52,8 +52,14 @@ function subscribe(){
     },()=>{boards.delete(slot);render();}));
   },()=>clear('Zuschauerlink nicht verfügbar. Bitte Verbindung oder Freigabe prüfen.'));
 }
+function refreshViewer(){
+  if(!connected){status('Verbindung wird neu aufgebaut …');location.reload();return;}
+  for(const stop of stops)stop();stops=[];rootStop?.();rootStop=null;
+  boards.clear();data=null;render();status('Turnier wird aktualisiert …');subscribe();tableButton();
+}
+e('viewerRefresh').onclick=refreshViewer;
 window.addEventListener('offline',()=>clear('Offline – bitte erneut verbinden, um das Turnier live zu verfolgen.'));
-window.addEventListener('online',()=>{for(const stop of stops)stop();stops=[];rootStop?.();subscribe();});
+window.addEventListener('online',refreshViewer);
 window.addEventListener('pageshow',event=>{if(event.persisted&&connected){for(const stop of stops)stop();stops=[];rootStop?.();subscribe();tableButton();}});
 window.addEventListener('pagehide',()=>{for(const stop of stops)stop();rootStop?.();});
 tableButton();

@@ -2131,6 +2131,18 @@ window.snookerTournamentBridge=Object.freeze({
     spectatorSnapshot(data=tournament){return window.SnookerSpectator.snapshot(data,standings(data.rounds,data));},
     get current(){return tournament},
     get canApply(){return tournament&&!drafting&&openMatch===null},
+    correctArchivedBoard(board,original){
+      if(!tournament||tournament.ended||drafting||openMatch!==null||!board?.assignment||window.snookerTableSync?.role==='table')throw Error('Korrektur ist nur durch die Turnierleitung im laufenden Turnier möglich.');
+      const a=board.assignment,match=tournament.rounds[a.round]?.matches[a.index];
+      if(!match?.result||a.tournament!==String(tournament.started)||window.ClubSport.assignment(tournament,a.round,a.index,match).id!==a.id||JSON.stringify(match)!==original)throw Error('Die Partie wurde inzwischen geändert. Bitte Korrektur erneut öffnen.');
+      if(knockout.locked(tournament,match))throw Error('Eine Folgephase steht bereits fest. Dieses Ergebnis kann nicht mehr korrigiert werden.');
+      const rules=matchRules(tournament,match),summary=window.SnookerTableScore.derive(board.state,rules);
+      if(!summary.complete)throw Error('Bitte zuerst ein vollständiges Ergebnis eintragen.');
+      knockout.rewind(tournament,match);
+      match.scoreMonitor={assignmentId:a.id,state:clone(board.state)};
+      match.result={frames:summary.frames,breaks:summary.breaks,...(isPool?{disciplines:clone(summary.disciplines)}:{})};match.monitorResult=true;
+      monitorApplying=true;try{saveTournament()}finally{monitorApplying=false;}
+    },
     applyBoard(board){
       if(!tournament||tournament.ended||drafting||openMatch!==null||!board.assignment||window.snookerTableSync?.syncing)return;
       const a=board.assignment,match=tournament.rounds[a.round]?.matches[a.index];
