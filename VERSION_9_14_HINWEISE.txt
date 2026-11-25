@@ -1,0 +1,8 @@
+Version 9.14
+
+- Neue Registrierung: Vor- und Nachname nur für die Benutzerfreigabe; keine automatische Zuordnung zu Turnier-Spielernamen.
+- Pflichtbestätigung des Kontohinweises, nicht vorausgewählt. Bestätigung und Textversion werden bei der Zugangsanfrage gespeichert. Kein Haftungsverzicht.
+- Benutzerverwaltung: Name, E-Mail-Adresse, Freigabestatus und Zeitpunkt der Hinweisbestätigung. Bestehende Konten bleiben unverändert.
+- WICHTIG: Vor Nutzung der neuen Registrierung die vollständigen Firebase-Regeln aus FIREBASE_REGELN_9_14.txt veröffentlichen.
+- Alle bisherigen Funktionen von 9.13 enthalten. audio und vendor unverändert.
+- Der kurze Kontohinweis ist keine vollständige Datenschutzerklärung. Für diese sind unter anderem Verantwortlicher, Kontakt, Rechtsgrundlage, Speicherfristen und Angaben zum Firebase-Einsatz zu ergänzen.

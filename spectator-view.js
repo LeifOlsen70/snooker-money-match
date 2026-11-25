@@ -1,8 +1,8 @@
 import {initializeApp} from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js';
 import {getAuth,setPersistence,browserLocalPersistence,signInAnonymously,signOut} from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-auth.js';
 import {getFirestore,doc,getDoc,onSnapshot,runTransaction} from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore.js';
-import {firebaseConfig} from './firebase-config.js?v=9.13';
-import {createTableConnection} from './table-connection.js?v=9.13';
+import {firebaseConfig} from './firebase-config.js?v=9.14';
+import {createTableConnection} from './table-connection.js?v=9.14';
 const model=window.SnookerSpectator,pool=new URLSearchParams(location.search).get('sport')==='pool',sport=pool?'pool':'snooker',token=location.hash.slice(1),e=id=>document.getElementById(id);
 const app=initializeApp(firebaseConfig,pool?'pool-code-device-v1':'table-code-device-v2'),auth=getAuth(app),db=getFirestore(app);
 let data=null,meta=null,view='matches',boards=new Map(),stops=[],rootStop=null,connected=false;

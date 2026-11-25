@@ -7,3 +7,5 @@
 .playerPicker input { width: 100%; box-sizing: border-box; }
 .playerPicker [role=alert] { color: #d53c3c; }
 .tournamentRoster[hidden] { display: none !important; }
+
+.playerPicker .playerAlreadyChosen{opacity:.5;border-style:dashed!important}

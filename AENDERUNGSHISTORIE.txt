@@ -524,3 +524,13 @@ WICHTIG: Die Datei firestore.rules muss vor dem Test vollständig in Firebase Co
 - Bei Browserdaten-Löschung, Gerätewechsel oder verlorenem Login muss die Turnierleitung einen neuen Tischcode vergeben; hierfür ist eine entsprechende Reset-/Neuzuordnungsfunktion noch NICHT implementiert. Ein neues Turnier erzeugt neue Codes.
 - Sicherheitsgrenze: Dies sperrt Fremdgeräte am Tisch, bindet jedoch das Spielleiterkonto nicht an ein einzelnes physisches Gerät. Alle mit demselben Spielleiterkonto angemeldeten Geräte können dessen Daten sehen.
 - Bestehende Tischverbindungen aus v7.62 müssen gegebenenfalls mit ihrem ursprünglichen Code erneut beitreten, um ihn zu reservieren.
+
+
+=== VERSION_9_13_HINWEISE.txt ===
+Version 9.13
+
+- Abgeschlossene Ergebnisse im laufenden Turnier separat korrigieren, auch wenn der Tisch bereits neu belegt ist. Zurück/neu eingeben, danach Korrektur speichern. Abbrechen verwirft den Entwurf.
+- K.-o.-Folgephasen bleiben geschützt.
+- Turnier verfolgen: Aktualisieren lädt die Live-Verbindungen neu; gewählter Reiter und Zuschauerlink bleiben erhalten.
+- Einheitliche Versionsanzeigen 9.13. Alte Versionshinweise zusammengefasst; optionale Löschliste beigefügt.
+- Alle App-Dateien hochladen. Firebase-Regeln und vendor-Inhalte unverändert.

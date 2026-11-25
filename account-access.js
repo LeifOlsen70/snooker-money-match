@@ -65,6 +65,11 @@
     e('accountRegister').textContent = value ? 'Ich habe bereits ein Konto' : 'Neues Konto registrieren';
     e('accountRepeatLabel').hidden = !value;
     e('accountRepeat').required = value;
+    e('accountNameLabel').hidden = !value;
+    e('accountName').required = value;
+    e('accountNotice').hidden = !value;
+    e('accountNoticeAccepted').required = value;
+    e('accountNoticeAccepted').checked = false;
     e('accountPassword').autocomplete = value ? 'new-password' : 'current-password';
     e('accountReset').hidden = value;
     status('');
@@ -89,6 +94,7 @@
     if (account) raw.setItem(prefix(account.uid) + 'email', account.email || '');
     if (message) status(message);
     if (ready && pendingMode()) openMode(pendingMode());
+    if(ready)window.dispatchEvent(new CustomEvent('snooker-account-ready',{detail:{uid:account.uid}}));
   }
   function switchUser(account) {
     // A remembered Firebase session must never replace a local guest session.
@@ -132,10 +138,13 @@
     if (registering && password !== e('accountRepeat').value) {
       status('Die beiden Passwörter stimmen nicht überein.'); return;
     }
+    const registrationName=e('accountName').value.trim().replace(/\s+/g,' ');
+    if(registering&&(registrationName.length<2||registrationName.length>100)){status('Bitte deinen Vor- und Nachnamen eingeben (2 bis 100 Zeichen).');return;}
+    if(registering&&!e('accountNoticeAccepted').checked){status('Bitte den Hinweis zum Benutzerkonto lesen und bestätigen.');return;}
     setBusy(true);
     status(registering ? 'Konto wird erstellt …' : 'Anmeldung läuft …');
     try {
-      const result = registering ? await actions.register(email,password) : await actions.login(email,password);
+      const result = registering ? await actions.register(email,password,{name:registrationName,noticeAccepted:true,noticeVersion:'2026-11-25-v1'}) : await actions.login(email,password);
       if (guest && result?.user) {
         const account = result.user;
         // Use the same migration path when the old owner logs in from guest mode.
@@ -152,6 +161,8 @@
       }
       e('accountPassword').value = '';
       e('accountRepeat').value = '';
+      e('accountName').value = '';
+      e('accountNoticeAccepted').checked = false;
     } catch (error) {
       status(errors[error.code] || error.userMessage || 'Anmeldung fehlgeschlagen. Bitte erneut versuchen.');
     } finally { setBusy(false); }

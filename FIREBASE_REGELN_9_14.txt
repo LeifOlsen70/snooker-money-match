@@ -1,0 +1,278 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function isAdmin() { return signedIn() && request.auth.uid == 'SRx2kZD2jzdM3Q6RVVOjioAuHuw1'; }
+    function approved() {
+      return isAdmin() || (signedIn() && exists(/databases/$(database)/documents/snookerAccess/$(request.auth.uid)) && get(/databases/$(database)/documents/snookerAccess/$(request.auth.uid)).data.status == 'approved');
+    }
+    function normalAccount() {
+      return signedIn() && request.auth.token.firebase.sign_in_provider != 'anonymous';
+    }
+    // Gespeicherte Namen: Nutzer dürfen ergänzen; nur Admin darf ändern/löschen.
+    function keepsSavedNames() {
+      return !('tournamentRoster' in resource.data)
+        || (('tournamentRoster' in request.resource.data)
+          && request.resource.data.tournamentRoster.names is list
+          && request.resource.data.tournamentRoster.names.hasAll(resource.data.tournamentRoster.names));
+    }
+    match /privateSnooker/{userId} {
+      allow read, create: if approved() && request.auth.uid == userId;
+      allow update: if approved() && request.auth.uid == userId && (isAdmin() || keepsSavedNames());
+      allow delete: if approved() && request.auth.uid == userId && (isAdmin() || !('tournamentRoster' in resource.data));
+    }
+    match /privateSnooker/{userId}/sports/pool {
+      allow read, write: if approved() && request.auth.uid == userId;
+    }
+    // Four-digit pairing codes; a generation binds every member to this reservation.
+    match /snookerTableInvites/{token} {
+      function boardPath(owner,slot,pool) {
+        return pool ? /databases/$(database)/documents/snookerTableBoards/$(owner)/poolTables/$(string(slot))
+          : /databases/$(database)/documents/snookerTableBoards/$(owner)/tables/$(string(slot));
+      }
+      function ownedRecord() {
+        let data = request.resource.data;
+        let board = getAfter(boardPath(data.owner,data.slot,('sport' in data) && data.sport == 'pool')).data;
+        return approved() && normalAccount() && data.owner == request.auth.uid
+          && token.matches('^[0-9]{4}$')
+          && (!('sport' in data) || data.sport == 'pool')
+          && data.keys().hasOnly(['owner','slot','tournamentKey','generation','sport'])
+          && data.slot is int && data.slot >= 1 && data.slot <= 6
+          && data.generation is string && data.generation.matches('^[a-f0-9]{32}$')
+          && board.joinToken == token && board.joinGeneration == data.generation
+          && board.tournamentKey == data.tournamentKey;
+      }
+      function claim() {
+        let board = get(boardPath(resource.data.owner,resource.data.slot,('sport' in resource.data) && resource.data.sport == 'pool')).data;
+        return signedIn() && token.matches('^[0-9]{4}$')
+          && !('claimedBy' in resource.data)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['claimedBy'])
+          && request.resource.data.claimedBy == request.auth.uid
+          && board.joinToken == token && board.joinOpen == true
+          && board.joinGeneration == resource.data.generation
+          && board.tournamentKey == resource.data.tournamentKey;
+      }
+      function release() {
+        return signedIn() && resource.data.claimedBy == request.auth.uid
+          && !('claimedBy' in request.resource.data)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['claimedBy'])
+          && ((('sport' in resource.data) && resource.data.sport == 'pool')
+            ? !existsAfter(/databases/$(database)/documents/snookerTableBoards/$(resource.data.owner)/poolTables/$(string(resource.data.slot))/members/$(request.auth.uid))
+            : !existsAfter(/databases/$(database)/documents/snookerTableBoards/$(resource.data.owner)/tables/$(string(resource.data.slot))/members/$(request.auth.uid)));
+      }
+      allow get: if signedIn();
+      allow list: if false;
+      allow create: if ownedRecord();
+      allow update: if (ownedRecord() && resource.data.owner == request.auth.uid) || claim() || release();
+      allow delete: if approved() && normalAccount() && resource.data.owner == request.auth.uid;
+    }
+    match /snookerTableBoards/{organizer}/tables/{slot} {
+      function isOwner() { return approved() && normalAccount() && request.auth.uid == organizer; }
+      function isMember() {
+        return signedIn()
+          && exists(/databases/$(database)/documents/snookerTableBoards/$(organizer)/tables/$(slot)/members/$(request.auth.uid))
+          && get(/databases/$(database)/documents/snookerTableBoards/$(organizer)/tables/$(slot)/members/$(request.auth.uid)).data.token == resource.data.joinToken
+          && get(/databases/$(database)/documents/snookerTableBoards/$(organizer)/tables/$(slot)/members/$(request.auth.uid)).data.generation == resource.data.joinGeneration
+          && exists(/databases/$(database)/documents/snookerTableInvites/$(resource.data.joinToken))
+          && get(/databases/$(database)/documents/snookerTableInvites/$(resource.data.joinToken)).data.claimedBy == request.auth.uid
+          && get(/databases/$(database)/documents/snookerTableInvites/$(resource.data.joinToken)).data.generation == resource.data.joinGeneration;
+      }
+      function validScoreState() {
+        let state = request.resource.data.state;
+        return state.keys().hasAll(['events','cursor','revision'])
+          && state.keys().hasOnly(['events','cursor','revision'])
+          && state.events is list && state.events.size() <= 2000
+          && state.cursor is int && state.cursor >= 0 && state.cursor <= state.events.size()
+          && state.revision is int && state.revision == resource.data.state.revision + 1;
+      }
+      allow get: if isOwner() || isMember();
+      allow list: if isOwner();
+      allow create, delete: if isOwner();
+      allow update: if isOwner() || (isMember()
+        && resource.data.enabled == true && resource.data.joinOpen == true
+        && resource.data.assignment != null
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['state'])
+        && validScoreState());
+      match /members/{member} {
+        function validJoin() {
+          let token = request.resource.data.token;
+          let board = get(/databases/$(database)/documents/snookerTableBoards/$(organizer)/tables/$(slot)).data;
+          let invite = get(/databases/$(database)/documents/snookerTableInvites/$(token)).data;
+          return token is string && token.matches('^[0-9]{4}$')
+            && request.resource.data.keys().hasOnly(['token','generation'])
+            && request.resource.data.generation == board.joinGeneration
+            && invite.generation == board.joinGeneration
+            && board.joinOpen == true && board.joinToken == token
+            && !('sport' in invite)
+            && invite.owner == organizer && string(invite.slot) == slot
+            && invite.tournamentKey == board.tournamentKey
+            && getAfter(/databases/$(database)/documents/snookerTableInvites/$(token)).data.claimedBy == request.auth.uid;
+        }
+        allow get: if signedIn() && (request.auth.uid == member || request.auth.uid == organizer);
+        allow list: if normalAccount() && request.auth.uid == organizer;
+        allow create, update: if signedIn() && request.auth.uid == member && validJoin();
+        allow delete: if signedIn() && (request.auth.uid == member || request.auth.uid == organizer);
+      }
+    }
+
+    match /snookerTableBoards/{organizer}/poolTables/{slot} {
+      function isOwner() { return approved() && normalAccount() && request.auth.uid == organizer; }
+      function isMember() {
+        return signedIn()
+          && exists(/databases/$(database)/documents/snookerTableBoards/$(organizer)/poolTables/$(slot)/members/$(request.auth.uid))
+          && get(/databases/$(database)/documents/snookerTableBoards/$(organizer)/poolTables/$(slot)/members/$(request.auth.uid)).data.token == resource.data.joinToken
+          && get(/databases/$(database)/documents/snookerTableBoards/$(organizer)/poolTables/$(slot)/members/$(request.auth.uid)).data.generation == resource.data.joinGeneration
+          && exists(/databases/$(database)/documents/snookerTableInvites/$(resource.data.joinToken))
+          && get(/databases/$(database)/documents/snookerTableInvites/$(resource.data.joinToken)).data.claimedBy == request.auth.uid
+          && get(/databases/$(database)/documents/snookerTableInvites/$(resource.data.joinToken)).data.generation == resource.data.joinGeneration;
+      }
+      function validScoreState() {
+        let state = request.resource.data.state;
+        return state.keys().hasAll(['events','cursor','revision'])
+          && state.keys().hasOnly(['events','cursor','revision'])
+          && state.events is list && state.events.size() <= 2000
+          && state.cursor is int && state.cursor >= 0 && state.cursor <= state.events.size()
+          && state.revision is int && state.revision == resource.data.state.revision + 1;
+      }
+      allow get: if isOwner() || isMember();
+      allow list: if isOwner();
+      allow create, delete: if isOwner();
+      allow update: if isOwner() || (isMember()
+        && resource.data.enabled == true && resource.data.joinOpen == true
+        && resource.data.assignment != null
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['state'])
+        && validScoreState());
+      match /members/{member} {
+        function validJoin() {
+          let token = request.resource.data.token;
+          let board = get(/databases/$(database)/documents/snookerTableBoards/$(organizer)/poolTables/$(slot)).data;
+          let invite = get(/databases/$(database)/documents/snookerTableInvites/$(token)).data;
+          return token is string && token.matches('^[0-9]{4}$')
+            && request.resource.data.keys().hasOnly(['token','generation'])
+            && request.resource.data.generation == board.joinGeneration
+            && invite.generation == board.joinGeneration
+            && board.joinOpen == true && board.joinToken == token
+            && ('sport' in invite) && invite.sport == 'pool'
+            && invite.owner == organizer && string(invite.slot) == slot
+            && invite.tournamentKey == board.tournamentKey
+            && getAfter(/databases/$(database)/documents/snookerTableInvites/$(token)).data.claimedBy == request.auth.uid;
+        }
+        allow get: if signedIn() && (request.auth.uid == member || request.auth.uid == organizer);
+        allow list: if normalAccount() && request.auth.uid == organizer;
+        allow create, update: if signedIn() && request.auth.uid == member && validJoin();
+        allow delete: if signedIn() && (request.auth.uid == member || request.auth.uid == organizer);
+      }
+    }
+
+    // Zuschauerlinks are 192-bit capabilities. No collection listing; no private data access.
+    match /snookerSpectatorLinks/{token} {
+      function metadata() { return get(/databases/$(database)/documents/snookerSpectatorLinks/$(token)).data; }
+      function validMeta() {
+        let d = request.resource.data;
+        return token.matches('^[a-f0-9]{48}$')
+          && d.keys().hasAll(['owner','sport','tournamentKey','enabled','updatedAt'])
+          && d.keys().hasOnly(['owner','sport','tournamentKey','enabled','updatedAt'])
+          && d.owner == request.auth.uid && d.sport in ['snooker','pool']
+          && d.tournamentKey is string && d.enabled is bool && d.updatedAt is number;
+      }
+      function owner() { return approved() && normalAccount() && metadata().owner == request.auth.uid; }
+      function readable() {
+        let d = metadata();
+        return signedIn() && d.enabled == true
+          && (d.owner == 'SRx2kZD2jzdM3Q6RVVOjioAuHuw1' ||
+            (exists(/databases/$(database)/documents/snookerAccess/$(d.owner)) &&
+             get(/databases/$(database)/documents/snookerAccess/$(d.owner)).data.status == 'approved'));
+      }
+      // Metadata alone contains no tournament contents or pairing credentials.
+      allow get: if signedIn();
+      allow list: if false;
+      allow create: if approved() && normalAccount() && validMeta();
+      allow update: if approved() && normalAccount() && resource.data.owner == request.auth.uid
+        && validMeta() && request.resource.data.owner == resource.data.owner
+        && request.resource.data.sport == resource.data.sport
+        && request.resource.data.tournamentKey == resource.data.tournamentKey;
+      allow delete: if approved() && normalAccount() && resource.data.owner == request.auth.uid;
+      match /view/{viewId} {
+        allow get: if viewId == 'current' && readable();
+        allow list: if false;
+        allow create, update: if viewId == 'current' && owner()
+          && request.resource.data.keys().hasOnly(['payload','updatedAt'])
+          && request.resource.data.payload is string && request.resource.data.payload.size() < 900000;
+        allow delete: if owner();
+      }
+      match /tables/{slot} {
+        function tableDeviceMirror() {
+          let meta = metadata();
+          let path = meta.sport == 'pool'
+            ? /databases/$(database)/documents/snookerTableBoards/$(meta.owner)/poolTables/$(slot)
+            : /databases/$(database)/documents/snookerTableBoards/$(meta.owner)/tables/$(slot);
+          let board = getAfter(path).data;
+          let member = meta.sport == 'pool'
+            ? get(/databases/$(database)/documents/snookerTableBoards/$(meta.owner)/poolTables/$(slot)/members/$(request.auth.uid)).data
+            : get(/databases/$(database)/documents/snookerTableBoards/$(meta.owner)/tables/$(slot)/members/$(request.auth.uid)).data;
+          let invite = get(/databases/$(database)/documents/snookerTableInvites/$(board.joinToken)).data;
+          let d = request.resource.data;
+          return readable() && slot.matches('^[1-6]$')
+            && board.viewerToken == token && board.tournamentKey == meta.tournamentKey
+            && board.joinOpen == true && board.enabled == true && board.assignment != null
+            && member.token == board.joinToken && member.generation == board.joinGeneration
+            && invite.claimedBy == request.auth.uid && invite.generation == board.joinGeneration
+            && invite.owner == meta.owner && string(invite.slot) == slot
+            && d.keys().hasOnly(['slot','tournamentKey','assignment','state','enabled'])
+            && string(d.slot) == slot && d.tournamentKey == board.tournamentKey
+            && d.assignment == board.assignment && d.state == board.state && d.enabled == board.enabled;
+        }
+        allow get: if readable();
+        allow list: if false;
+        allow create, update: if owner() || (signedIn() && tableDeviceMirror());
+        allow delete: if owner();
+      }
+    }
+
+    // Einmalige Freigabe pro Firebase UID; Benutzer dürfen nur Antrag anlegen.
+    function validRegistrationDetails() {
+      let d=request.resource.data;
+      return !d.keys().hasAny(['name','noticeVersion','noticeAcknowledgedAt'])
+        || (d.keys().hasAll(['name','noticeVersion','noticeAcknowledgedAt'])
+          && d.name is string && d.name.size() >= 2 && d.name.size() <= 100
+          && d.name.matches('.*[^ ].*')
+          && d.noticeVersion == '2026-11-25-v1'
+          && d.noticeAcknowledgedAt == request.time);
+    }
+    match /snookerAccess/{uid} {
+      allow get: if signedIn() && (request.auth.uid == uid || isAdmin());
+      allow list: if isAdmin();
+      allow create: if signedIn() && request.auth.uid == uid
+        && request.auth.token.firebase.sign_in_provider != 'anonymous'
+        && request.resource.data.keys().hasOnly(['email','status','createdAt','name','noticeVersion','noticeAcknowledgedAt'])
+        && validRegistrationDetails()
+        && request.resource.data.email == request.auth.token.email
+        && request.resource.data.status == 'pending'
+        && request.resource.data.createdAt == request.time;
+      allow update: if isAdmin() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','reviewedAt'])
+        && request.resource.data.status in ['approved','rejected']
+        && request.resource.data.reviewedAt == request.time;
+      allow delete: if isAdmin() && uid != request.auth.uid && resource.data.status == 'rejected';
+    }
+    // Push-Abonnements darf nur der Administrator selbst anlegen und lesen.
+    match /snookerAdminPush/{uid}/subscriptions/{subscriptionId} {
+      allow read, create, update, delete: if isAdmin() && request.auth.uid == uid;
+    }
+    // Existing operator access, keeping private Snooker accounts separated.
+    match /{collection}/{document=**} {
+      allow read, write: if signedIn()
+        && request.auth.uid == 'SRx2kZD2jzdM3Q6RVVOjioAuHuw1'
+        && collection != 'privateSnooker'
+        && collection != 'snookerTableInvites'
+        && collection != 'snookerTableBoards'
+        && collection != 'snookerAccess'
+        && collection != 'snookerAdminPush'
+        && collection != 'snookerSpectatorLinks';
+    }
+    // Existing Pool group access.
+    match /privatePool/SRx2kZD2jzdM3Q6RVVOjioAuHuw1 {
+      allow read, write: if signedIn()
+        && request.auth.uid == 'FZZLq71H5lVXNNDnfRS6URdaODs2';
+    }
+  }
+}

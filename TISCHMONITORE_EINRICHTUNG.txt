@@ -1,3 +1,7 @@
+Aktuell: Version 9.07
+Die aktuellen Schritte einschließlich Zuschaueransicht und Wechsel zum Tischgerät stehen in VERSION_9_07_HINWEISE.txt. Für den neuen Zuschauerzugang die firestore.rules aus dieser ZIP veröffentlichen.
+
+Ältere Einrichtungshinweise:
 Snooker Money Match v8.00 – Einrichtung
 
 1. Firebase > Authentication > Anmeldemethode: E-Mail/Passwort und Anonym aktiviert lassen.

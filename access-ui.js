@@ -52,7 +52,8 @@ function requestDate(value){
   }catch{return 'Zeitpunkt nicht gespeichert';}
 }
 function render(list,change,remove){updateCount(list.filter(a=>a.status==='pending').length);rows.replaceChildren(); if(!list.length){rows.append(el('p','Noch keine Anfragen.'));return}
-  for(const a of list){const row=el('div',undefined,'accessRow');const name=el('div');name.append(el('strong',a.email||a.uid),el('p',a.status==='approved'?'Freigegeben':a.status==='rejected'?'Abgelehnt':'Wartet auf Freigabe'));
+  for(const a of list){const row=el('div',undefined,'accessRow');const name=el('div');name.append(el('strong',a.name||'Name nicht hinterlegt (Bestandskonto)'),el('p',a.email||a.uid),el('p',a.status==='approved'?'Freigegeben':a.status==='rejected'?'Abgelehnt':'Wartet auf Freigabe'));
+    if(a.noticeVersion)name.append(el('p','Hinweis bestätigt: '+requestDate(a.noticeAcknowledgedAt),'accessRequestDate'));
     name.append(el('p','Anfrage: '+requestDate(a.createdAt),'accessRequestDate'));
     const actions=el('div',undefined,'accessActions');
     if(a.status!=='approved'){const ok=el('button','Freigeben');ok.onclick=()=>change(a.uid,'approved');actions.append(ok)}
